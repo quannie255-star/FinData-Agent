@@ -166,6 +166,8 @@ def fetch_stock_daily(symbol: str, start: str) -> pd.DataFrame:
     df["pct_chg"] = (df["close"].pct_change() * 100).round(4)
     start_date = pd.to_datetime(start).date()
     df = df[df["date"] >= start_date].reset_index(drop=True)
+    if df.empty:  # 增量模式下已采到最新，新浪 T+1 无新数据
+        return df
     df.loc[df.index[0], "pct_chg"] = 0.0  # 过滤后首日无前收，涨跌幅置 0
     return df
 
