@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# 环境与密钥
+.env
+.env.local
+
+# 数据与产物（体积大，不入库；通过脚本重新生成）
+data/*.duckdb
+data/*.duckdb.wal
+data/raw/
+htmlcov/
+.coverage
+.pytest_cache/
+.ruff_cache/
+
+# IDE / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 旧版归档与本地笔记不入库
+legacy/
+findata-agent/
