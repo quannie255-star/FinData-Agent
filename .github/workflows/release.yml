@@ -51,6 +51,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build & push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -62,6 +63,21 @@ jobs:
           cache-from: type=gha,scope=build
           cache-to: type=gha,mode=max,scope=build
           # SBOM + provenance 默认开（settings -> Actions 默认允许）
+
+      - name: dump build log on failure
+        if: failure()
+        # buildx 不把详细 log 进 annotation；手动抓 log + ::error:: 推
+        run: |
+          # 简化版：让 GitHub Actions 自己重跑 buildx 一次到本地 load，
+          # 拿 verbose log。或者用 docker history 看具体 layer failure。
+          docker buildx build \
+            --progress=plain \
+            --platform=linux/amd64 \
+            --load \
+            . 2>&1 | tee /tmp/build.log | tail -80 | while read -r line; do
+              echo "::error::$line"
+            done
+          exit 1
 
       - name: summary
         run: |
