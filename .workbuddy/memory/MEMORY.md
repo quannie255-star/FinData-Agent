@@ -83,6 +83,16 @@ findata.trust/ 添新子包。
 **当前主线一句话**：在形态相同、结论相反的事实之间（停牌 vs 上游停更）做出区分。
 归因层是产品生死线（不做归因，精确率只有 61.5%；做了就 100%）。
 
+**已知边界（真实数据路径，2026-09-07 实测）**
+- CI 只跑合成语料 → 真实路径 bug 进不了门禁。改数据层/探针后**必须真跑一次
+  `run_inspection.py --source warehouse`**（已因此抓到 calendar 的
+  Timestamp/date 类型混用 crash，合成语料下永不触发）
+- 硬编码节假日只覆盖 2024-2025 → 2022 春节被误报 missing_rows。春节所有标的
+  同时休市，`with_observed` 推不出来，需接 `ak.tool_trade_date_hist_sina`
+- **`corporate_event` 真实路径是空表**（有 schema + 消费方，**无采集代码**）→
+  停牌/除权抑制在真实数据上没有数据源，报告"抑制 0"。合成语料的抑制率是设计
+  出来的对照。下一步用 `ak.stock_history_dividend` 先接除权除息
+
 **ready for JD 投递的可验证锚点**
 - 评测门禁从口头承诺 → CI 自动化（test.yml 三关 + ci-gate 聚合）
 - 服务外部化：HTTP API（5 路由）+ MCP stdio（3 工具）双路径，同一份 service 函数（杜绝 UI/Agent 漂移）

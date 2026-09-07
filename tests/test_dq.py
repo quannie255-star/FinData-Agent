@@ -53,6 +53,21 @@ def test_calendar_ignores_weekend():
     assert cal.staleness(friday, monday) == 0
 
 
+def test_calendar_accepts_pandas_timestamp():
+    """真实仓库路径下日期会混着 `date` 和 `pd.Timestamp`，不能一比大小就炸。
+
+    合成语料类型单一，CI 跑不出来；只有 `--source warehouse`（DuckDB → pandas）
+    才会在 `cur <= end` 抛 "Cannot compare Timestamp with datetime.date"。
+    """
+    cal = TradingCalendar.default()
+    assert cal.trading_days(pd.Timestamp("2024-03-01"), date(2024, 3, 4)) == [
+        date(2024, 3, 1),
+        date(2024, 3, 4),
+    ]
+    assert cal.is_trading_day(pd.Timestamp("2024-03-02")) is False  # 周六
+    assert cal.prev_trading_day(pd.Timestamp("2024-03-04")) == date(2024, 3, 1)
+
+
 def test_suspension_is_suppressed():
     """停牌造成的缺失必须被识别为合法，而不是报成采集故障。"""
     baseline = build_baseline(SyntheticConfig(n_suspension=2, n_ex_rights=0, n_new_listing=0))

@@ -11,7 +11,22 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+
+
+def _as_date(day: date) -> date:
+    """把 `pandas.Timestamp` / `datetime` 统一成 `datetime.date`。
+
+    真实仓库路径下 DuckDB 与 pandas 混用，同一个"日期"在不同环节可能是
+    `datetime.date` 也可能是 `pd.Timestamp`（Timestamp 是 datetime 的子类）。
+    两者混着比大小会抛 `TypeError: Cannot compare Timestamp with datetime.date`。
+
+    合成语料路径类型单一，CI 跑不出来；只有 `--source warehouse` 拿真实
+    DuckDB 数据巡检时才会炸 —— 所以归一做在日历这一层，覆盖所有调用方。
+    """
+    if isinstance(day, datetime):  # 含 pandas.Timestamp
+        return day.date()
+    return day
 
 
 def _span(start: str, end: str) -> Iterator[date]:
@@ -68,6 +83,7 @@ class TradingCalendar:
         return self._holidays
 
     def is_trading_day(self, day: date) -> bool:
+        day = _as_date(day)
         if day in self._extra:
             return True
         return day.weekday() < 5 and day not in self._holidays
@@ -83,6 +99,7 @@ class TradingCalendar:
 
     def trading_days(self, start: date, end: date) -> list[date]:
         """闭区间内的全部交易日。"""
+        start, end = _as_date(start), _as_date(end)
         days: list[date] = []
         cur = start
         while cur <= end:
@@ -93,7 +110,7 @@ class TradingCalendar:
 
     def prev_trading_day(self, day: date) -> date:
         """返回早于 day 的最近交易日。"""
-        cur = day - timedelta(days=1)
+        cur = _as_date(day) - timedelta(days=1)
         while not self.is_trading_day(cur):
             cur -= timedelta(days=1)
         return cur
