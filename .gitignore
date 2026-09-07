@@ -19,6 +19,9 @@ htmlcov/
 .pytest_cache/
 .ruff_cache/
 
+# 本地生成的报告与 dashboard 产物（每次 run_inspection 重新生成）
+reports/
+
 # IDE / 系统
 .idea/
 .vscode/
