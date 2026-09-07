@@ -24,8 +24,35 @@ from findata.api.app import app as api_app
 from findata.api.app import healthz as api_healthz
 
 PORT = int(os.environ.get("PORT", "8080"))
-# src/findata/cli/serve.py → 上溯三级即仓库根
-SITE_DIR = Path(__file__).resolve().parents[3] / "site"
+
+
+def _resolve_site_dir() -> Path:
+    """定位 site/ 目录，容错 editable / wheel / frozen 多种 install 方式。
+
+    解析顺序：
+    1. `FINDATA_SITE_DIR` 环境变量（部署时显式覆盖，最稳）
+    2. `__file__` 的 4 级上溯（`src/findata/cli/serve.py` 的 repo root）
+    3. 从 `__file__` 向上 walk，找首个含 `index.html` 的 site/ 目录
+    4. 都失败时退回第 2 步的猜测路径（请求时 read_text 会 500，比静默好）
+    """
+    env = os.environ.get("FINDATA_SITE_DIR")
+    if env:
+        return Path(env).resolve()
+
+    here = Path(__file__).resolve()
+    primary = here.parents[3] / "site"
+    if (primary / "index.html").exists():
+        return primary
+
+    for ancestor in here.parents:
+        cand = ancestor / "site"
+        if (cand / "index.html").exists():
+            return cand
+
+    return primary
+
+
+SITE_DIR = _resolve_site_dir()
 
 # 拿 API 全部路由 + 演示站路由拼成单一进程
 app = api_app
