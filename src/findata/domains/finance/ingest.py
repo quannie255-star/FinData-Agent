@@ -200,9 +200,18 @@ def fetch_valuation(symbol: str, start: str) -> pd.DataFrame:
 
 
 def ingest_universe(conn: duckdb.DuckDBPyConnection) -> int:
+    # list_date 留空：akshare 需额外接口才能拿到上市日。
+    # TODO: 可从 stock_daily 首日近似回填（首次采集后 COALESCE 一次即可），
+    # 归因器需要它来区分"新股历史短"和"数据被删"。
     df = pd.DataFrame(
         [
-            {"symbol": s, "name": n, "industry": ind, "listed_board": _board(s)}
+            {
+                "symbol": s,
+                "name": n,
+                "industry": ind,
+                "listed_board": _board(s),
+                "list_date": None,
+            }
             for s, n, ind in UNIVERSE
         ]
     )

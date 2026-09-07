@@ -30,7 +30,19 @@ CREATE TABLE IF NOT EXISTS stock_universe (
     symbol      VARCHAR PRIMARY KEY,   -- 6 位代码，如 600519
     name        VARCHAR,
     industry    VARCHAR,
-    listed_board VARCHAR               -- main / star / chinext
+    listed_board VARCHAR,               -- main / star / chinext
+    list_date   DATE                    -- 上市日；新股历史长度天然不足，供归因器抑制误报
+);
+
+-- 公司事件：停牌 / 除权除息 / 上市。归因器的"业务知识"来源。
+-- 缺了它，停牌造成的缺失与采集失败造成的缺失在形态上无法区分。
+CREATE TABLE IF NOT EXISTS corporate_event (
+    symbol   VARCHAR,
+    date     DATE,
+    kind     VARCHAR,                  -- suspension / ex_rights / listing
+    end_date DATE,                     -- 停牌结束日，其余事件为 NULL
+    detail   VARCHAR,
+    PRIMARY KEY (symbol, date, kind)
 );
 
 -- 个股日线（前复权，新浪口径）。单位：价格=元，成交量=股，成交额=元，换手率=小数
