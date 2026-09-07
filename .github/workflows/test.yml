@@ -84,19 +84,7 @@ jobs:
           payload=$(curl -fsS -X POST -H 'content-type: application/json' \
                        -d '{"source":"synthetic","seed":20240102}' \
                        http://127.0.0.1:8080/v1/inspect)
-          echo "$payload" | python -c "
-import sys, json
-d = json.loads(sys.stdin.read())
-# 顶层契约: asof / summary / alerts / suppressed
-for k in ('asof', 'summary', 'alerts', 'suppressed'):
-    assert k in d, f'missing {k}: {list(d)}'
-s = d['summary']
-for k in ('n_findings', 'n_alerts', 'n_suppressed', 'health_score', 'grade'):
-    assert k in s, f'missing summary.{k}: {list(s)}'
-assert isinstance(d['alerts'], list)
-print('inspect ok, n_findings=%d n_alerts=%d n_suppressed=%d health=%s' % (
-    s['n_findings'], s['n_alerts'], s['n_suppressed'], s['health_score']))
-"
+          echo "$payload" | python3 scripts/ci_assert_inspect.py
           # 4) 看板必须吐 HTML（且包含 findata-summary 这个 meta，是演示站依赖的）
           html=$(curl -fsS 'http://127.0.0.1:8080/v1/dashboard?source=synthetic&days=10')
           echo "$html" | grep -q 'name="findata-summary"'
