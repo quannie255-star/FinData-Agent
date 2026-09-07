@@ -27,11 +27,14 @@ WORKDIR /build
 
 # 先拷 manifest，让依赖层能命中缓存
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev --no-install-project
+# 拆开 + 强制 verbose：把 log 留在 layer，下一步 cat，buildx 会显示
+RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
+    ec=$?; cat /tmp/uv_deps.log | tail -60; exit $ec
 
 # 再装项目本身
 COPY src ./src
-RUN uv sync --no-dev
+RUN uv sync --no-dev --verbose > /tmp/uv_proj.log 2>&1; \
+    ec=$?; cat /tmp/uv_proj.log | tail -60; exit $ec
 
 # ─── runtime ───
 FROM python:3.11-slim AS runtime
