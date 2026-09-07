@@ -15,12 +15,17 @@ import duckdb
 from findata.dq.triage import BaselineTriage
 from findata.eval.fixtures import SyntheticConfig
 from findata.eval.runner import EvalResult, run_evaluation
+from findata.observability import get_tracer, setup_tracer
 from findata.report.dashboard import build_dashboard, render_dashboard
 from findata.report.inspect import InspectionResult, Snapshot, run_inspection
 from findata.report.render import render_html, render_markdown
 
 Source = Literal["synthetic", "duckdb"]
 TriageKind = Literal["baseline", "llm", "both"]
+
+# service 层一加载就把 TracerProvider 装上。幂等,重复 import 不重置。
+setup_tracer()
+_tracer = get_tracer()
 
 
 def inspect(
@@ -30,9 +35,21 @@ def inspect(
     db_path: str | None = None,
 ) -> InspectionResult:
     """跑巡检：装 Snapshot → 回放到 asof → 跑流水线。"""
-    snap = _load_snapshot(source, asof, seed, db_path)
-    target = snap.as_of(asof) if asof is not None else snap
-    return run_inspection(target)
+    with _tracer.start_as_current_span("service.inspect") as span:
+        span.set_attribute("findata.source", source)
+        span.set_attribute("findata.asof", asof.isoformat() if asof else "latest")
+        span.set_attribute("findata.seed", seed)
+        snap = _load_snapshot(source, asof, seed, db_path)
+        target = snap.as_of(asof) if asof is not None else snap
+        result = run_inspection(target)
+        # 把核心健康指标塞进 span attribute,便于 trace ↔ alert 双向跳转
+        s = result.summary
+        span.set_attribute("findata.health_score", s.health_score)
+        span.set_attribute("findata.n_findings", s.n_findings)
+        span.set_attribute("findata.n_alerts", s.n_alerts)
+        span.set_attribute("findata.n_suppressed", s.n_suppressed)
+        span.set_attribute("findata.grade", s.grade())
+        return result
 
 
 def render_report(
@@ -43,11 +60,14 @@ def render_report(
     db_path: str | None = None,
 ) -> tuple[str, str]:
     """渲染单日报告。返回 (content, media_type)。"""
-    result = inspect(source, asof, seed, db_path)
-    if fmt == "md":
-        body = render_markdown(result, header_extra=_header(result, source))
-        return body, "text/markdown; charset=utf-8"
-    return render_html(result), "text/html; charset=utf-8"
+    with _tracer.start_as_current_span("service.render_report") as span:
+        span.set_attribute("findata.source", source)
+        span.set_attribute("findata.format", fmt)
+        result = inspect(source, asof, seed, db_path)
+        if fmt == "md":
+            body = render_markdown(result, header_extra=_header(result, source))
+            return body, "text/markdown; charset=utf-8"
+        return render_html(result), "text/html; charset=utf-8"
 
 
 def build_dashboard_html(
@@ -59,10 +79,17 @@ def build_dashboard_html(
     db_path: str | None = None,
 ) -> tuple[str, InspectionResult]:
     """组装看板。返回 (html, current_result) —— 后者给 API 当 JSON 摘要用。"""
-    snap = _load_snapshot(source, asof, seed, db_path)
-    eval_report = run_evaluation(SyntheticConfig()).report if with_eval else None
-    data = build_dashboard(snap, n_days=days, eval_report=eval_report)
-    return render_dashboard(data), data.current
+    with _tracer.start_as_current_span("service.build_dashboard") as span:
+        span.set_attribute("findata.source", source)
+        span.set_attribute("findata.days", days)
+        span.set_attribute("findata.with_eval", with_eval)
+        snap = _load_snapshot(source, asof, seed, db_path)
+        eval_report = run_evaluation(SyntheticConfig()).report if with_eval else None
+        data = build_dashboard(snap, n_days=days, eval_report=eval_report)
+        html = render_dashboard(data)
+        # html bytes 也是可观察指标:同样参数下若它大幅增长,说明报告内容变了
+        span.set_attribute("findata.html_bytes", len(html.encode("utf-8")))
+        return html, data.current
 
 
 def evaluate(
@@ -74,21 +101,30 @@ def evaluate(
     LLM 客户端缺省用项目内的 MockLLMClient，使外部 Agent 接入无需配置
     OPENAI_API_KEY 也能跑通对照；接入真实 LLM 时通过环境变量即可切换。
     """
-    if triage == "baseline":
-        return run_evaluation(fault_seed=seed)
-    from findata.agent.llm import MockLLMClient
-    from findata.agent.llm_triage import LLMTriage
+    with _tracer.start_as_current_span("service.evaluate") as span:
+        span.set_attribute("findata.fault_seed", seed)
+        span.set_attribute("findata.triage_kind", triage)
+        if triage == "baseline":
+            return run_evaluation(fault_seed=seed)
+        from findata.agent.llm import MockLLMClient
+        from findata.agent.llm_triage import LLMTriage
 
-    mock = MockLLMClient()
-    llm_triage = LLMTriage(client=mock)
-    if triage == "llm":
-        return run_evaluation(fault_seed=seed, triage=llm_triage)
-    # both: 同 batch 双归因，跑 κ
-    return run_evaluation(
-        fault_seed=seed,
-        triage=BaselineTriage(),
-        second_triage=llm_triage,
-    )
+        mock = MockLLMClient()
+        llm_triage = LLMTriage(client=mock)
+        if triage == "llm":
+            return run_evaluation(fault_seed=seed, triage=llm_triage)
+        # both: run_evaluation 内部跑 baseline + llm 双归因
+        with _tracer.start_as_current_span("service.evaluate.both_triage") as sub:
+            result = run_evaluation(
+                fault_seed=seed,
+                triage=BaselineTriage(),
+                second_triage=llm_triage,
+            )
+            if result.triage_agreement:
+                k = result.triage_agreement.get("kappa_root_cause")
+                if k is not None:
+                    sub.set_attribute("findata.llm_kappa_root_cause", float(k))
+        return result
 
 
 # ─────────────────────────── 私有 ───────────────────────────

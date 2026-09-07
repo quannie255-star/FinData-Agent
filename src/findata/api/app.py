@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import date as _date
 from datetime import datetime
 from typing import Any, Literal
@@ -18,6 +19,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 from findata import __version__
+from findata.observability import get_in_memory_exporter
 from findata.service import (
     build_dashboard_html,
     eval_to_json,
@@ -146,7 +148,54 @@ def _inject_meta(html: str, meta: dict[str, Any]) -> str:
     return html.replace("</head>", f"  {tag}\n</head>", 1)
 
 
+@app.get("/v1/traces")
+def get_traces(
+    limit: int = Query(50, ge=1, le=500),  # noqa: B008
+) -> dict[str, Any]:
+    """最近 N 条 span 的快照。
+
+    OTel 的 span 走 InMemorySpanExporter 收集；演示站 dashboard 可以从
+    这里拿 trace 数据渲染「刚才发生了哪些调用 + 每个调用耗时多少」。
+    生产里通常配 OTLP 把 span 推给 Jaeger / Tempo，但 5KB 演示站不引入
+    那一层。
+    """
+    exporter = get_in_memory_exporter()
+    if exporter is None:
+        return {"enabled": False, "spans": []}
+    spans = exporter.get_finished_spans()
+    # 最新的在前面；O(N) 切片,演示量级不优化
+    spans = sorted(spans, key=lambda s: s.end_time, reverse=True)[:limit]
+    return {
+        "enabled": True,
+        "n_total": len(exporter.get_finished_spans()),
+        "n_returned": len(spans),
+        "spans": [
+            {
+                "name": s.name,
+                "start_time": s.start_time,
+                "end_time": s.end_time,
+                "duration_ms": int((s.end_time - s.start_time) / 1_000_000),
+                "attributes": _safe_attrs(s.attributes),
+                "status": s.status.status_code.name,
+            }
+            for s in spans
+        ],
+    }
+
+
 # 兼容旧调用者：JSON 错误返回
 @app.exception_handler(HTTPException)
 def http_exc_handler(_, exc: HTTPException):  # type: ignore[no-untyped-def]
     return JSONResponse({"error": exc.detail}, status_code=exc.status_code)
+
+
+def _safe_attrs(attrs: Any) -> dict[str, Any]:
+    """OTel attribute 可能是非 JSON 原生类型,这里只保留可序列化的部分。"""
+    out: dict[str, Any] = {}
+    for k, v in attrs.items():
+        try:
+            json.dumps(v)
+            out[k] = v
+        except (TypeError, ValueError):
+            out[k] = str(v)
+    return out
