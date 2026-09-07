@@ -6,9 +6,11 @@ stdio 让 Claude Desktop / Cursor / Cline 这类现成的客户端零配置接�
 
 工具集
 ------
-- `findata_health_check` : 跑一次巡检，返回 JSON 摘要
-- `findata_dashboard`    : 拼一份自包含 HTML 看板
-- `findata_validate`     : 跑评测，返回 5 项指标；可选 κ 一致性
+- `findata_health_check`  : 跑一次巡检，返回 JSON 摘要
+- `findata_dashboard`     : 拼一份自包含 HTML 看板
+- `findata_validate`      : 跑评测，返回 5 项指标；可选 κ 一致性
+- `findata_list_metrics`  : 列出指标字典里所有 metric 元数据 (M2 增量)
+- `findata_execute_metric`: 跑某一个 SQL-kind metric, 确定性返回 (sql, params, result) (M2 增量)
 
 调用 `findata-mcp` 启动。
 """
@@ -18,19 +20,40 @@ from __future__ import annotations
 import argparse
 import asyncio
 from datetime import date
+from pathlib import Path
 from typing import Any
 
+import duckdb
 from mcp.server.mcpserver import MCPServer
 
+from findata.dq import MetricRegistry, compile_metric, default_ctx
 from findata.service import build_dashboard_html, eval_to_json, inspect, result_to_json
+
+# 默认指标字典路径: 与 findata 包一起发布; 也可被 FINDATA_METRICS_YAML 环境变量覆盖
+_DEFAULT_METRICS_YAML = Path(__file__).parent.parent / "dq" / "metrics.yaml"
+_METRICS_REGISTRY: MetricRegistry | None = None
+
+
+def _registry() -> MetricRegistry:
+    """进程级单例 registry。YAML 改动需重启服务, 与"快速查一下指标元数据" 的
+    调用频次配得上 —— 不做 hot-reload."""
+    global _METRICS_REGISTRY
+    if _METRICS_REGISTRY is None:
+        import os as _os
+        path_str = _os.environ.get("FINDATA_METRICS_YAML", str(_DEFAULT_METRICS_YAML))
+        _METRICS_REGISTRY = MetricRegistry.from_yaml(Path(path_str))
+    return _METRICS_REGISTRY
+
 
 mcp = MCPServer(
     name="findata",
     instructions=(
-        "findata: 数据质量监控 Agent。三个工具——"
-        "健康检查返回告警/抑制摘要；"
-        "返回自包含 HTML 看板；"
-        "validate 跑评测并可选输出 baseline vs LLM 归因的 Cohen's κ。"
+        "findata: 数据质量监控 Agent。五个工具——"
+        "health_check 返回告警/抑制摘要；"
+        "dashboard 返回自包含 HTML 看板；"
+        "validate 跑评测并可选输出 baseline vs LLM 归因的 Cohen's κ；"
+        "list_metrics 列出指标字典；"
+        "execute_metric 确定性跑某个 SQL-kind metric。"
     ),
 )
 
@@ -137,6 +160,91 @@ def findata_validate(
     from findata.service import evaluate as _evaluate
 
     return eval_to_json(_evaluate(seed=seed, triage=triage))  # type: ignore[arg-type]
+
+
+@mcp.tool(
+    name="findata_list_metrics",
+    title="Findata List Metrics",
+    description=(
+        "列出指标字典 (findata/dq/metrics.yaml) 里所有 metric 的元数据: "
+        "name / kind / description / default_severity / threshold。 "
+        "返回纯 JSON 数组, 外部 Agent 拿到后可以选择具体 metric 跑 execute_metric。"
+        "环境变量 FINDATA_METRICS_YAML 可覆盖默认 yaml 路径。"
+    ),
+)
+def findata_list_metrics() -> dict[str, Any]:
+    """Enumerate every metric defined in the metric dictionary."""
+    reg = _registry()
+    return {"count": len(reg.list()), "metrics": reg.list()}
+
+
+@mcp.tool(
+    name="findata_execute_metric",
+    title="Findata Execute Metric",
+    description=(
+        "确定性跑一个 SQL-kind metric: 把指标字典里的 sql_template 编译成"
+        "(sql, params), 拿数据源里读出来的 duckdb 视图直接执行, 返回结果行。"
+        "只支持 kind=sql 的 metric; kind=probe 的请走 findata_health_check。"
+        "source=synthetic 时, 会在内存里建一张合成的 stock_daily 视图再跑。"
+    ),
+)
+def findata_execute_metric(
+    name: str,
+    source: str = "synthetic",
+    asof: str | None = None,
+    seed: int = 20240102,
+) -> dict[str, Any]:
+    """Compile a metric's SQL template, run it, and return the rows."""
+    reg = _registry()
+    try:
+        metric = reg.get(name)
+    except KeyError as exc:
+        return {"error": str(exc)}
+    if metric["kind"] != "sql":
+        return {
+            "error": f"metric {name!r} is kind={metric['kind']!r}, not sql; "
+            "use health_check instead"
+        }
+    target = _parse_date(asof)
+    sql, params = compile_metric(metric, default_ctx(asof=target or date.today()))
+    try:
+        conn = _connect_for_execute(source, seed)
+    except (NotImplementedError, ValueError) as exc:
+        return {"error": str(exc), "name": name, "kind": "sql"}
+    try:
+        result = conn.execute(sql, params).fetchall()
+        cols = [d[0] for d in conn.description]
+        rows = [dict(zip(cols, row, strict=False)) for row in result]
+    finally:
+        if source == "duckdb":
+            conn.close()
+    return {
+        "name": name,
+        "kind": "sql",
+        "sql": sql.strip(),
+        "params": [str(p) for p in params],
+        "rows": rows,
+        "threshold": metric.get("threshold", {}),
+    }
+
+
+def _connect_for_execute(source: str, seed: int) -> duckdb.DuckDBPyConnection:
+    """根据 source 选数据视图。synthetic 走 Snapshot.from_synthetic 把 DataFrame 注册成视图。"""
+    conn = duckdb.connect(":memory:")
+    if source == "synthetic":
+        from findata.report.inspect import Snapshot
+
+        snap = Snapshot.from_synthetic(seed=seed)
+        conn.register("stock_daily", snap.stock_daily)
+        if not snap.valuation_daily.empty:
+            conn.register("valuation_daily", snap.valuation_daily)
+    elif source == "duckdb":
+        raise NotImplementedError(
+            "execute_metric(source=duckdb) 暂未接通真实仓库, 请用 synthetic"
+        )
+    else:
+        raise ValueError(f"unknown source: {source!r}")
+    return conn
 
 
 # ─────────────────────────── 入口 ───────────────────────────

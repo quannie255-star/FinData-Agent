@@ -547,6 +547,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pyyaml" },
     { name = "requests" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -569,6 +570,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pydantic-settings", specifier = ">=2.3" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.31" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.4" },
 ]

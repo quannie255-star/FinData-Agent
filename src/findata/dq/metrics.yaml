@@ -1,0 +1,168 @@
+# findata 指标字典 (metrics dictionary)
+#
+# 把"加新探针"这件事从改 py 代码 → 改 YAML。这是"数据质量监控 Agent"
+# 与"硬编码 if/else 监控脚本"的分水岭:
+#
+# 1. 业务方/DBA 可以看 YAML 知道现在监控了哪些指标,不需要读 py 源码
+# 2. 调整阈值不需要发版
+# 3. 评测脚本可以扫这份 YAML 自动生成 expected fault 集
+#
+# 两种 metric 形态:
+#   - kind: probe  — 调 findata.dq.probes.<probe_fn> 在 DataFrame 上跑
+#                    (现有 7 个探针,阈值在这里是文档性的,实际判定在 py)
+#   - kind: sql    — 编译 sql_template + params 后丢给 duckdb 跑
+#                    (新能力,真正的"确定性 SQL 编译器")
+#
+# threshold 字段是触发上限(>, >=, == 视 metric 而定,见各 metric 的 description)。
+# 改这里会同步改 registry 暴露给 MCP 的元数据,演示站 /v1/traces 也能看见。
+
+metrics:
+
+  # ─── 现有探针 (py 实现) ───
+  - name: freshness
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_freshness
+    description: 数据未在期望到达日 T+1 内到达
+    category: freshness
+    default_severity: P1
+    threshold:
+      max_lag_days: 1            # 落后 ≥ 1 个交易日 = P1, ≥ 2 = P0
+    table: stock_daily
+
+  - name: completeness
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_completeness
+    description: 关键字段(close/volume/amount)缺失率
+    category: shape
+    default_severity: P2
+    threshold:
+      null_rate_max: 0.05        # 任一关键字段空值率 > 5% 即告警
+    table: stock_daily
+
+  - name: uniqueness
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_uniqueness
+    description: (symbol, date) 主键是否唯一
+    category: shape
+    default_severity: P0
+    threshold:
+      duplicate_count_max: 0
+    table: stock_daily
+
+  - name: validity
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_validity
+    description: 单日涨跌幅是否突破涨跌停幅度
+    category: shape
+    default_severity: P1
+    threshold:
+      # 主板 ±10%, 创业板/科创板 ±20% (由 universe.listed_board 决定,这里只是告警入门阈值)
+      breach_pct_min: 0.095
+      breach_pct_max: 0.205
+    table: stock_daily
+
+  - name: drift
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_drift
+    description: 成交量/成交额相对基线(过去 30 日)是否发生量级漂移
+    category: distribution
+    default_severity: P1
+    threshold:
+      drift_up: 5.0              # 近期均值 / 历史均值 > 5
+      drift_down: 0.2            # 近期均值 / 历史均值 < 0.2
+      min_history_days: 30
+    table: stock_daily
+
+  - name: null_sweep
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_null_sweep
+    description: 跨字段扫"全 null 行"——成片缺失暗示上游 schema/分区错误
+    category: shape
+    default_severity: P0
+    threshold:
+      all_null_min_rows: 5
+    table: stock_daily
+
+  - name: history_depth
+    kind: probe
+    probe_module: findata.dq.probes
+    probe_fn: probe_history_depth
+    description: 个股历史长度是否足以做统计基线(新股上市/补数据未完成)
+    category: freshness
+    default_severity: P2
+    threshold:
+      min_days: 60
+    table: stock_daily
+
+  # ─── 新: 确定性 SQL 指标 (SQL 模板 + 阈值) ───
+  # 这些 metric 不依赖 py 业务代码。改 SQL/阈值就改监控行为,
+  # 编译期确定、不靠 LLM,这是"确定性 SQL 编译器"的卖点。
+
+  - name: row_count
+    kind: sql
+    description: 观察日 stock_daily 行数,反映是否丢整段
+    category: shape
+    default_severity: P1
+    table: stock_daily
+    sql_template: |
+      SELECT count(*) AS n
+      FROM stock_daily
+      WHERE date = $asof
+    threshold:
+      min_rows: 3000             # A 股活跃标的 < 3000 行 = 整段没到
+
+  - name: null_rate
+    kind: sql
+    description: 观察日 close 字段空值率
+    category: shape
+    default_severity: P1
+    table: stock_daily
+    sql_template: |
+      SELECT
+        count(*) AS n_total,
+        count(*) FILTER (WHERE close IS NULL) AS n_null
+      FROM stock_daily
+      WHERE date = $asof
+    threshold:
+      null_rate_max: 0.02
+
+  - name: distinct_symbol
+    kind: sql
+    description: 观察日 distinct 标的数,反映 universe 覆盖
+    category: shape
+    default_severity: P2
+    table: stock_daily
+    sql_template: |
+      SELECT count(DISTINCT symbol) AS n
+      FROM stock_daily
+      WHERE date = $asof
+    threshold:
+      min_distinct: 3000
+
+  - name: freshness_sql
+    kind: sql
+    description: 观察日距最后一行(按 universe 已知交易日推算)的滞后天数
+    category: freshness
+    default_severity: P1
+    table: stock_daily
+    sql_template: |
+      WITH expected AS (
+        -- 取 universe 中已上市标的的最近 list_date,
+        -- 期望最后一行 ≥ max(list_date) 的最后一个交易日
+        SELECT max(date) AS last_observed
+        FROM stock_daily
+        WHERE date <= $asof
+      )
+      SELECT
+        $asof AS asof,
+        last_observed,
+        $asof - last_observed AS lag_days
+      FROM expected
+    threshold:
+      max_lag_days: 1

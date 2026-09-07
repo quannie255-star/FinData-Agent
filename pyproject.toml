@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.28.1",
     "opentelemetry-api>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
+    "pyyaml>=6.0.3",
 ]
 
 [dependency-groups]
