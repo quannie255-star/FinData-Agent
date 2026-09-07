@@ -27,11 +27,16 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# 不用 hatchling —— hatchling 的 PEP 660 editable install 走 `editables`
+# 包，slim docker 容器内 PyPI 拉 editables 经常失败（多轮 release 都
+# 撞这一处）。改用 setuptools 68+ 自带的 PEP 660 实现（_vendor 路径），
+# 不需要 editables 任何外部 build dep。
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/findata"]
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["findata*"]
 
 [project.scripts]
 findata-api = "findata.api.app:app"
