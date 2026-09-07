@@ -31,23 +31,21 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
     ec=$?; cat /tmp/uv_deps.log | tail -60; exit $ec
 
-# Step 2: 用 pip wheel + pip install 装 project 本身。
+# Step 2: 用 pip install -e 装 project 本身。
 # **不要用 uv sync 二次 install-project** —— uv 走 PEP 660 editable hook
 # 需要额外下载 `editables==0.6` 作为 build requirement，slim + 容器内
 # 容易撞到 PyPI 拉取失败（"DEBUG Downloading and building requirement
 # for build: editables==0.6" + 0.976s exit 1）。
-# pip wheel 走 isolated build（自动 temp venv 装 build-system requires），
-# pip install 装 prebuilt wheel，路径稳定不依赖 editables 包。
+# 同样不要用 `pip wheel` —— hatchling 的 isolated build 也要拉 editables。
 #
-# 错误暴露：set -o pipefail + tee /tmp/x.log >&2 + exit ${PIPESTATUS[0]}
-# 把所有 stderr 一行行送到 buildx 的 error message（不依赖 buildx
-# 展开 layer log，annotation 字段能直接看到 pip wheel 报的具体错）。
+# 改用 `pip install -e`：
+# - pip 23+ 自带 PEP 660 实现，不需要 editables 包
+# - `-e` 走 pip 的 wheel + editable install 链路，不调 hatchling 的
+#   PEP 660 hook（hatchling 默认要 editables，pip 不用）
+# - `--no-deps` 跳过 deps（已经在 uv sync 装好），只装 project 自身
 COPY src ./src
 RUN set -o pipefail; \
-    pip wheel --no-deps -w /wheels . 2>&1 | tee /tmp/pip_wheel.log >&2; \
-    exit ${PIPESTATUS[0]}
-RUN set -o pipefail; \
-    pip install --no-deps /wheels/findata-*.whl 2>&1 | tee /tmp/pip_install.log >&2; \
+    pip install --no-deps -e . 2>&1 | tee /tmp/pip_install.log >&2; \
     exit ${PIPESTATUS[0]}
 
 # ─── runtime ───
