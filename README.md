@@ -290,7 +290,7 @@ docker compose up                                # 容器化版
 - [x] M8 可观测：`findata.observability` OTel 默认 InMemory exporter，service 层埋点 + `GET /v1/traces` 端点
 - [x] M2-bis 指标字典：11 个 metric（7 探针 + 4 SQL）抽到 YAML，`SqlTemplate` 确定性编译器（`$name` → `?`，同名占位按次数复制参数），新增 MCP `findata_list_metrics` / `findata_execute_metric`
 - [x] M9 业务事实表 schema：`stock_universe.list_date` + `corporate_event(suspension/ex_rights/listing)`，归因层依赖的生产 schema 落地
-- [x] M7 CI：ruff + pytest(py 3.11/3.12) + 真实 serve smoke + ci-gate 聚合，ghcr.io 多平台镜像分发（仅 stable tag 推 `:latest`）
+- [x] M9-bis 上市日回填：`backfill_list_date` 用 `stock_daily` 首个交易日回填 `list_date`（幂等 + 补采到更早历史时自我修正）。没它的话 `BENIGN_NEW_LISTING`（新股历史短）这条归因分支在真实数据路径上永远走不到——只有 fixture 能触发，等于主线能力是哑的
 - [x] M7.1 CI 修复：smoke step 的 Python 断言从内嵌 `python -c "..."` 抽出为 `scripts/ci_assert_inspect.py`，workflow file invalid 修复
 - [x] M7.6 CI 修复（最终）：smoke step 里 `grep '"ok": true'` 收紧到 `grep '"ok":true'`——FastAPI 默认 JSON 编码无空格。中间绕了几圈（M7.2..M7.5 一步步把诊断打透），最终一次到位
 

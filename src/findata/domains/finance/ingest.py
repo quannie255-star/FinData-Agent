@@ -89,12 +89,17 @@ class IngestSummary:
     ok: list[dict] = field(default_factory=list)
     failed: list[dict] = field(default_factory=list)
     total_rows: int = 0
+    list_date_backfilled: int = 0  # 本次回填了上市日的股票数
 
     def report(self) -> str:
         lines = [
             f"采集完成：成功 {len(self.ok)} 项 / 失败 {len(self.failed)} 项"
             f" / 共写入 {self.total_rows} 行"
         ]
+        if self.list_date_backfilled:
+            lines.append(
+                f"  上市日回填：{self.list_date_backfilled} 只（取自 stock_daily 首日）"
+            )
         for f in self.failed:
             lines.append(f"  [失败] {f['target']} {f['symbol']}: {f['error']}")
         return "\n".join(lines)
@@ -200,9 +205,8 @@ def fetch_valuation(symbol: str, start: str) -> pd.DataFrame:
 
 
 def ingest_universe(conn: duckdb.DuckDBPyConnection) -> int:
-    # list_date 留空：akshare 需额外接口才能拿到上市日。
-    # TODO: 可从 stock_daily 首日近似回填（首次采集后 COALESCE 一次即可），
-    # 归因器需要它来区分"新股历史短"和"数据被删"。
+    # list_date 先留空：akshare 拿上市日要额外调接口，而日线还没采，
+    # 此刻也没有素材可推算。ingest_all 末尾会调 backfill_list_date 回填。
     df = pd.DataFrame(
         [
             {
@@ -219,6 +223,43 @@ def ingest_universe(conn: duckdb.DuckDBPyConnection) -> int:
         n = upsert_dataframe(conn, "stock_universe", df, ["symbol"])
         t.add(n)
     return n
+
+
+def backfill_list_date(conn: duckdb.DuckDBPyConnection) -> int:
+    """用 stock_daily 的首个交易日回填 `stock_universe.list_date`。
+
+    为什么需要：归因器靠 list_date 区分「新股历史天然短」（BENIGN_NEW_LISTING，
+    抑制告警）和「历史数据被删」（MISSING_ROWS，要报）。没有它，真实数据路径上
+    这条分支永远走不到 —— 只有 fixture 能触发，等于主线能力是哑的。
+
+    为什么敢用首个交易日近似：akshare 没有顺手的上市日接口，而"表内最早的
+    交易日"误差最多一天（首日停牌除外），对"是不是新股"这个二值判断足够。
+
+    性质：
+    - **幂等**：只在 list_date 为空时写，重复执行第二次返回 0
+    - **自我修正**：增量补采把历史推到更早时，list_date 跟着往前挪，不会
+      锁死在首次采集看到的那个值
+    """
+    # 命中条件：没填过，或日线里出现了比已填值更早的日期
+    _COND = """
+        (SELECT min(date) FROM stock_daily d WHERE d.symbol = u.symbol) IS NOT NULL
+        AND (u.list_date IS NULL
+             OR u.list_date > (SELECT min(date) FROM stock_daily d WHERE d.symbol = u.symbol))
+    """
+    changed = conn.execute(
+        f"SELECT count(*) FROM stock_universe u WHERE {_COND}"
+    ).fetchone()[0]
+    if not changed:
+        return 0
+
+    conn.execute(
+        f"""
+        UPDATE stock_universe u
+        SET list_date = (SELECT min(date) FROM stock_daily d WHERE d.symbol = u.symbol)
+        WHERE {_COND}
+        """
+    )
+    return int(changed)
 
 
 def ingest_all(
@@ -292,5 +333,8 @@ def ingest_all(
             lambda c=symbol, ss=sina_symbol, st=start: fetch_index_daily(c, ss, st),
         )
         time.sleep(settings.ingest_sleep_seconds)
+
+    # 日线都采完了才有素材推算上市日；幂等，重复跑返回 0
+    summary.list_date_backfilled = backfill_list_date(conn)
 
     return summary

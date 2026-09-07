@@ -7,6 +7,7 @@ import pytest
 
 from findata.core.db import connect, upsert_dataframe
 from findata.core.lineage import tracked_run
+from findata.domains.finance.ingest import backfill_list_date
 
 
 @pytest.fixture()
@@ -82,3 +83,71 @@ def test_lineage_success_and_failure(conn):
     ).fetchone()
     assert row[0] == "failed"
     assert "boom" in row[1]
+
+
+def _universe_df(symbol: str, list_date: str | None) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "symbol": [symbol],
+            "name": ["测试"],
+            "industry": ["测试"],
+            "listed_board": ["main"],
+            "list_date": [pd.to_datetime(list_date).date() if list_date else None],
+        }
+    )
+
+
+def _list_date_of(conn, symbol: str):
+    return conn.execute(
+        "SELECT list_date FROM stock_universe WHERE symbol = ?", [symbol]
+    ).fetchone()[0]
+
+
+def test_backfill_list_date_from_first_trading_day(conn):
+    """上市日取 stock_daily 最早一天 —— 归因器靠它区分"新股"和"历史被删"。"""
+    upsert_dataframe(conn, "stock_universe", _universe_df("600519", None), ["symbol"])
+    upsert_dataframe(
+        conn,
+        "stock_daily",
+        _daily_df("600519", ["2024-01-05", "2024-01-04", "2024-01-02"], [1.0, 2.0, 3.0]),
+        ["symbol", "date"],
+    )
+
+    assert backfill_list_date(conn) == 1
+    assert _list_date_of(conn, "600519") == pd.to_datetime("2024-01-02").date()
+
+
+def test_backfill_list_date_idempotent(conn):
+    upsert_dataframe(conn, "stock_universe", _universe_df("600519", None), ["symbol"])
+    upsert_dataframe(
+        conn, "stock_daily", _daily_df("600519", ["2024-01-02"], [1.0]), ["symbol", "date"]
+    )
+
+    assert backfill_list_date(conn) == 1
+    assert backfill_list_date(conn) == 0  # 第二次无事可做
+    assert _list_date_of(conn, "600519") == pd.to_datetime("2024-01-02").date()
+
+
+def test_backfill_list_date_moves_earlier_when_history_extended(conn):
+    """增量补采把历史推到更早时，已填的 list_date 要跟着往前挪。
+
+    否则 expected 交易日数被低估，老股可能被误判成"新股历史完整"而误抑制告警。
+    """
+    upsert_dataframe(conn, "stock_universe", _universe_df("600519", "2024-06-03"), ["symbol"])
+    upsert_dataframe(
+        conn, "stock_daily", _daily_df("600519", ["2024-06-03"], [1.0]), ["symbol", "date"]
+    )
+    assert backfill_list_date(conn) == 0  # 已填且不更早，不动
+
+    upsert_dataframe(
+        conn, "stock_daily", _daily_df("600519", ["2024-01-02"], [2.0]), ["symbol", "date"]
+    )
+    assert backfill_list_date(conn) == 1
+    assert _list_date_of(conn, "600519") == pd.to_datetime("2024-01-02").date()
+
+
+def test_backfill_list_date_skips_without_daily(conn):
+    """没有日线的股票不能回填（否则 min(date) 为 NULL，会把已有值覆盖成 NULL）。"""
+    upsert_dataframe(conn, "stock_universe", _universe_df("600519", None), ["symbol"])
+    assert backfill_list_date(conn) == 0
+    assert _list_date_of(conn, "600519") is None
