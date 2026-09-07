@@ -66,11 +66,13 @@ jobs:
 
       - name: dump build log on failure
         if: failure()
-        # buildx 不把详细 log 进 annotation；手动抓 log + ::error:: 推
+        # buildx 不把详细 log 进 annotation；手动重跑 buildx 拿 verbose log。
+        # **加 --no-cache** 否则 buildx 命中 GHA cache 几秒结束，看不到
+        # 任何 layer 的错误信息。
+        # 用 --load 不 push，省 quota / 不污染 ghcr.io。
         run: |
-          # 简化版：让 GitHub Actions 自己重跑 buildx 一次到本地 load，
-          # 拿 verbose log。或者用 docker history 看具体 layer failure。
           docker buildx build \
+            --no-cache \
             --progress=plain \
             --platform=linux/amd64 \
             --load \

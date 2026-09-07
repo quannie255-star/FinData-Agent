@@ -38,11 +38,17 @@ RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
 # for build: editables==0.6" + 0.976s exit 1）。
 # pip wheel 走 isolated build（自动 temp venv 装 build-system requires），
 # pip install 装 prebuilt wheel，路径稳定不依赖 editables 包。
+#
+# 错误暴露：set -o pipefail + tee /tmp/x.log >&2 + exit ${PIPESTATUS[0]}
+# 把所有 stderr 一行行送到 buildx 的 error message（不依赖 buildx
+# 展开 layer log，annotation 字段能直接看到 pip wheel 报的具体错）。
 COPY src ./src
-RUN pip wheel --no-deps -w /wheels . > /tmp/pip_wheel.log 2>&1; \
-    ec=$?; cat /tmp/pip_wheel.log | tail -60; exit $ec
-RUN pip install --no-deps /wheels/findata-*.whl > /tmp/pip_install.log 2>&1; \
-    ec=$?; cat /tmp/pip_install.log | tail -60; exit $ec
+RUN set -o pipefail; \
+    pip wheel --no-deps -w /wheels . 2>&1 | tee /tmp/pip_wheel.log >&2; \
+    exit ${PIPESTATUS[0]}
+RUN set -o pipefail; \
+    pip install --no-deps /wheels/findata-*.whl 2>&1 | tee /tmp/pip_install.log >&2; \
+    exit ${PIPESTATUS[0]}
 
 # ─── runtime ───
 FROM python:3.11-slim AS runtime
