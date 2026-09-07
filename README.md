@@ -206,7 +206,13 @@ uv run findata-mcp            # MCP stdio server（挂给 Claude Desktop / Curso
 docker compose up --build
 ```
 
-`slim` 多阶段构建：`uv` 装依赖到一个完整 venv，runtime 镜像只拷 site/ 与 site-packages，最终镜像约 200MB。健康检查走 `/healthz`。
+`slim` 多阶段构建：`uv sync --no-dev --no-install-project` 只装**依赖**，runtime 只拷
+site-packages + `src/` + `site/`，最终镜像约 200MB。健康检查走 `/healthz`。
+
+> **为什么不在容器里 `pip install .`**：slim 内跑 PEP 517 build 要现场拉 build
+> backend（hatchling → `editables`，或 setuptools isolated build），release 曾连挂 5 轮。
+> 改成源码 + `PYTHONPATH=/app/src` 直跑后链路一次通——`findata.__version__` 有
+> `_FALLBACK_VERSION` 兜底，不依赖 installed metadata。
 
 ### 为什么 HTTP + MCP 都做
 
@@ -233,9 +239,13 @@ GitHub Actions 三关 + 聚合门禁：
 | `smoke` | `uvicorn findata.cli.serve:app` 真实起 8080，curl `/`、`/healthz`、`/v1/inspect`、`/v1/dashboard`，断言响应字段 | "import 顺序错"、"entry-point 在打包后找不到模块"、"运行时字段不一致"——unit test 拼不出来的故障 |
 | `ci-gate` | 等上面三关都 success 才放行 | 防止 reviewer 看到 4 条绿里混着 1 条红 |
 
-镜像分发（`release.yml`）：**仅 `v*.*.*` tag 触发 docker buildx 多平台构建**，推到
-`ghcr.io/quannie255-star/findata`。RC tag（如 `v0.5.0-rc1`）不会污染 `:latest`，
-只有 stable tag 推 `:latest`。
+镜像分发（`release.yml`）：**仅 `v*.*.*` tag 触发 docker buildx 多平台构建**
+（linux/amd64 + linux/arm64），推到 `ghcr.io/quannie255-star/findata-agent`。
+RC tag（如 `v0.5.0-rc1`）不会污染 `:latest`，只有 stable tag 推 `:latest`。
+
+**push 前先冒烟**：multi-arch 构建只能 push、不能 `docker run`，所以流水线拆两步 ——
+先单架构 amd64 `--load` 构建并起容器，curl `/healthz` 与 `/` 通过后才 multi-arch push。
+坏镜像不会进 registry。
 
 ## 可观测：OpenTelemetry
 

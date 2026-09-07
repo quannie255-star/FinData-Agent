@@ -106,5 +106,7 @@ jobs:
       - name: summary
         run: |
           echo "pushed: ${{ steps.meta.outputs.tags }}"
+          echo "digest: ${{ steps.build.outputs.digest }}"
           echo "manifest:"
-          echo "${{ steps.meta.outputs.json }}" | python -m json.tool
+          # runner 上只有 python3，没有 python（ubuntu-24.04 起）
+          echo '${{ steps.meta.outputs.json }}' | python3 -m json.tool
