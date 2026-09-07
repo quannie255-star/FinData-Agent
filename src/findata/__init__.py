@@ -12,14 +12,18 @@
 
 from __future__ import annotations
 
+# 单一版本源：`pyproject.toml` 的 version。镜像里不走 pip install（源码 +
+# PYTHONPATH 直跑），拿不到 installed metadata，所以这里必须留一致的兜底值。
+_FALLBACK_VERSION = "0.5.0"
+
 try:
     from importlib.metadata import PackageNotFoundError, version
 
     try:
         __version__ = version("findata")
-    except PackageNotFoundError:  # editable install 边界情况
-        __version__ = "0.4.0"
+    except PackageNotFoundError:  # 未安装（源码 + PYTHONPATH 直跑，如 docker 镜像内）
+        __version__ = _FALLBACK_VERSION
 except Exception:  # noqa: BLE001
-    __version__ = "0.4.0"
+    __version__ = _FALLBACK_VERSION
 
 __all__ = ["__version__"]

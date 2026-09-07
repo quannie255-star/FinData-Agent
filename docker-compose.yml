@@ -16,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: findata:0.4.0
+    image: findata:0.5.0
     container_name: findata
     restart: unless-stopped
     environment:

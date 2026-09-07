@@ -1,7 +1,7 @@
 # findata 演示镜像（slim）：单容器同时跑 API（uvicorn）+ 演示站静态页。
 #
-# 多阶段构建：第一阶段在 builder 镜像里装包，第二阶段只拷 site/ 与 venv site-packages。
-# 体积压到 ~200MB，拉得快。
+# 多阶段：builder 只负责解析并装好**依赖**，runtime 只拷 site-packages + 源码。
+# 最终镜像里没有任何 build toolchain 残留的 site-packages 污染。
 
 # ─── builder ───
 FROM python:3.11-slim AS builder
@@ -10,11 +10,11 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# uv 比 pip 快 10×，更可控；发布镜像用一份完整 venv
+# uv 比 pip 快 10×，且严格走 uv.lock（可复现）
 RUN pip install uv==0.7.3
 
-# akshare 依赖的 native wheels（py-mini-racer / lxml / curl-cffi）在 slim 上
-# 需要 system headers 才能装。build 一次 100MB+ 但 cache 命中后只下 deps。
+# akshare 依赖链里的 native wheels（lxml / curl-cffi / akracer 等）在 slim
+# 上需要 system headers。这一层装完 100MB+，但命中缓存后只走 deps 下载。
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         libxml2-dev \
@@ -27,48 +27,44 @@ WORKDIR /build
 
 # 先拷 manifest，让依赖层能命中缓存
 COPY pyproject.toml uv.lock ./
-# Step 1: 用 uv sync 装 deps（快、走 lockfile、可缓存）
-RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
-    ec=$?; cat /tmp/uv_deps.log | tail -60; exit $ec
 
-# Step 2: 用 pip install --no-build-isolation . 装 project。
-# **--no-build-isolation** 让 pip 用镜像已有的 build deps（setuptools
-# 自带在 python:3.11-slim），不拉 PyPI 满足 requires。这一步彻底
-# 切断了 hatchling/editables 的拉取链。
+# 只装**依赖**，不装 project 本身（--no-install-project）。
 #
-# 之前几轮 release 失败链：
-#   pip install -e .          →  isolated build hatchling → 拉 editables 失败
-#   pip install .             →  isolated build setuptools → 拉 setuptools 失败?
-#   pip install --no-deps .   →  exit 2 (setuptools 80+ 行为变化)
-#
-# --no-build-isolation 用 system setuptools (slim 自带)，不拉 PyPI：
-#   - setuptools 80+ 自带 PEP 660 (绕开 editables)
-#   - 不触发 isolated env 创建，不拉任何 build dep
-#   - hatchling 完全不在 build chain 里
-COPY src ./src
-RUN set -o pipefail; \
-    pip install --no-deps --no-build-isolation . 2>&1 | tee /tmp/pip_install.log >&2; \
-    exit ${PIPESTATUS[0]}
+# 为什么不在容器里装 project：slim 容器内跑 PEP 517 build 需要现场拉 build
+# backend（hatchling → editables，或 setuptools isolated build），多轮 release
+# 都卡在这一步（exit 1 / exit 2）。而 CI runner 上 `uv build` 是好的 —— 所以
+# 这里干脆不装，改用「源码 + PYTHONPATH」运行（见 runtime 阶段）。
+# 代码里 `findata.__version__` 有 importlib.metadata 的 fallback，不依赖安装。
+RUN uv sync --no-dev --no-install-project
 
 # ─── runtime ───
 FROM python:3.11-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
     PORT=8080 \
-    HOST=0.0.0.0
+    HOST=0.0.0.0 \
+    PYTHONPATH=/app/src
 
-# 演示站 + venv 一并拷过来
-COPY --from=builder /build/.venv /app/.venv
-COPY site /app/site
+# 只拷 site-packages，**不拷整个 .venv**：venv 的 bin/python 是指向 builder
+# 绝对路径的符号链接，跨 stage 拷过来可能失效。直接灌进系统 site-packages，
+# 解释器仍用 runtime 镜像自带的 python，零符号链接风险。
+COPY --from=builder /build/.venv/lib/python3*/site-packages/ /usr/local/lib/python3.11/site-packages/
+
 COPY src /app/src
-
-# 健康检查直接走 /healthz
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{__import__(\"os\").environ.get(\"PORT\",8080)}/healthz',timeout=2).status==200 else 1)"
+COPY site /app/site
 
 WORKDIR /app
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app/src
+
+# build-time 冒烟：依赖齐不齐、能不能 import、site/ 在不在，当场炸比上线炸好
+RUN python -c "import findata, findata.api.app, findata.cli.serve; \
+               print('import ok:', findata.__file__, findata.__version__)" \
+ && python -c "import pathlib; p=pathlib.Path('/app/site/index.html'); \
+               assert p.exists(), 'site/index.html missing'"
+
+# 健康检查直接走 /healthz
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz',timeout=2).status==200 else 1)"
 
 # 8080 暴露给 K8s / LB；docker-compose 也用同一端口
 EXPOSE 8080

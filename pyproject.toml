@@ -1,6 +1,6 @@
 [project]
 name = "findata"
-version = "0.4.0"
+version = "0.5.0"
 description = "数据质量监控 Agent：异常探测 + 根因归因 + 误报抑制 + 评测门禁"
 readme = "README.md"
 requires-python = ">=3.11"

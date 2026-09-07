@@ -21,6 +21,8 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 
+from findata import __version__ as _FINDATA_VERSION
+
 _INITIALIZED = False
 _EXPORTER: InMemorySpanExporter | None = None
 _PROVIDER: TracerProvider | None = None
@@ -28,7 +30,7 @@ _PROVIDER: TracerProvider | None = None
 
 def setup_tracer(
     service_name: str = "findata",
-    service_version: str = "0.4.0",
+    service_version: str = _FINDATA_VERSION,
     *,
     in_memory: bool = True,
     simple_processor: bool = True,

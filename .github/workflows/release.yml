@@ -43,6 +43,45 @@ jobs:
       - name: set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # ── 先本地构建 + 起容器冒烟，通过才推 ghcr.io ──
+      # 顺序很重要：坏镜像绝不能进 registry。单架构 amd64 + --load 才能
+      # `docker run`；multi-arch 只能 push，跑不起来。
+      - name: build image (amd64, load for smoke)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: findata:smoke
+          cache-from: type=gha,scope=build
+          cache-to: type=gha,mode=max,scope=build
+
+      - name: smoke test container
+        run: |
+          set -euo pipefail
+          docker run -d --name findata-smoke -p 8080:8080 findata:smoke
+          trap 'docker logs findata-smoke || true; docker rm -f findata-smoke || true' EXIT
+
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz > /tmp/healthz.json; then ok=1; break; fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::container never answered /healthz (see docker logs above)"
+            exit 1
+          fi
+          cat /tmp/healthz.json; echo
+
+          curl -fsS http://127.0.0.1:8080/ -o /tmp/index.html
+          if ! grep -qi '<html' /tmp/index.html; then
+            echo "::error::GET / did not serve site/index.html"
+            exit 1
+          fi
+          echo "smoke ok: /healthz + /"
+
       - name: login to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -50,7 +89,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: build & push
+      - name: build & push (multi-arch)
         id: build
         uses: docker/build-push-action@v6
         with:
@@ -63,32 +102,6 @@ jobs:
           cache-from: type=gha,scope=build
           cache-to: type=gha,mode=max,scope=build
           # SBOM + provenance 默认开（settings -> Actions 默认允许）
-
-      - name: dump build log on failure
-        if: failure()
-        # buildx 不把详细 log 进 annotation；手动重跑 buildx 拿 verbose log。
-        # **加 --no-cache** 否则 buildx 命中 GHA cache 几秒结束，看不到
-        # 任何 layer 的错误信息。
-        # 用 --load 不 push，省 quota / 不污染 ghcr.io。
-        # 输出到 step summary（公开可看，无需 token）+ ::error::
-        run: |
-          {
-            echo "## Release build failure debug"
-            echo ""
-            echo "verbose log (\`--no-cache --progress=plain --load\`):"
-            echo ""
-            echo '```'
-            set -o pipefail
-            docker buildx build \
-              --no-cache \
-              --progress=plain \
-              --platform=linux/amd64 \
-              --load \
-              . 2>&1
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "::error::see Step Summary for full verbose log"
-          exit 1
 
       - name: summary
         run: |
