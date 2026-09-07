@@ -1,0 +1,130 @@
+name: test
+
+# 每次 push 与 PR 都要过这条线。
+# 三关：lint → 单测 → 起真实服务跑端到端。
+# 起服务这一步比 unit test 更值钱：能 catch "import 顺序错"、"entry-point 在打包后
+# 找不到模块" 这种静态测试拼不出来的故障。
+
+on:
+  push:
+    branches: [main, master, workbuddy/**]
+  pull_request:
+    branches: [main, master]
+
+# 同时间同分支后到的 build cancel 掉前面排队的，节省 CI 分钟。
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: ruff (src + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff==0.5.*
+      - run: ruff check src tests
+
+  test:
+    name: pytest (py ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.3"
+          enable-cache: true
+      - name: uv sync
+        run: uv sync --all-extras
+      - name: pytest
+        run: uv run pytest -q
+
+  smoke:
+    # 端到端：把 findata-serve 真实起在 8080，curl 三个关键路由，
+    # 都拿到 200 + 期望字段才放过。能抓出 import / 路由挂载 / entry-point
+    # 在干净 venv 下崩的问题。
+    name: e2e smoke (serve up)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.3"
+          enable-cache: true
+      - name: uv sync
+        run: uv sync --all-extras
+      - name: start uvicorn (background)
+        run: |
+          set -e
+          uv run uvicorn findata.cli.serve:app --host 127.0.0.1 --port 8080 >/tmp/serve.log 2>&1 &
+          echo $! > /tmp/serve.pid
+      - name: wait for /healthz
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/healthz || echo 000)
+            if [ "$code" = "200" ]; then echo "ready after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "service never came up"; cat /tmp/serve.log; exit 1
+      - name: hit core routes
+        run: |
+          set -e
+          # 1) 演示站
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = "200"
+          # 2) 健康检查
+          curl -fsS http://127.0.0.1:8080/healthz | grep -q '"ok": true'
+          # 3) 巡检路由 - 用 synthetic 跑出可断言的告警
+          payload=$(curl -fsS -X POST -H 'content-type: application/json' \
+                       -d '{"source":"synthetic","seed":20240102}' \
+                       http://127.0.0.1:8080/v1/inspect)
+          echo "$payload" | python -c "
+import sys, json
+d = json.loads(sys.stdin.read())
+# 顶层契约: asof / summary / alerts / suppressed
+for k in ('asof', 'summary', 'alerts', 'suppressed'):
+    assert k in d, f'missing {k}: {list(d)}'
+s = d['summary']
+for k in ('n_findings', 'n_alerts', 'n_suppressed', 'health_score', 'grade'):
+    assert k in s, f'missing summary.{k}: {list(s)}'
+assert isinstance(d['alerts'], list)
+print('inspect ok, n_findings=%d n_alerts=%d n_suppressed=%d health=%s' % (
+    s['n_findings'], s['n_alerts'], s['n_suppressed'], s['health_score']))
+"
+          # 4) 看板必须吐 HTML（且包含 findata-summary 这个 meta，是演示站依赖的）
+          html=$(curl -fsS 'http://127.0.0.1:8080/v1/dashboard?source=synthetic&days=10')
+          echo "$html" | grep -q 'name="findata-summary"'
+          echo "$html" | grep -q '数据质量看板'
+      - name: dump server log on exit
+        if: always()
+        run: cat /tmp/serve.log || true
+      - name: kill server
+        if: always()
+        run: kill "$(cat /tmp/serve.pid)" 2>/dev/null || true
+
+  ci-gate:
+    # 聚合点：lint + 两侧 python + smoke 全过才让这条线变绿。
+    # PR 列表上不再同时显示 4 条绿，避免 reviewer 视觉疲劳。
+    name: ci-gate
+    needs: [lint, test, smoke]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: summary
+        env:
+          LINT: ${{ needs.lint.result }}
+          TESTS: ${{ needs.test.result }}
+          SMOKE: ${{ needs.smoke.result }}
+        run: |
+          if [ "$LINT" != "success" ] || [ "$TESTS" != "success" ] || [ "$SMOKE" != "success" ]; then
+            echo "ci-gate failing: lint=$LINT tests=$TESTS smoke=$SMOKE"
+            exit 1
+          fi
+          echo "all green"

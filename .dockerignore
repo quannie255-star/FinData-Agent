@@ -1,0 +1,50 @@
+# ─────────────── 把 dev-only 的资产挡在 build context 外面 ───────────────
+# 体积：上下文 ≈10MB（pyproject + uv.lock + src + site），不挡会到 200MB+。
+
+# 缓存与运行期目录
+.git
+.gitignore
+.github
+.workbuddy
+.venv
+venv
+env
+
+# 评测产物（tests 也只是 build/test 用，runtime 不需要）
+tests
+reports
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# 字节码
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+
+# 打包产物
+*.egg-info
+*.egg
+build
+dist
+*.whl
+
+# 编辑器与 OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# 本地演示脚本（CI 不会跑，演示站用 site/ + entry-points）
+scripts
+
+# 文档草稿与凭据（凭据绝不能进镜像）
+.claude
+.cursor
+*.log
+.env
+.env.*
+credentials.*

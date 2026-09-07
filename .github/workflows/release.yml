@@ -1,0 +1,70 @@
+name: release
+
+# 仅 tag 触发：v0.5.0 / v1.0.0-rc.1 这种 v*.*.* 才推 ghcr.io 镜像。
+# 日常 commit 只走 .github/workflows/test.yml，不浪费 CI 分钟、不污染镜像仓库。
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+# 写 ghcr.io 必须有 write packages。GITHUB_TOKEN 在 tag build 时自带。
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false  # 已经在出 tag 了，别中断
+
+jobs:
+  build:
+    name: docker buildx & push (ghcr.io)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # 仅当真 tag 时才打 :latest；pre-release (rc/alpha/beta) 不污染 latest
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            prefix=
+
+      - name: set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=build
+          cache-to: type=gha,mode=max,scope=build
+          # SBOM + provenance 默认开（settings -> Actions 默认允许）
+
+      - name: summary
+        run: |
+          echo "pushed: ${{ steps.meta.outputs.tags }}"
+          echo "manifest:"
+          echo "${{ steps.meta.outputs.json }}" | python -m json.tool
