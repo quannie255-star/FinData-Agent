@@ -76,21 +76,34 @@ jobs:
           done
           echo "service never came up"; cat /tmp/serve.log; exit 1
       - name: hit core routes
+        # 不开 set -e：让每一个 curl/grep 单独报告失败原因（CI log 里直接看到）
         run: |
-          set -e
           # 1) 演示站
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = "200"
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/ || echo 000)
+          echo "[1] / -> $code"
+          [ "$code" = "200" ] || { echo "FAIL: / returned $code"; cat /tmp/serve.log; exit 1; }
+
           # 2) 健康检查
-          curl -fsS http://127.0.0.1:8080/healthz | grep -q '"ok": true'
+          ok=$(curl -fsS http://127.0.0.1:8080/healthz | grep -q '"ok": true' && echo y || echo n)
+          echo "[2] /healthz ok=$ok"
+          [ "$ok" = "y" ] || { echo "FAIL: /healthz body"; cat /tmp/serve.log; exit 1; }
+
           # 3) 巡检路由 - 用 synthetic 跑出可断言的告警
           payload=$(curl -fsS -X POST -H 'content-type: application/json' \
                        -d '{"source":"synthetic","seed":20240102}' \
                        http://127.0.0.1:8080/v1/inspect)
-          echo "$payload" | python3 scripts/ci_assert_inspect.py
+          echo "[3] /v1/inspect got ${#payload} bytes"
+          echo "$payload" | python3 scripts/ci_assert_inspect.py \
+            || { echo "FAIL: ci_assert_inspect.py rejected payload"; cat /tmp/serve.log; exit 1; }
+
           # 4) 看板必须吐 HTML（且包含 findata-summary 这个 meta，是演示站依赖的）
           html=$(curl -fsS 'http://127.0.0.1:8080/v1/dashboard?source=synthetic&days=10')
-          echo "$html" | grep -q 'name="findata-summary"'
-          echo "$html" | grep -q '数据质量看板'
+          echo "[4] /v1/dashboard got ${#html} bytes"
+          echo "$html" | grep -q 'name="findata-summary"' \
+            || { echo "FAIL: dashboard missing findata-summary meta"; exit 1; }
+          echo "$html" | grep -q '数据质量看板' \
+            || { echo "FAIL: dashboard missing page title"; exit 1; }
+          echo "all routes OK"
       - name: dump server log on exit
         if: always()
         run: cat /tmp/serve.log || true
