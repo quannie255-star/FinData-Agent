@@ -27,14 +27,22 @@ WORKDIR /build
 
 # 先拷 manifest，让依赖层能命中缓存
 COPY pyproject.toml uv.lock ./
-# 拆开 + 强制 verbose：把 log 留在 layer，下一步 cat，buildx 会显示
+# Step 1: 用 uv sync 装 deps（快、走 lockfile、可缓存）
 RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
     ec=$?; cat /tmp/uv_deps.log | tail -60; exit $ec
 
-# 再装项目本身
+# Step 2: 用 pip wheel + pip install 装 project 本身。
+# **不要用 uv sync 二次 install-project** —— uv 走 PEP 660 editable hook
+# 需要额外下载 `editables==0.6` 作为 build requirement，slim + 容器内
+# 容易撞到 PyPI 拉取失败（"DEBUG Downloading and building requirement
+# for build: editables==0.6" + 0.976s exit 1）。
+# pip wheel 走 isolated build（自动 temp venv 装 build-system requires），
+# pip install 装 prebuilt wheel，路径稳定不依赖 editables 包。
 COPY src ./src
-RUN uv sync --no-dev --verbose > /tmp/uv_proj.log 2>&1; \
-    ec=$?; cat /tmp/uv_proj.log | tail -60; exit $ec
+RUN pip wheel --no-deps -w /wheels . > /tmp/pip_wheel.log 2>&1; \
+    ec=$?; cat /tmp/pip_wheel.log | tail -60; exit $ec
+RUN pip install --no-deps /wheels/findata-*.whl > /tmp/pip_install.log 2>&1; \
+    ec=$?; cat /tmp/pip_install.log | tail -60; exit $ec
 
 # ─── runtime ───
 FROM python:3.11-slim AS runtime
