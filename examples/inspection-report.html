@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据质量巡检报告 · 2024-06-28</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --card:#fff; --line:#e5e7eb; --text:#1f2328;
+    --muted:#6b7280; --p0:#dc2626; --p1:#d97706; --p2:#2563eb; --ok:#059669;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 20px; background:var(--bg); color:var(--text);
+    font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:14px 16px; }
+  .card .k { color:var(--muted); font-size:12px; }
+  .card .v { font-size:24px; font-weight:600; margin-top:2px; }
+  .card .n { color:var(--muted); font-size:12px; }
+  .sec { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:18px 20px; margin-bottom:16px; }
+  .sec h2 { font-size:15px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .tag { font-size:11px; padding:2px 8px; border-radius:999px; color:#fff; font-weight:600; }
+  .t-p0 { background:var(--p0); } .t-p1 { background:var(--p1); }
+  .t-p2 { background:var(--p2); } .t-ok { background:var(--ok); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:8px 10px; vertical-align:top;
+    border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .route { color:var(--muted); font-size:12px; margin:-6px 0 10px; }
+  .empty { color:var(--muted); }
+  .bar { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .bar .lb { width:190px; font-size:12px; color:var(--muted); }
+  .bar .tr { flex:1; background:#f3f4f6; border-radius:4px; height:8px; overflow:hidden; }
+  .bar .fl { height:100%; background:#9ca3af; }
+  .bar .ct { width:28px; text-align:right; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>数据质量巡检报告</h1>
+  <div class="sub">观察日 2024-06-28 · 生成于 2026-09-07 22:16 · 覆盖 12 只标的 / 1,290 行行情</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="k">健康分</div><div class="v">36.0</div><div class="n">严重</div>
+    </div>
+    <div class="card">
+      <div class="k">待处理告警</div><div class="v">8</div>
+      <div class="n">P0 4 · P1 4 · P2 0</div>
+    </div>
+    <div class="card">
+      <div class="k">抑制误报</div><div class="v">5</div><div class="n">合法业务事件</div>
+    </div>
+    <div class="card">
+      <div class="k">降噪率</div><div class="v">38%</div>
+      <div class="n">13 个信号收敛为 8</div>
+    </div>
+  </div>
+
+  <div class="sec"><h2>待处理告警</h2><h2 style="margin-top:18px"><span class="tag t-p0">P0 阻断</span><span style="font-weight:500">立即响应</span></h2><div class="route">推送值班群，阻断下游依赖该表的任务</div><table><thead><tr><th>标的</th><th>表</th><th>窗口</th><th>根因</th><th>观测值(阈值)</th><th>判断依据</th></tr></thead><tbody><tr><td><code>601166</code></td><td>stock_daily</td><td>2024-02-05..2024-02-05</td><td><code>value_out_of_range</code></td><td>1 <span style='color:#6b7280'>(1)</span></td><td>non_positive_close 命中 1 条，且无公司事件可解释</td></tr>
+<tr><td><code>600036</code></td><td>stock_daily</td><td>2024-03-29..2024-04-01</td><td><code>duplicate_write</code></td><td>2 <span style='color:#6b7280'>(1)</span></td><td>2 个主键重复，任务重跑未做幂等</td></tr>
+<tr><td><code>600030</code></td><td>stock_daily</td><td>2024-06-21..2024-06-28</td><td><code>upstream_stale</code></td><td>4 <span style='color:#6b7280'>(2)</span></td><td>最新数据落后 4 个交易日，且无停牌/新股可解释，判定为上游停更</td></tr>
+<tr><td><code>000858</code></td><td>valuation_daily</td><td>2024-04-18..2024-06-28</td><td><code>unit_shift</code></td><td>0.000118 <span style='color:#6b7280'>(100)</span></td><td>量级突变至 0.000118 倍，判定为单位或口径变更</td></tr></tbody></table><h2 style="margin-top:18px"><span class="tag t-p1">P1 重要</span><span style="font-weight:500">当日工单</span></h2><div class="route">进入当日待办，收盘前必须定位</div><table><thead><tr><th>标的</th><th>表</th><th>窗口</th><th>根因</th><th>观测值(阈值)</th><th>判断依据</th></tr></thead><tbody><tr><td><code>601318</code></td><td>stock_daily</td><td>2024-03-15..2024-06-03</td><td><code>distribution_drift</code></td><td>5.312 <span style='color:#6b7280'>(5)</span></td><td>近期均值/历史均值 = 5.31，超出漂移阈值</td></tr>
+<tr><td><code>600519</code></td><td>stock_daily</td><td>2024-03-12..2024-04-18</td><td><code>schema_null_sweep</code></td><td>0.7333 <span style='color:#6b7280'>(0.5)</span></td><td>列 amount 近期空值率 73%，远高于历史，判定为上游字段下线</td></tr>
+<tr><td><code>600030</code></td><td>stock_daily</td><td>2024-06-24..2024-06-28</td><td><code>missing_rows</code></td><td>5 <span style='color:#6b7280'>(1)</span></td><td>中间出现 5 个交易日空洞，判定为回补漏采</td></tr>
+<tr><td><code>002594</code></td><td>stock_daily</td><td>2024-04-08..2024-04-09</td><td><code>missing_rows</code></td><td>2 <span style='color:#6b7280'>(1)</span></td><td>中间出现 2 个交易日空洞，判定为回补漏采</td></tr></tbody></table></div>
+  <div class="sec"><h2>已抑制 · 合法业务事件</h2><p class="route">形态与故障一致，但归因后确认合理，不产生告警。</p><table><thead><tr><th>标的</th><th>窗口</th><th>事件</th><th>说明</th></tr></thead><tbody><tr><td><code>600036</code></td><td>2024-01-29..2024-02-08</td><td><span class="tag t-ok">停牌</span></td><td>窗口内 100% 交易日处于停牌区间，缺失为合法业务状态，告警已抑制</td></tr>
+<tr><td><code>601318</code></td><td>2024-02-21..2024-02-28</td><td><span class="tag t-ok">停牌</span></td><td>窗口内 100% 交易日处于停牌区间，缺失为合法业务状态，告警已抑制</td></tr>
+<tr><td><code>300750</code></td><td>2024-02-26..2024-02-26</td><td><span class="tag t-ok">除权除息</span></td><td>当日存在除权除息事件，价格跳空为合法复权行为，告警已抑制</td></tr>
+<tr><td><code>600519</code></td><td>2024-06-20..2024-06-20</td><td><span class="tag t-ok">除权除息</span></td><td>当日存在除权除息事件，价格跳空为合法复权行为，告警已抑制</td></tr>
+<tr><td><code>000651</code></td><td>2024-06-13..2024-06-28</td><td><span class="tag t-ok">新股上市</span></td><td>上市日 2024-06-13，应到 12 个交易日、实到 12 个，数据完整，历史短属正常，告警已抑制</td></tr></tbody></table></div>
+  <div class="sec"><h2>根因分布</h2><div class="bar"><div class="lb"><code>benign_suspension</code></div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="ct">2</div></div>
+<div class="bar"><div class="lb"><code>benign_corporate_action</code></div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="ct">2</div></div>
+<div class="bar"><div class="lb"><code>missing_rows</code></div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="ct">2</div></div>
+<div class="bar"><div class="lb"><code>benign_new_listing</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>value_out_of_range</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>duplicate_write</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>upstream_stale</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>unit_shift</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>distribution_drift</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>schema_null_sweep</code></div><div class="tr"><div class="fl" style="width:50%"></div></div><div class="ct">1</div></div></div>
+</div>
+</body>
+</html>

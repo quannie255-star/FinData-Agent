@@ -266,7 +266,7 @@ LLM 归因器 vs 规则归因器的一致性指标从此有量化追溯。
 
 ```bash
 uv sync
-uv run pytest                                    # 72 个单测
+uv run pytest                                    # 104 个单测
 uv run python scripts/run_eval.py                # 数据质量评测
 uv run python scripts/run_inspection.py          # 每日巡检
 uv run python scripts/build_dashboard.py         # 评测看板
@@ -277,6 +277,33 @@ docker compose up                                # 容器化版
 
 巡检默认跑合成语料而非真实仓库，是刻意的：真实仓库要先采集几分钟且依赖外网，
 而让 clone 仓库的人第一条命令就看到完整产出，比"先去准备数据"重要得多。
+
+## 产出样例
+
+不想先装环境的话，[`examples/`](examples/) 里有跑好的快照——巡检报告（Markdown / HTML）、
+评测看板、评测门禁输出，浏览器直接打开就能看，且**任何人 clone 后重跑结果逐字一致**。
+
+巡检一瞥（合成语料，观察日 2024-06-28）：
+
+```text
+健康分 36.0（严重）· 信号 13 → 告警 8 · 抑制 5（降噪 38%）
+  [P0] 600030 upstream_stale      — 最新数据落后 4 个交易日，且无停牌/新股可解释，判定为上游停更
+  [P0] 000858 unit_shift          — 量级突变至 0.000118 倍，判定为单位或口径变更
+  [P1] 600519 schema_null_sweep   — 列 amount 近期空值率 73%，远高于历史，判定为上游字段下线
+```
+
+评测门禁（规则归因器 · 确定性故障注入语料）：
+
+| 指标 | 结果 |
+| --- | --- |
+| 故障召回率 | 100.0% (7/7) |
+| 根因准确率 | 100.0% (7/7) |
+| 误报抑制率 | 100.0% (5/5) |
+| 告警精确率 | 100.0% (7/7) —— **朴素基线 61.5%** |
+
+最后一行是重点：**同一批 13 条信号，不做归因、全部告警时精确率只有 61.5%。**
+这 38.5 个百分点的差就是归因层存在的全部理由，也是这个项目的门槛——检测不难，
+难的是判断该不该报。
 
 ## 路线图
 
@@ -291,8 +318,7 @@ docker compose up                                # 容器化版
 - [x] M2-bis 指标字典：11 个 metric（7 探针 + 4 SQL）抽到 YAML，`SqlTemplate` 确定性编译器（`$name` → `?`，同名占位按次数复制参数），新增 MCP `findata_list_metrics` / `findata_execute_metric`
 - [x] M9 业务事实表 schema：`stock_universe.list_date` + `corporate_event(suspension/ex_rights/listing)`，归因层依赖的生产 schema 落地
 - [x] M9-bis 上市日回填：`backfill_list_date` 用 `stock_daily` 首个交易日回填 `list_date`（幂等 + 补采到更早历史时自我修正）。没它的话 `BENIGN_NEW_LISTING`（新股历史短）这条归因分支在真实数据路径上永远走不到——只有 fixture 能触发，等于主线能力是哑的
-- [x] M7.1 CI 修复：smoke step 的 Python 断言从内嵌 `python -c "..."` 抽出为 `scripts/ci_assert_inspect.py`，workflow file invalid 修复
-- [x] M7.6 CI 修复（最终）：smoke step 里 `grep '"ok": true'` 收紧到 `grep '"ok":true'`——FastAPI 默认 JSON 编码无空格。中间绕了几圈（M7.2..M7.5 一步步把诊断打透），最终一次到位
+- [x] M10 发布链路：镜像不在容器内 build project（slim 内 PEP 517 build 需现场拉 build backend，是连挂 5 轮的根因），release 拆两步「单架构起容器冒烟 → 通过才 multi-arch push」，坏镜像不进 registry
 
 ## License
 
