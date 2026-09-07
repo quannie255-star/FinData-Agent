@@ -1,0 +1,39 @@
+# findata docker-compose —— 演示架构。
+#
+# 单 service 跑 API + 演示站 + MCP（同进程内多入口，按 HOST/PORT 暴露）。
+# 真正生产场景会拆三个 service（api / web / mcp），但演示时多一层
+# 反向代理只会增加排障成本，没有收益。
+#
+# 启动：
+#   docker compose up --build
+# 打开浏览器：
+#   http://localhost:8080            ← 演示站首页
+#   http://localhost:8080/healthz    ← 健康探针
+#   http://localhost:8080/v1/docs    ← OpenAPI 文档
+
+services:
+  findata:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: findata:0.4.0
+    container_name: findata
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8080:8080"
+    volumes:
+      # 演示数据可挂本地 DuckDB 文件；不挂就是纯 synthetic 路径
+      - ./data:/app/data:rw
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/healthz',timeout=2).status==200 else 1)
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

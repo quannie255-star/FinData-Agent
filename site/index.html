@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>findata · 数据质量监控 Agent</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="wrap">
+
+<section class="hero">
+  <h1>findata</h1>
+  <p class="tagline">
+    数据质量监控 Agent。异常探测 → 根因归因 → 误报抑制 → eval 门禁。
+    不只是"找异常"，而是分辨"该告警"与"该忽略"，并在评测里立得住。
+  </p>
+  <div class="badges">
+    <span class="badge">M1 数据层</span>
+    <span class="badge">M2 质量内核</span>
+    <span class="badge">M3 巡检流水线</span>
+    <span class="badge">M4 LLM 归因</span>
+    <span class="badge">M5 看板</span>
+    <span class="badge">M6 API + MCP + Docker</span>
+  </div>
+</section>
+
+<div class="grid">
+  <div class="card">
+    <h3><span class="num">1</span>探针观测</h3>
+    <p>
+      6 类探针独立工作：freshness / completeness / uniqueness / validity
+      / drift / null_sweep。每类只答"观测到什么"，不带判断。
+    </p>
+    <div class="code">run_probes(ctx) → List[Finding]</div>
+  </div>
+  <div class="card">
+    <h3><span class="num">2</span>归因 + 抑制</h3>
+    <p>
+      规则归因器与 LLM 归因器可互换；不信任 LLM 原则下设计
+      （白名单校验、逐条降级、整批兜底），最坏不比规则差。
+    </p>
+    <div class="code">diagnose_all(findings, ctx) → List[Diagnosis]</div>
+  </div>
+  <div class="card">
+    <h3><span class="num">3</span>eval 先行</h3>
+    <p>
+      确定性合成语料 + 故障注入 + 5 项指标 + Cohen's κ 一致性。
+      CI 门禁把"归因层有 100% 增量"做成可证伪命题，不靠感觉。
+    </p>
+    <div class="code">run_evaluation(seed=…) → EvalReport</div>
+  </div>
+</div>
+
+<section class="section">
+  <h2>系统自评（合成语料）</h2>
+  <div class="metrics" id="metrics">
+    <div class="metric"><div class="k">故障召回率</div><div class="v good" id="m-recall">100.0%</div><div class="n">7/7</div></div>
+    <div class="metric"><div class="k">根因准确率</div><div class="v good" id="m-root">100.0%</div><div class="n">7/7</div></div>
+    <div class="metric"><div class="k">分级准确率</div><div class="v good" id="m-sev">100.0%</div><div class="n">7/7</div></div>
+    <div class="metric"><div class="k">误报抑制率</div><div class="v good" id="m-sup">100.0%</div><div class="n">5/5</div></div>
+    <div class="metric"><div class="k">告警精确率</div><div class="v good" id="m-prec">100.0%</div><div class="n">vs 朴素基线 61.5%</div></div>
+  </div>
+  <p style="font-size:13px;color:var(--muted);margin-top:6px">
+    数字由 <code>scripts/run_eval.py</code> 跑确定性种子复现；进入看板可看
+    "为什么这些数字"——每条告警都能跳到根因说明。
+  </p>
+</section>
+
+<section class="section">
+  <h2>Live Dashboard</h2>
+  <p>iframe 内嵌展示 /v1/dashboard 的真实输出。回放近期健康分趋势、告警明细与抑制信号。</p>
+  <iframe class="embed" src="/v1/dashboard?source=synthetic&days=20&with_eval=true" loading="lazy"></iframe>
+  <p style="text-align:center;margin-top:14px">
+    <a href="/v1/dashboard?source=synthetic&days=40&with_eval=true" target="_blank"
+       style="color:var(--accent);text-decoration:none;font-weight:600">
+      在新页面打开 →
+    </a>
+  </p>
+</section>
+
+<section class="section">
+  <h2>接入</h2>
+
+  <div class="endpoint">
+    <code><span class="tag t-post">POST</span> /v1/inspect</code>
+    <div class="desc">跑一次巡检，返回 JSON 摘要与告警列表。支持 asof 回放历史时点。</div>
+  </div>
+  <div class="endpoint">
+    <code><span class="tag t-post">POST</span> /v1/eval</code>
+    <div class="desc">跑评测。triage=baseline/llm/both；both 输出 Cohen's κ。</div>
+  </div>
+  <div class="endpoint">
+    <code><span class="tag t-get">GET</span> /v1/dashboard</code>
+    <div class="desc">拉一份自包含 HTML 看板（无 CDN、无外部依赖）。</div>
+  </div>
+  <div class="endpoint">
+    <code><span class="tag t-post">POST</span> /v1/render</code>
+    <div class="desc">单日报告：fmt=md 或 html。</div>
+  </div>
+
+  <h2 style="margin-top:28px">MCP Server</h2>
+  <p>
+    <code>findata-mcp</code> stdio transport，已被 Claude Desktop / Cursor /
+    Cline 等原生支持。挂载到 MCP 客户端后，多出三个工具：
+  </p>
+  <div class="endpoint">
+    <code>findata_health_check</code>
+    <div class="desc">跑一次巡检 → JSON 摘要。可传 asof / source / seed。</div>
+  </div>
+  <div class="endpoint">
+    <code>findata_dashboard</code>
+    <div class="desc">拼一份 HTML 看板，返回 html + length + summary 摘要。</div>
+  </div>
+  <div class="endpoint">
+    <code>findata_validate</code>
+    <div class="desc">跑评测 → 5 项指标；triage=both 时输出 Cohen's κ。</div>
+  </div>
+
+  <pre class="code" style="margin-top:8px">{
+  "mcpServers": {
+    "findata": {
+      "command": "findata-mcp",
+      "args": []
+    }
+  }
+}</pre>
+</section>
+
+<footer>
+  findata · A 股金融数据质量监控 · eval 先行 · 参见
+  <a href="/docs" style="color:var(--accent)">/docs</a> 查阅 OpenAPI
+</footer>
+
+</div>
+</body>
+</html>
