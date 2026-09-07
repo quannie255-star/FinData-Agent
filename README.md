@@ -179,6 +179,7 @@ uv run findata-mcp            # MCP stdio server（挂给 Claude Desktop / Curso
 | `POST` | `/v1/eval` | 跑评测；`triage=baseline/llm/both`，both 输出 Cohen's κ |
 | `GET` | `/v1/dashboard` | 拉一份自包含 HTML 看板（无 CDN、无外部依赖） |
 | `POST` | `/v1/render` | 单日报告：`fmt=md` 或 `fmt=html` |
+| `GET` | `/v1/traces` | 最近 OpenTelemetry span（按 `end_time desc`），便于 trace ↔ alert 双向跳转 |
 
 ### MCP 工具（stdio transport）
 
@@ -193,8 +194,11 @@ uv run findata-mcp            # MCP stdio server（挂给 Claude Desktop / Curso
 }
 ```
 
-挂载后多出三个工具： `findata_health_check` / `findata_dashboard` / `findata_validate`。
-外部 Agent（Claude Desktop / Cursor / Cline）就可以把 `findata` 当作「命令 + 读 JSON」的能力用——不再需要写 sql、改 ETL、写文档，证据、回放、验证都可以从对话里直接调。
+挂载后多出五个工具：
+`findata_health_check` / `findata_dashboard` / `findata_validate` /
+`findata_list_metrics` / `findata_execute_metric`（M2：基于指标字典 YAML 的
+确定性 SQL 执行，外部 Agent 可以直接给 Claude Desktop / Cursor 拉指标层）。
+不再需要写 sql、改 ETL、写文档，证据、回放、验证、指标都可以从对话里直接调。
 
 ### Docker
 
@@ -210,6 +214,43 @@ docker compose up --build
 - MCP 适合「Agent 在 IDE 里调 / 自动化诊断 / 可被组合」
 
 二者背后是**同一份** `findata.service` 调用，避免出现"UI 一份数据、Agent 一份数据"的那种自然漂移。
+
+## CI 与镜像分发
+
+```bash
+# 本地一键验全
+uv run ruff check src tests scripts
+uv run pytest
+uv run python scripts/ci_assert_inspect.py < /tmp/inspect.json   # 模拟 CI smoke
+```
+
+GitHub Actions 三关 + 聚合门禁：
+
+| Job | 干什么 | 抓的故障 |
+| --- | --- | --- |
+| `lint` | ruff check src + tests + scripts | 风格 / 已弃用 API / 隐含 bug |
+| `test` | pytest (py 3.11 & 3.12 matrix) | 行为回归 |
+| `smoke` | `uvicorn findata.cli.serve:app` 真实起 8080，curl `/`、`/healthz`、`/v1/inspect`、`/v1/dashboard`，断言响应字段 | "import 顺序错"、"entry-point 在打包后找不到模块"、"运行时字段不一致"——unit test 拼不出来的故障 |
+| `ci-gate` | 等上面三关都 success 才放行 | 防止 reviewer 看到 4 条绿里混着 1 条红 |
+
+镜像分发（`release.yml`）：**仅 `v*.*.*` tag 触发 docker buildx 多平台构建**，推到
+`ghcr.io/quannie255-star/findata`。RC tag（如 `v0.5.0-rc1`）不会污染 `:latest`，
+只有 stable tag 推 `:latest`。
+
+## 可观测：OpenTelemetry
+
+`findata.observability` 子包默认装一个 `InMemorySpanExporter`（演示站 5KB 起步，
+不需要 OTLP collector）。`service.inspect` / `render_report` / `build_dashboard` /
+`evaluate` 四个入口都埋了根 span，关键 attribute：
+
+- `findata.source` / `findata.asof` / `findata.seed`
+- `findata.health_score` / `findata.n_findings` / `findata.n_alerts` / `findata.n_suppressed` / `findata.grade`
+
+`evaluate(both)` 子 span `service.evaluate.both_triage` 会写 `findata.cohen_kappa`，
+LLM 归因器 vs 规则归因器的一致性指标从此有量化追溯。
+
+`GET /v1/traces?limit=50` 按 `end_time desc` 返最近 span——线上告警可以一键跳到
+生成它的 service 调用栈。后续接 Tempo / Jaeger / Honeycomb 只换 provider，业务代码不动。
 
 ## 快速开始
 
@@ -234,7 +275,14 @@ docker compose up                                # 容器化版
 - [x] M3 产品化：巡检流水线 + 告警路由/聚合/健康分 + Markdown/HTML 报告
 - [x] M4 Agent 层：LLM 归因器（Triage 协议 + 白名单校验 + 逐条降级 + 可观测统计）
 - [x] M5 看板：回放 + 健康分趋势 + 朴素基线对照 + 告警历史（静态 HTML，零依赖）
-- [x] **M6 部署**：FastAPI + MCP 工具 + Docker slim 镜像 + 单页演示站（HTTP/MCP 同源）
+- [x] M6 部署：FastAPI + MCP 工具 + Docker slim 镜像 + 单页演示站（HTTP/MCP 同源）
+- [x] M7 CI：ruff + pytest(py 3.11/3.12) + 真实 serve smoke + ci-gate 聚合，ghcr.io 多平台镜像分发（仅 stable tag 推 `:latest`）
+- [x] M8 可观测：`findata.observability` OTel 默认 InMemory exporter，service 层埋点 + `GET /v1/traces` 端点
+- [x] M2-bis 指标字典：11 个 metric（7 探针 + 4 SQL）抽到 YAML，`SqlTemplate` 确定性编译器（`$name` → `?`，同名占位按次数复制参数），新增 MCP `findata_list_metrics` / `findata_execute_metric`
+- [x] M9 业务事实表 schema：`stock_universe.list_date` + `corporate_event(suspension/ex_rights/listing)`，归因层依赖的生产 schema 落地
+- [x] M7 CI：ruff + pytest(py 3.11/3.12) + 真实 serve smoke + ci-gate 聚合，ghcr.io 多平台镜像分发（仅 stable tag 推 `:latest`）
+- [x] M7.1 CI 修复：smoke step 的 Python 断言从内嵌 `python -c "..."` 抽出为 `scripts/ci_assert_inspect.py`，workflow file invalid 修复
+- [x] M7.6 CI 修复（最终）：smoke step 里 `grep '"ok": true'` 收紧到 `grep '"ok":true'`——FastAPI 默认 JSON 编码无空格。中间绕了几圈（M7.2..M7.5 一步步把诊断打透），最终一次到位
 
 ## License
 
