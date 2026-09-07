@@ -70,26 +70,25 @@ jobs:
         # **加 --no-cache** 否则 buildx 命中 GHA cache 几秒结束，看不到
         # 任何 layer 的错误信息。
         # 用 --load 不 push，省 quota / 不污染 ghcr.io。
-        # 输出到 tee → 写本地文件 → upload-artifact（公开下载）+ ::error::
+        # 输出到 step summary（公开可看，无需 token）+ ::error::
         run: |
-          set -o pipefail
-          docker buildx build \
-            --no-cache \
-            --progress=plain \
-            --platform=linux/amd64 \
-            --load \
-            . 2>&1 | tee /tmp/build.log | tail -80 | while read -r line; do
-              echo "::error::$line"
-            done
+          {
+            echo "## Release build failure debug"
+            echo ""
+            echo "verbose log (\`--no-cache --progress=plain --load\`):"
+            echo ""
+            echo '```'
+            set -o pipefail
+            docker buildx build \
+              --no-cache \
+              --progress=plain \
+              --platform=linux/amd64 \
+              --load \
+              . 2>&1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::see Step Summary for full verbose log"
           exit 1
-
-      - name: upload build log
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: /tmp/build.log
-          if-no-files-found: ignore
 
       - name: summary
         run: |
