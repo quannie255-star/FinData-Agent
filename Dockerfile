@@ -12,6 +12,17 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 
 # uv 比 pip 快 10×，更可控；发布镜像用一份完整 venv
 RUN pip install uv==0.7.3
+
+# akshare 依赖的 native wheels（py-mini-racer / lxml / curl-cffi）在 slim 上
+# 需要 system headers 才能装。build 一次 100MB+ 但 cache 命中后只下 deps。
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libxml2-dev \
+        libxslt1-dev \
+        libffi-dev \
+        libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build
 
 # 先拷 manifest，让依赖层能命中缓存
