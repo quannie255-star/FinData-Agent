@@ -63,6 +63,12 @@
   attribute（health_score / n_alerts / κ） + `GET /v1/traces` 端点按 end_time desc
   返最近 span。不引入 OTLP collector，演示站 5KB 起得动；后续接 Tempo/Jaeger 只
   换 provider。
+- [x] **M10 发布链路收尾（v0.5.0，2026-09-07 全绿）**：镜像**不在容器内 build
+  project**（slim 内 PEP 517 build 要现场拉 editables/setuptools，曾连挂 5 轮）→
+  改为 `uv sync --no-dev --no-install-project` 装依赖 + 只拷 site-packages +
+  `/app/src` + `PYTHONPATH` 直跑；release 拆两步「单架构 --load 起容器冒烟 →
+  通过才 multi-arch push」，坏镜像不进 registry。`ghcr.io/quannie255-star/
+  findata-agent:0.5.0|0.5|latest`（amd64+arm64，匿名可拉）。
 
 **项目方向定调（2026-09-07 18:00）**
 GLM 那边描述的 M2-M6 是「查询时可信 Agent」（指标字典 YAML + LangGraph 编排
