@@ -44,7 +44,9 @@ jobs:
       - name: uv sync
         run: uv sync --all-extras
       - name: pytest
-        run: uv run pytest -q
+        run: uv run pytest --tb=short -rfE 2>&1 | tail -80
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
 
   smoke:
     # 端到端：把 findata-serve 真实起在 8080，curl 三个关键路由，
