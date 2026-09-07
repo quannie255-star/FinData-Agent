@@ -70,7 +70,9 @@ jobs:
         # **加 --no-cache** 否则 buildx 命中 GHA cache 几秒结束，看不到
         # 任何 layer 的错误信息。
         # 用 --load 不 push，省 quota / 不污染 ghcr.io。
+        # 输出到 tee → 写本地文件 → upload-artifact（公开下载）+ ::error::
         run: |
+          set -o pipefail
           docker buildx build \
             --no-cache \
             --progress=plain \
@@ -80,6 +82,14 @@ jobs:
               echo "::error::$line"
             done
           exit 1
+
+      - name: upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/build.log
+          if-no-files-found: ignore
 
       - name: summary
         run: |
