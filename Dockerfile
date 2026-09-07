@@ -31,14 +31,23 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --no-install-project --verbose > /tmp/uv_deps.log 2>&1; \
     ec=$?; cat /tmp/uv_deps.log | tail -60; exit $ec
 
-# Step 2: 用 pip install . 装 project（**非 editable**）。
-# -e 触发 PEP 660 editable finder（pip 自带或 hatchling 用 editables）；
-# 不用 -e 直接 pip install . 走标准 wheel + install 路径，
-# 装到 site-packages，runtime 跟 editable 等价（用户透明）。
-# hatchling → setuptools 已切，build dep 不再拉 editables。
+# Step 2: 用 pip install --no-build-isolation . 装 project。
+# **--no-build-isolation** 让 pip 用镜像已有的 build deps（setuptools
+# 自带在 python:3.11-slim），不拉 PyPI 满足 requires。这一步彻底
+# 切断了 hatchling/editables 的拉取链。
+#
+# 之前几轮 release 失败链：
+#   pip install -e .          →  isolated build hatchling → 拉 editables 失败
+#   pip install .             →  isolated build setuptools → 拉 setuptools 失败?
+#   pip install --no-deps .   →  exit 2 (setuptools 80+ 行为变化)
+#
+# --no-build-isolation 用 system setuptools (slim 自带)，不拉 PyPI：
+#   - setuptools 80+ 自带 PEP 660 (绕开 editables)
+#   - 不触发 isolated env 创建，不拉任何 build dep
+#   - hatchling 完全不在 build chain 里
 COPY src ./src
 RUN set -o pipefail; \
-    pip install --no-deps . 2>&1 | tee /tmp/pip_install.log >&2; \
+    pip install --no-deps --no-build-isolation . 2>&1 | tee /tmp/pip_install.log >&2; \
     exit ${PIPESTATUS[0]}
 
 # ─── runtime ───
