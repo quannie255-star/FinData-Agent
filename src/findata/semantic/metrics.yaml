@@ -1,0 +1,110 @@
+# 指标字典：每个指标的 SQL 由编译器按模板确定性渲染，LLM 只负责选择与填参。
+#
+# 字段约定：
+#   name        指标唯一标识（LLM 输出此 key）
+#   label       人类可读名称（展示/报错用）
+#   description 一句话说明口径，供 LLM 选择指标时参考
+#   params      参数 schema：type=string/int/float/date，required 标记必填
+#   template    SQL 模板；:name 形式占位符，编译期只允许来自 params 的键
+#   unit        数值单位（答案里必须带上，避免"猜单位"）
+#   source      数据来源（血缘溯源用）
+#   verify      可选：第二条独立口径的验证 SQL（与 template 算法不同），用于交叉核验；
+#               结果应与主路径在容差 tol 内一致。输出列必须是 value。
+
+metrics:
+  - name: close_price
+    label: 最新收盘价
+    description: 某只股票最近一个交易日的收盘价（前复权，单位：元）
+    params:
+      symbol:
+        type: string
+        required: true
+    template: >
+      SELECT close AS value, date AS as_of
+      FROM stock_daily
+      WHERE symbol = :symbol
+      ORDER BY date DESC
+      LIMIT 1
+    unit: 元
+    source: stock_daily
+    verify:
+      template: >
+        SELECT close AS value
+        FROM stock_daily
+        WHERE symbol = :symbol AND date = (SELECT max(date) FROM stock_daily WHERE symbol = :symbol)
+      tol: 1e-6
+      note: 主路径按排序取最新，验证路径按 MAX(date) 等值匹配
+
+  - name: pct_change
+    label: 区间涨跌幅
+    description: 某只股票在 [start, end] 区间内的累计涨跌幅（单位：%）
+    params:
+      symbol:
+        type: string
+        required: true
+      start:
+        type: date
+        required: true
+      end:
+        type: date
+        required: true
+    template: >
+      SELECT round((end_close / start_close - 1) * 100, 4) AS value,
+             start_date AS start_date, end_date AS end_date
+      FROM (
+        SELECT (SELECT close FROM stock_daily
+                WHERE symbol = :symbol AND date >= :start
+                ORDER BY date ASC LIMIT 1) AS start_close,
+               (SELECT close FROM stock_daily
+                WHERE symbol = :symbol AND date <= :end
+                ORDER BY date DESC LIMIT 1) AS end_close,
+               :start AS start_date, :end AS end_date
+      ) WHERE start_close IS NOT NULL AND end_close IS NOT NULL
+    unit: "%"
+    source: stock_daily
+    verify:
+      template: >
+        WITH pts AS (
+          SELECT
+            (SELECT close FROM stock_daily
+             WHERE symbol = :symbol AND date >= :start
+             ORDER BY date ASC LIMIT 1) AS start_close,
+            (SELECT close FROM stock_daily
+             WHERE symbol = :symbol AND date <= :end
+             ORDER BY date DESC LIMIT 1) AS end_close,
+            (SELECT close FROM stock_daily
+             WHERE symbol = :symbol AND date BETWEEN :start AND :end
+             ORDER BY date ASC
+             OFFSET (SELECT CAST(count(*)/2 AS INTEGER) FROM stock_daily
+                     WHERE symbol = :symbol AND date BETWEEN :start AND :end)
+             LIMIT 1) AS mid_close
+        )
+        SELECT round(((1 + (mid_close / start_close - 1))
+                    * (1 + (end_close / mid_close - 1)) - 1) * 100, 4) AS value
+        FROM pts
+        WHERE start_close > 0 AND mid_close > 0 AND end_close > 0
+      tol: 0.1
+      note: 主路径直接算首尾 close 比值；验证路径把区间切两半独立相乘（独立拆分可暴露序列断裂）
+
+  - name: valuation_pe_ttm
+    label: 最新市盈率(PE-TTM)
+    description: 某只股票最近一个交易日的滚动市盈率（PE-TTM，单位：倍）
+    params:
+      symbol:
+        type: string
+        required: true
+    template: >
+      SELECT pe_ttm AS value, date AS as_of
+      FROM valuation_daily
+      WHERE symbol = :symbol
+      ORDER BY date DESC
+      LIMIT 1
+    unit: 倍
+    source: valuation_daily
+    verify:
+      template: >
+        SELECT pe_ttm AS value
+        FROM valuation_daily
+        WHERE symbol = :symbol AND date = (SELECT max(date) FROM valuation_daily WHERE symbol = :symbol)
+      tol: 1e-6
+      note: 主路径按排序取最新，验证路径按 MAX(date) 等值匹配（检出重复日/异常行）

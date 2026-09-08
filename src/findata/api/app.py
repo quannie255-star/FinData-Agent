@@ -15,11 +15,15 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from findata import __version__
+from findata.config import settings
+from findata.core.db import connect
 from findata.observability import get_in_memory_exporter
+from findata.semantic.catalog import MetricCatalog
+from findata.semantic.tools import list_metrics, metric_query
 from findata.service import (
     build_dashboard_html,
     eval_to_json,
@@ -199,3 +203,153 @@ def _safe_attrs(attrs: Any) -> dict[str, Any]:
         except (TypeError, ValueError):
             out[k] = str(v)
     return out
+
+
+# ─────────────────────────── 可信问数 / 分析 路由（semantic + agent） ───────────────────────────
+# 与上方监控路由并存：两套能力共享 M1 数据底座，但查询血缘独立落 query_run / verify_run。
+# 设计要点：LLM 只选指标 + 填参，SQL 由语义层确定性渲染；每次查询自动交叉验证；
+# 所有数字都带 run_id，/trace 可回追 SQL 与验证结论（"可信"叙事的对外接口）。
+
+_CONN = None
+_CATALOG = None
+
+
+def _get_conn():
+    """懒加载读写连接（查询需要写 query_run 血缘，故读写模式）。"""
+    global _CONN, _CATALOG
+    if _CONN is None:
+        _CONN = connect(settings.dsn, read_only=False)
+        _CATALOG = MetricCatalog()
+    return _CONN, _CATALOG
+
+
+class MetricRequest(BaseModel):
+    metric: str
+    params: dict[str, Any] | None = None
+
+
+class AgentRequest(BaseModel):
+    question: str
+
+
+@app.get("/health")
+def health() -> dict[str, Any]:
+    """分析链路存活探针（与监控 /healthz 并存，路径不冲突）。"""
+    return {"status": "ok", "version": __version__}
+
+
+@app.get("/metrics")
+def metrics() -> list[dict[str, Any]]:
+    """列出语义层所有可用指标。"""
+    _, catalog = _get_conn()
+    return list_metrics(catalog)
+
+
+@app.post("/metric")
+def query_metric(req: MetricRequest) -> dict[str, Any]:
+    """直查指标：确定性 SQL 编译 + 参数绑定 + 交叉验证，返回带 run_id 的结果。"""
+    conn, catalog = _get_conn()
+    try:
+        result = metric_query(conn, req.metric, req.params or {}, catalog)
+    except Exception as exc:  # 语义层校验失败（未知指标/参数错）
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    payload: dict[str, Any] = {
+        "metric": result.metric,
+        "label": result.label,
+        "value": result.value,
+        "unit": result.unit,
+        "as_of": result.as_of,
+        "source": result.source,
+        "run_id": result.run_id,
+        "params": result.params,
+        "extra": result.extra,
+    }
+    if result.verification is not None:
+        payload["verification"] = {
+            "status": result.verification.status.value,
+            "note": result.verification.note,
+            "verify_run_id": result.verification.verify_run_id,
+        }
+    return payload
+
+
+@app.post("/agent")
+def agent_answer(req: AgentRequest) -> dict[str, Any]:
+    """自然语言问答（LangGraph Agent）：选指标 → 填参 → 确定性查询 → 验证。"""
+    from findata.agent.graph import answer_question
+
+    conn, _ = _get_conn()
+    try:
+        answer = answer_question(conn, req.question)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Agent 调用失败（是否配置 FINDATA_LLM_API_KEY？）：{exc}",
+        ) from exc
+    return {"question": req.question, "answer": answer}
+
+
+@app.post("/agent/stream")
+def agent_stream(req: AgentRequest) -> StreamingResponse:
+    """问答的 SSE 流式版本。"""
+    from findata.agent.graph import build_agent
+    from langchain_core.messages import HumanMessage
+
+    conn, _ = _get_conn()
+
+    async def event_source():
+        try:
+            agent = build_agent(conn)
+            initial = {"messages": [HumanMessage(content=req.question)], "run_ids": []}
+            async for chunk in agent._app.astream(initial, stream_mode="messages"):
+                msg, _ = chunk
+                if getattr(msg, "content", None):
+                    text = msg.content
+                    if isinstance(text, list):
+                        text = "".join(
+                            part.get("text", "") for part in text if isinstance(part, dict)
+                        )
+                    if text:
+                        yield f"data: {json.dumps({'token': text}, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as exc:  # noqa: BLE001
+            yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_source(), media_type="text/event-stream")
+
+
+@app.get("/trace/{run_id}")
+def trace(run_id: str) -> dict[str, Any]:
+    """按 run_id 回溯查询血缘（SQL + 参数 + 交叉验证结论）。"""
+    conn, _ = _get_conn()
+    row = conn.execute(
+        "SELECT metric, params, sql, value, started_at, finished_at "
+        "FROM query_run WHERE run_id = ?",
+        [run_id],
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"run_id={run_id} 未找到")
+    verify = conn.execute(
+        "SELECT status, main_value, verify_value, note, run_id "
+        "FROM verify_run WHERE query_run_id = ?",
+        [run_id],
+    ).fetchone()
+    verification = None
+    if verify is not None:
+        verification = {
+            "status": verify[0],
+            "main_value": verify[1],
+            "verify_value": verify[2],
+            "note": verify[3],
+            "verify_run_id": verify[4],
+        }
+    return {
+        "run_id": run_id,
+        "metric": row[0],
+        "params": json.loads(row[1]) if row[1] else None,
+        "sql": row[2],
+        "value": row[3],
+        "started_at": str(row[4]) if row[4] else None,
+        "finished_at": str(row[5]) if row[5] else None,
+        "verification": verification,
+    }

@@ -93,3 +93,28 @@ class MockLLMClient:
         if self._replies:
             return self._replies.pop(0)
         return self._default
+
+
+# langchain 是"可信问数/分析"链路（LangGraph）的软依赖；监控链路（归因器）
+# 走 OpenAICompatClient / MockLLMClient，不依赖它。导入失败不应拖垮监控链路。
+try:  # pragma: no cover
+    from langchain_openai import ChatOpenAI
+except Exception:  # pragma: no cover
+    ChatOpenAI = None  # type: ignore[assignment]
+
+
+def make_chat_model(temperature: float = 0.0) -> "ChatOpenAI":
+    """构建 OpenAI 兼容的 Chat 模型，供 LangGraph 分析链路（semantic/agent）使用。
+
+    temperature=0 保证"选指标 + 填参"的确定性。监控链路的归因器走
+    OpenAICompatClient / MockLLMClient，不依赖此函数。
+    """
+    if ChatOpenAI is None:
+        raise RuntimeError("langchain-openai 未安装，无法构建分析链路模型")
+    return ChatOpenAI(
+        model=settings.llm_model,
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        temperature=temperature,
+        timeout=settings.llm_timeout_seconds,
+    )

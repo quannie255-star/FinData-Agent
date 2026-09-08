@@ -1,7 +1,7 @@
 [project]
 name = "findata"
-version = "0.6.0"
-description = "数据质量监控 Agent：异常探测 + 根因归因 + 误报抑制 + 评测门禁"
+version = "0.7.0"
+description = "面向 A 股金融数据的智能体：数据质量监控（异常探测+根因归因+误报抑制）与可信问数分析（语义指标层+交叉验证+溯源）两套互补能力，共享同一 DuckDB 数据底座"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -11,13 +11,15 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "requests>=2.31",
+    "pyyaml>=6.0.3",
     "fastapi>=0.141.1",
     "uvicorn[standard]>=0.52.4",
     "mcp>=2.1.1",
     "httpx>=0.28.1",
     "opentelemetry-api>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
-    "pyyaml>=6.0.3",
+    "langgraph>=1.2.11",
+    "langchain-openai>=1.6.0",
 ]
 
 [dependency-groups]

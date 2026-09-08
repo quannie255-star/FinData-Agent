@@ -3,6 +3,10 @@
 所有业务表遵循统一约定：
 - 主键去重（symbol+date 等），保证幂等 upsert
 - 数值单位在列注释中声明，语义层引用时不再猜单位
+
+本文件是 findata 两套互补能力的共享数据底座：
+- 数据质量监控（dq/）：ingest_run / stock_universe / trading_calendar / corporate_event / stock_daily ...
+- 可信问数分析（semantic/）：query_run / verify_run 记录每次指标查询与交叉验证血缘
 """
 
 from __future__ import annotations
@@ -90,7 +94,38 @@ CREATE TABLE IF NOT EXISTS valuation_daily (
     total_mv  DOUBLE,                -- 总市值（元）
     PRIMARY KEY (symbol, date)
 );
+
+-- 查询血缘（可信问数/语义层起）：记录每次 metric_query 的 SQL 与结果，供溯源
+CREATE TABLE IF NOT EXISTS query_run (
+    run_id      VARCHAR PRIMARY KEY,
+    metric      VARCHAR,
+    params      JSON,
+    sql         TEXT,
+    value       DOUBLE,
+    started_at  TIMESTAMP,
+    finished_at TIMESTAMP
+);
+
+-- 交叉验证血缘（可信层起）：记录主路径与验证路径的比对结果
+CREATE TABLE IF NOT EXISTS verify_run (
+    run_id        VARCHAR PRIMARY KEY,
+    query_run_id  VARCHAR,           -- 关联 query_run.run_id，便于一次查询回追验证
+    metric        VARCHAR,
+    params        JSON,
+    main_value    DOUBLE,
+    verify_value  DOUBLE,
+    status        VARCHAR,           -- verified / mismatch / not_verifiable
+    sql           TEXT,
+    note          TEXT,               -- 验证口径说明 / 不一致原因
+    finished_at   TIMESTAMP
+);
 """
+
+# 老库兼容迁移：已存在表用 ALTER 补列（SCHEMA_SQL 的 IF NOT EXISTS 不会改旧表）
+MIGRATIONS = [
+    "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS query_run_id VARCHAR",
+    "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS note TEXT",
+]
 
 
 def connect(db_path: str | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -101,6 +136,12 @@ def connect(db_path: str | None = None, read_only: bool = False) -> duckdb.DuckD
     conn = duckdb.connect(path, read_only=read_only)
     if not read_only:
         conn.execute(SCHEMA_SQL)
+        for stmt in MIGRATIONS:
+            try:
+                conn.execute(stmt)
+            except Exception:
+                # 列已存在（不同 duckdb 版本报错文案不同），忽略即可
+                pass
     return conn
 
 
