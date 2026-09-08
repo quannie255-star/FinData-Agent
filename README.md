@@ -1,5 +1,10 @@
 # Findata — 数据质量监控 Agent
 
+[![test](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml/badge.svg)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)
+[![release](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml/badge.svg)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+![镜像](https://img.shields.io/badge/ghcr.io-v0.6.0-green)
+
 > 不只是发现数据异常，而是判断它**该不该被当回事**。
 
 **Findata** 是一个面向 A 股金融数据的**数据质量监控 Agent**：自动巡检数据仓库，发现异常后做**根因归因**，并主动**抑制因合法业务事件（停牌、除权除息、新股上市、财报修正）产生的误报**，最终产出可行动的告警与巡检报告。
@@ -283,6 +288,9 @@ docker compose up                                # 容器化版
 
 不想先装环境的话，[`examples/`](examples/) 里有跑好的快照——巡检报告（Markdown / HTML）、
 评测看板、评测门禁输出，浏览器直接打开就能看，且**任何人 clone 后重跑结果逐字一致**。
+
+[`PITCH.md`](PITCH.md) 是另一份东西：**给要介绍这个项目的人准备的**——简历可直接粘贴的
+项目描述、30 秒电梯演讲、以及几个高频追问的应答（包括这个项目的边界和一处我撤回了的实现）。
 
 巡检一瞥（合成语料，观察日 2024-06-28）：
 
