@@ -1,6 +1,6 @@
 [project]
 name = "findata"
-version = "0.2.0"
+version = "0.6.0"
 description = "可信数据分析 Agent：语义指标层 + 交叉验证 + 溯源 + 评测体系"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,10 +10,16 @@ dependencies = [
     "pandas>=2.0",
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
+    "pyyaml>=6.0",
+    "langgraph>=1.2.11",
+    "langchain-openai>=1.6.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=8.0",
     "ruff>=0.5",
 ]

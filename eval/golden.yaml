@@ -1,0 +1,73 @@
+# Golden Set — 离线评测集（绑定 CI 合成 fixture，确定性可复现）
+#
+# 每个 case 是一组「已知输入 + 期望输出」：
+#   query      评测输入：指标名 + params（与 metric_query 完全一致）
+#   expect     期望结果：value + unit + 验证状态
+#   tol        数值容差（用于浮点比对）
+#
+# 数值来自 scripts/build_eval_fixture.py 生成的合成数据（非真实行情），
+# 这样 CI 在无网络环境下也能确定性回归。任何人改 SQL/编译器/验证器逻辑时，
+# CI 都会把偏差挡在 merge 之前。真实仓库的评测请用 --db 指向 data/warehouse.duckdb。
+
+cases:
+  - name: 茅台最新收盘价
+    query:
+      metric: close_price
+      params:
+        symbol: "600519"
+    expect:
+      value_present: true
+      value: 121.0
+      unit: "元"
+      verification: "verified"
+    tol: 1e-3
+
+  - name: 五粮液最新收盘价
+    query:
+      metric: close_price
+      params:
+        symbol: "000858"
+    expect:
+      value_present: true
+      value: 72.0
+      unit: "元"
+      verification: "verified"
+    tol: 1e-3
+
+  - name: 茅台区间涨幅
+    query:
+      metric: pct_change
+      params:
+        symbol: "600519"
+        start: "2024-01-02"
+        end: "2024-01-04"
+    expect:
+      value_present: true
+      value: 21.0
+      unit: "%"
+      verification: "verified"
+    tol: 1e-3
+
+  - name: 茅台最近市盈率
+    query:
+      metric: valuation_pe_ttm
+      params:
+        symbol: "600519"
+    expect:
+      value_present: true
+      value: 18.5
+      unit: "倍"
+      verification: "verified"
+    tol: 1e-3
+
+  - name: 宁德时代最新收盘价（无估值数据）
+    query:
+      metric: close_price
+      params:
+        symbol: "300750"
+    expect:
+      value_present: true
+      value: 385.0
+      unit: "元"
+      verification: "verified"
+    tol: 1e-3

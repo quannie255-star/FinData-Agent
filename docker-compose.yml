@@ -1,0 +1,27 @@
+# 一键起 Findata 服务（含自动灌入的演示数据）
+#
+#   docker compose up --build
+#   打开 http://localhost:8000/docs 即可交互
+#
+# 想接真实 LLM（自然语言问答 /agent 需要）：
+#   1) cp .env.example .env 并填入 FINDATA_LLM_API_KEY
+#   2) 取消下面 env_file 注释
+#   3) 跑一次真实采集：docker compose exec findata uv run python scripts/ingest_finance.py
+
+services:
+  findata:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - FINDATA_LLM_BASE_URL=${FINDATA_LLM_BASE_URL:-}
+      - FINDATA_LLM_API_KEY=${FINDATA_LLM_API_KEY:-}
+      - FINDATA_LLM_MODEL=${FINDATA_LLM_MODEL:-}
+    # env_file:
+    #   - .env
+    volumes:
+      # 持久化数据仓库，避免容器重建后数据丢失
+      - findata-data:/app/data
+
+volumes:
+  findata-data:

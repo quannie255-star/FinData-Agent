@@ -1,0 +1,14 @@
+.venv
+.git
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+data/*.duckdb
+data/eval_fixture.duckdb
+.workbuddy
+*.md
+!README.md
+.env

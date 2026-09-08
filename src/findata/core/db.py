@@ -70,7 +70,38 @@ CREATE TABLE IF NOT EXISTS valuation_daily (
     total_mv  DOUBLE,                -- 总市值（元）
     PRIMARY KEY (symbol, date)
 );
+
+-- 查询血缘（M2 语义层起）：记录每次 metric_query 的 SQL 与结果，供引用溯源
+CREATE TABLE IF NOT EXISTS query_run (
+    run_id      VARCHAR PRIMARY KEY,
+    metric      VARCHAR,
+    params      JSON,
+    sql         TEXT,
+    value       DOUBLE,
+    started_at  TIMESTAMP,
+    finished_at TIMESTAMP
+);
+
+-- 交叉验证血缘（M4 可信层起）：记录主路径与验证路径的比对结果
+CREATE TABLE IF NOT EXISTS verify_run (
+    run_id        VARCHAR PRIMARY KEY,
+    query_run_id  VARCHAR,           -- 关联 query_run.run_id，便于一次查询回追验证
+    metric        VARCHAR,
+    params        JSON,
+    main_value    DOUBLE,
+    verify_value  DOUBLE,
+    status        VARCHAR,           -- verified / mismatch / not_verifiable
+    sql           TEXT,
+    note          TEXT,               -- 验证口径说明 / 不一致原因
+    finished_at   TIMESTAMP
+);
 """
+
+# 老库兼容迁移：已存在表用 ALTER 补列（SCHEMA_SQL 的 IF NOT EXISTS 不会改旧表）
+MIGRATIONS = [
+    "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS query_run_id VARCHAR",
+    "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS note TEXT",
+]
 
 
 def connect(db_path: str | None = None, read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -81,6 +112,12 @@ def connect(db_path: str | None = None, read_only: bool = False) -> duckdb.DuckD
     conn = duckdb.connect(path, read_only=read_only)
     if not read_only:
         conn.execute(SCHEMA_SQL)
+        for stmt in MIGRATIONS:
+            try:
+                conn.execute(stmt)
+            except Exception:
+                # 列已存在（不同 duckdb 版本报错文案不同），忽略即可
+                pass
     return conn
 
 
