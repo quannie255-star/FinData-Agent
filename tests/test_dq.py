@@ -174,3 +174,57 @@ def test_upstream_outage_from_lineage():
     hits = [d for d in diags if d.root_cause is RootCause.UPSTREAM_OUTAGE]
     assert hits, "血缘记录采集失败时应归因到上游故障"
     assert hits[0].severity is Severity.P0
+
+
+def _exchange_calendar() -> TradingCalendar:
+    """一张极简交易所日历：1/2/3 开市，1/31-2/4 春节休市，其余按周末。"""
+    days: list[date] = []
+    for d in (1, 2, 3):
+        days.append(date(2022, 1, d))
+    days.append(date(2022, 1, 28))  # 春节前最后一天
+    for d in range(7, 11):  # 2/7 起恢复（7、8、9、10 中只取工作日）
+        day = date(2022, 2, d)
+        if day.weekday() < 5:
+            days.append(day)
+    return TradingCalendar.from_trading_days(days)
+
+
+def test_exchange_calendar_is_lookup_not_inference():
+    """真实日历模式直接查表：调休上班的周六也算交易日。"""
+    days = [date(2024, 2, 4), date(2024, 2, 5)]  # 2024-02-04 是周日但春节调休开市
+    cal = TradingCalendar.from_trading_days(days)
+    assert cal.is_exchange_calendar
+    assert cal.is_trading_day(date(2024, 2, 4))  # 周日，但日历里有
+    assert not cal.is_trading_day(date(2024, 2, 6))  # 周二，但日历里没有
+    assert not TradingCalendar.default().is_exchange_calendar
+
+
+def test_exchange_calendar_kills_spring_festival_false_positive():
+    """硬编码节假日表覆盖不到 2022，春节会被报成一串 missing_rows。
+
+    这是拿真实数据巡检时**实际发生的误报**：4 条告警里 3 条落在 2022 春节窗口。
+    春节是全市场同时休市，数据里没有任何观测能反推出来（with_observed 只认
+    "出现过的日子"），所以唯一正解是接真实交易日历。
+    """
+    cal = TradingCalendar.default()
+    # 硬编码表只到 2024，2022-02-01（周二）会被当成普通工作日
+    assert cal.is_trading_day(date(2022, 2, 1))
+
+    real = _exchange_calendar()
+    assert not real.is_trading_day(date(2022, 2, 1))
+    assert real.trading_days(date(2022, 1, 31), date(2022, 2, 4)) == []
+
+
+def test_exchange_calendar_prev_day_does_not_hang_out_of_range():
+    """查询早于日历覆盖范围时不能向后无限回溯。"""
+    cal = _exchange_calendar()
+    # 1980 年远早于日历；必须返回而不是死循环
+    assert cal.prev_trading_day(date(1980, 1, 1)) == date(1979, 12, 31)
+
+
+def test_with_observed_merges_into_exchange_calendar():
+    """真实日历模式下 with_observed 仍然生效（补齐接口漏采的日子）。"""
+    cal = _exchange_calendar()
+    extra = date(2022, 2, 5)  # 日历里没有，但数据里出现过
+    assert not cal.is_trading_day(extra)
+    assert cal.with_observed([extra]).is_trading_day(extra)

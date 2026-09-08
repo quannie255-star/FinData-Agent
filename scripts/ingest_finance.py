@@ -21,6 +21,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="采集金融数据到 DuckDB 仓库")
     parser.add_argument("--full", action="store_true", help="全量重采（默认增量）")
     parser.add_argument("--symbols", type=str, help="逗号分隔的股票代码，默认全部股票池")
+    parser.add_argument(
+        "--events",
+        action="store_true",
+        help="额外采集公司事件（除权除息/停牌）。按标的逐个调接口，比日线慢一个量级",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -37,7 +42,9 @@ def main() -> int:
 
     conn = connect(settings.dsn)
     try:
-        summary = ingest_all(conn, full_refresh=args.full, universe=universe)
+        summary = ingest_all(
+            conn, full_refresh=args.full, universe=universe, with_events=args.events
+        )
         print(summary.report())
 
         stats = conn.execute(

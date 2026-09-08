@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据质量巡检报告 · 2026-09-07</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --card:#fff; --line:#e5e7eb; --text:#1f2328;
+    --muted:#6b7280; --p0:#dc2626; --p1:#d97706; --p2:#2563eb; --ok:#059669;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 20px; background:var(--bg); color:var(--text);
+    font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .card { background:var(--card); border:1px solid var(--line);
+    border-radius:10px; padding:14px 16px; }
+  .card .k { color:var(--muted); font-size:12px; }
+  .card .v { font-size:24px; font-weight:600; margin-top:2px; }
+  .card .n { color:var(--muted); font-size:12px; }
+  .sec { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:18px 20px; margin-bottom:16px; }
+  .sec h2 { font-size:15px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .tag { font-size:11px; padding:2px 8px; border-radius:999px; color:#fff; font-weight:600; }
+  .t-p0 { background:var(--p0); } .t-p1 { background:var(--p1); }
+  .t-p2 { background:var(--p2); } .t-ok { background:var(--ok); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { text-align:left; padding:8px 10px; vertical-align:top;
+    border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  code { background:#f3f4f6; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .route { color:var(--muted); font-size:12px; margin:-6px 0 10px; }
+  .empty { color:var(--muted); }
+  .bar { display:flex; align-items:center; gap:8px; margin:6px 0; }
+  .bar .lb { width:190px; font-size:12px; color:var(--muted); }
+  .bar .tr { flex:1; background:#f3f4f6; border-radius:4px; height:8px; overflow:hidden; }
+  .bar .fl { height:100%; background:#9ca3af; }
+  .bar .ct { width:28px; text-align:right; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>数据质量巡检报告</h1>
+  <div class="sub">观察日 2026-09-07 · 生成于 2026-09-08 10:11 · 覆盖 25 只标的 / 3,396 行行情</div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="k">健康分</div><div class="v">92.0</div><div class="n">关注</div>
+    </div>
+    <div class="card">
+      <div class="k">待处理告警</div><div class="v">2</div>
+      <div class="n">P0 0 · P1 2 · P2 0</div>
+    </div>
+    <div class="card">
+      <div class="k">抑制误报</div><div class="v">0</div><div class="n">合法业务事件</div>
+    </div>
+    <div class="card">
+      <div class="k">降噪率</div><div class="v">0%</div>
+      <div class="n">3 个信号收敛为 2</div>
+    </div>
+  </div>
+
+  <div class="sec"><h2>待处理告警</h2><h2 style="margin-top:18px"><span class="tag t-p1">P1 重要</span><span style="font-weight:500">当日工单</span></h2><div class="route">进入当日待办，收盘前必须定位</div><table><thead><tr><th>标的</th><th>表</th><th>窗口</th><th>根因</th><th>观测值(阈值)</th><th>判断依据</th></tr></thead><tbody><tr><td><code>600030</code></td><td>stock_daily</td><td>2022-01-19..2022-01-26</td><td><code>missing_rows</code></td><td>6 <span style='color:#6b7280'>(1)</span></td><td>中间出现 6 个交易日空洞，判定为回补漏采</td></tr>
+<tr><td><code>600030</code></td><td>stock_daily</td><td>2023-07-25..2023-08-07 等 2 段</td><td><code>distribution_drift</code></td><td>5.404 <span style='color:#6b7280'>(5)</span></td><td>近期均值/历史均值 = 5.40，超出漂移阈值</td></tr></tbody></table></div>
+  
+  <div class="sec"><h2>根因分布</h2><div class="bar"><div class="lb"><code>missing_rows</code></div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="ct">1</div></div>
+<div class="bar"><div class="lb"><code>distribution_drift</code></div><div class="tr"><div class="fl" style="width:100%"></div></div><div class="ct">1</div></div></div>
+</div>
+</body>
+</html>

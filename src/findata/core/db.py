@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS stock_universe (
     list_date   DATE                    -- 上市日；新股历史长度天然不足，供归因器抑制误报
 );
 
+-- 真实交易日历（ak.tool_trade_date_hist_sina 全量，1990 至今）。
+-- 硬编码节假日表只覆盖有限年份，遇到更早/更晚的历史就会把春节、国庆报成
+-- "缺失行情"。这张表是消除这类误报的唯一正确来源 —— 节假日是查表问题，
+-- 不是推断问题。
+CREATE TABLE IF NOT EXISTS trading_calendar (
+    date DATE PRIMARY KEY
+);
+
 -- 公司事件：停牌 / 除权除息 / 上市。归因器的"业务知识"来源。
 -- 缺了它，停牌造成的缺失与采集失败造成的缺失在形态上无法区分。
 CREATE TABLE IF NOT EXISTS corporate_event (

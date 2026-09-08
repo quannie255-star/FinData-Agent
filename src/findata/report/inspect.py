@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from logging import getLogger
 
 import pandas as pd
 
@@ -25,9 +26,35 @@ ROUTES: dict[Severity, tuple[str, str]] = {
     Severity.P2: ("周度汇总", "并入周报，Trend 跟踪即可"),
 }
 
+logger = getLogger(__name__)
+
 _EMPTY_UNIVERSE = ("symbol", "name", "industry", "listed_board", "list_date")
-_EMPTY_EVENT = ("symbol", "event_date", "event_type", "payload")
+# 列名必须与 db.SCHEMA_SQL 的 corporate_event 一致，否则降级空表会被
+# 归因器当成"没有事件"而默默跳过抑制（列名不匹配时 triage 直接返回 False）。
+_EMPTY_EVENT = ("symbol", "date", "kind", "end_date", "detail")
 _EMPTY_RUN = ("run_id", "source", "table", "started_at", "status", "rows", "params")
+
+
+def _calendar_from_warehouse(conn, observed: list) -> TradingCalendar:
+    """真实仓库的交易日历：优先用 trading_calendar 表，没有才退回硬编码推断。
+
+    为什么必须先查表：硬编码节假日只覆盖 2024-2025，而生产库常有更早历史。
+    春节是**所有标的同一天休市**，数据里没有任何观测能反推出来（with_observed
+    只认"出现过的日子"），所以唯一正解是接真实日历。拿真实数据巡检时漏了
+    这一步，2022 年春节会被报成一串 missing_rows。
+    """
+    try:
+        days = [
+            d.date() if hasattr(d, "date") else d
+            for (d,) in conn.execute("SELECT date FROM trading_calendar").fetchall()
+        ]
+    except Exception:
+        days = []
+    if not days:
+        return TradingCalendar.default().with_observed(observed)
+    cal = TradingCalendar.from_trading_days(days)
+    logger.info("使用交易所真实交易日历：%d 个交易日", len(days))
+    return cal.with_observed(observed)
 
 
 def _empty(cols: tuple[str, ...]) -> pd.DataFrame:
@@ -61,7 +88,7 @@ class Snapshot:
             daily["date"] = pd.to_datetime(daily["date"]).dt.date
 
         observed = sorted({d for d in daily.get("date", pd.Series(dtype=object)) if d is not None})
-        cal = TradingCalendar.default().with_observed(observed)
+        cal = _calendar_from_warehouse(conn, observed)
         if asof is None:
             asof = observed[-1] if observed else date.today()
 

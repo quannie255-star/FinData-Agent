@@ -266,11 +266,12 @@ LLM 归因器 vs 规则归因器的一致性指标从此有量化追溯。
 
 ```bash
 uv sync
-uv run pytest                                    # 104 个单测
+uv run pytest                                    # 109 个单测
 uv run python scripts/run_eval.py                # 数据质量评测
-uv run python scripts/run_inspection.py          # 每日巡检
+uv run python scripts/run_inspection.py          # 每日巡检（合成语料，无需外网）
 uv run python scripts/build_dashboard.py         # 评测看板
-uv run python scripts/ingest_finance.py          # 采真实数据（约 2-3 分钟）
+uv run python scripts/ingest_finance.py --events # 采真实数据（含交易日历与公司事件）
+uv run python scripts/run_inspection.py --source warehouse   # 真实仓库巡检
 uv run findata-serve                             # 演示站（:8080）
 docker compose up                                # 容器化版
 ```
@@ -308,19 +309,30 @@ docker compose up                                # 容器化版
 ## 真实数据上跑过吗
 
 跑过。[`examples/inspection-warehouse-2026-09-07.md`](examples/inspection-warehouse-2026-09-07.md)
-是真实 akshare 数据（25 只标的 / 3,396 行，观察日 2026-09-07）的巡检结果：健康分 84、4 条告警。
+是真实 akshare 数据（25 只标的 / 3,396 行，观察日 2026-09-07）的巡检结果。
 
-坦白讲，它同时暴露了两个已知边界：
+**第一版暴露了误报，已修**：健康分 84、4 条告警，其中 3 条 `missing_rows` 全部落在
+2022 年春节窗口。硬编码节假日表只覆盖 2024-2025，而春节是**全市场同时休市**——
+那些日子根本没有观测，"数据里出现过就是交易日"永远推不出来。
+接进真实交易日历（`trading_calendar` 表，akshare `tool_trade_date_hist_sina`，
+1990 至今 8797 天）后，信号 57 → 3、告警 4 → 2、健康分 84 → 92。
+剩下的 2 条经核查都是真信号：600030 缺的 6 个交易日，同窗口其他标的有数据，
+是回补漏采而非集体休市。
 
-- **3 条 `missing_rows` 是误报**，全部落在 2022 年春节窗口。硬编码节假日表只覆盖
-  2024-2025 年，而春节是所有标的**同时**休市，靠"数据里出现过就是交易日"推不出来，
-  只能接真实交易日历（akshare `tool_trade_date_hist_sina`）
-- **真实路径下 `corporate_event` 还是空表**——目前只有 schema 和消费方，没接采集。
-  所以停牌 / 除权除息的抑制在真实数据上还没有数据源可用，报告里"抑制 0"就是这么来的
+**还有两条没修，也不打算假装修好**：
 
-愿意把这两条写进 README，是因为**知道边界比假装没边界重要**：合成语料上的漂亮数字是
-设计出来的对照，真实世界的事件源才是下一步。被问"真实数据上跑过吗"时，能说清为什么
-误报、缺什么，比报一个"100%"可信得多。
+- **真实数据上抑制率是 0**。`corporate_event` 现在有 553 条真实除权除息记录
+  （覆盖 24 只，1995–2026），但告警窗口内一条都没落上；停牌接口只给"此刻谁停着"
+  的快照、没有历史起止日。所以**合成语料上 100% 的精确率是设计出来的对照，
+  归因层的抑制能力在真实数据上尚未被触发**——缺的不是算法，是停牌历史这个事实来源
+- **成交量漂移分不清"单位变更"和"市场放量"**。另一条告警是 600030 放量 5.40 倍，
+  核查后同期价格上涨 14.8%，是 2023 年 7 月券商政策行情，合法。试过加归因规则，
+  失败了：探针算的"10 日均量/前 30 日均量"把评测注入的 20x 稀释成 5.14x，
+  和真实放量的 5.40x 数值重合；硬塞规则会让根因准确率从 100% 掉到 85.7%、
+  评测门禁挂掉。**为修一条告警牺牲门禁是负收益，所以撤回并留作已知局限**
+
+愿意把这两条写进 README，是因为**知道边界比假装没边界重要**。被问"真实数据上跑过吗"
+时，能说清为什么误报过、为什么抑制是 0、试过什么没成功，比报一个"100%"可信得多。
 
 ## 路线图
 
@@ -336,6 +348,7 @@ docker compose up                                # 容器化版
 - [x] M9 业务事实表 schema：`stock_universe.list_date` + `corporate_event(suspension/ex_rights/listing)`，归因层依赖的生产 schema 落地
 - [x] M9-bis 上市日回填：`backfill_list_date` 用 `stock_daily` 首个交易日回填 `list_date`（幂等 + 补采到更早历史时自我修正）。没它的话 `BENIGN_NEW_LISTING`（新股历史短）这条归因分支在真实数据路径上永远走不到——只有 fixture 能触发，等于主线能力是哑的
 - [x] M10 发布链路：镜像不在容器内 build project（slim 内 PEP 517 build 需现场拉 build backend，是连挂 5 轮的根因），release 拆两步「单架构起容器冒烟 → 通过才 multi-arch push」，坏镜像不进 registry
+- [x] M11 真实交易日历 + 公司事件采集：`trading_calendar` 表（`tool_trade_date_hist_sina` 8797 天）+ `TradingCalendar.from_trading_days` 查表模式 + `ingest_corporate_events`（除权除息 553 条 + 停牌快照）。真实数据上信号 57 → 3、告警 4 → 2、健康分 84 → 92
 
 ## License
 

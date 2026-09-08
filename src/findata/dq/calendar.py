@@ -13,6 +13,10 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from datetime import date, datetime, timedelta
 
+# prev/next_trading_day 的最大回溯天数。真实交易日历有覆盖范围（1990 至今），
+# 查询超出范围时若不加限制就会向后无限循环。约 1 年自然日，足够跨过任何长假。
+_MAX_LOOKBACK = 366
+
 
 def _as_date(day: date) -> date:
     """把 `pandas.Timestamp` / `datetime` 统一成 `datetime.date`。
@@ -63,27 +67,49 @@ _DEFAULT_HOLIDAYS: frozenset[date] = frozenset(
 class TradingCalendar:
     """交易日判定与交易日计数。"""
 
-    __slots__ = ("_holidays", "_extra")
+    __slots__ = ("_holidays", "_extra", "_universe")
 
     def __init__(
         self,
         holidays: Iterable[date] = (),
         extra_trading_days: Iterable[date] = (),
+        trading_days: Iterable[date] | None = None,
     ) -> None:
         self._holidays: frozenset[date] = frozenset(holidays)
         # 调休日：法定节假日里实际开市的周六日，或硬编码表未覆盖到的历史交易日。
         self._extra: frozenset[date] = frozenset(extra_trading_days)
+        # 真实交易日历全集。给了它就不再用"周末 + 节假日"推断，直接查表。
+        self._universe: frozenset[date] | None = (
+            None if trading_days is None else frozenset(trading_days)
+        )
 
     @classmethod
     def default(cls) -> TradingCalendar:
         return cls(_DEFAULT_HOLIDAYS)
 
+    @classmethod
+    def from_trading_days(cls, days: Iterable[date]) -> TradingCalendar:
+        """用真实交易日历构造（akshare `tool_trade_date_hist_sina` 全量）。
+
+        与 `default()` 的本质区别：硬编码节假日表只能覆盖写死的那两年，
+        往前一点（比如 2022 春节）就会把全市场休市报成"缺失行情"。
+        真实数据路径必须用这个；评测语料为了确定性可复现仍用 `default()`。
+        """
+        return cls(trading_days=days)
+
     @property
     def holidays(self) -> frozenset[date]:
         return self._holidays
 
+    @property
+    def is_exchange_calendar(self) -> bool:
+        """是否基于交易所真实日历（而非推断）。"""
+        return self._universe is not None
+
     def is_trading_day(self, day: date) -> bool:
         day = _as_date(day)
+        if self._universe is not None:
+            return day in self._universe
         if day in self._extra:
             return True
         return day.weekday() < 5 and day not in self._holidays
@@ -91,11 +117,13 @@ class TradingCalendar:
     def with_observed(self, days: Iterable[date]) -> TradingCalendar:
         """用真实数据里出现过的日期扩充日历。
 
-        硬编码节假日表只覆盖有限年份，而生产库常有更早的历史数据。
-        仓库里真的出现过行情的日期必然是交易日，把它并进来，
-        可以避免把旧数据误判成"非交易日的幽灵数据"。
+        真实日历模式下同样并入：数据里真的出现过行情的日子必然是交易日，
+        能补上交易日历接口本身缺采的零星日子。
         """
-        return TradingCalendar(self._holidays, self._extra | frozenset(days))
+        observed = frozenset(_as_date(d) for d in days)
+        if self._universe is not None:
+            return TradingCalendar(trading_days=self._universe | observed)
+        return TradingCalendar(self._holidays, self._extra | observed)
 
     def trading_days(self, start: date, end: date) -> list[date]:
         """闭区间内的全部交易日。"""
@@ -111,15 +139,21 @@ class TradingCalendar:
     def prev_trading_day(self, day: date) -> date:
         """返回早于 day 的最近交易日。"""
         cur = _as_date(day) - timedelta(days=1)
-        while not self.is_trading_day(cur):
+        for _ in range(_MAX_LOOKBACK):
+            if self.is_trading_day(cur):
+                return cur
             cur -= timedelta(days=1)
-        return cur
+        # 走不到这里除非 day 早于日历覆盖范围（数据比交易日历接口还老）。
+        # 宁可退化为"回退一个自然日"，也不能向后无限回溯。
+        return _as_date(day) - timedelta(days=1)
 
     def next_trading_day(self, day: date) -> date:
-        cur = day + timedelta(days=1)
-        while not self.is_trading_day(cur):
+        cur = _as_date(day) + timedelta(days=1)
+        for _ in range(_MAX_LOOKBACK):
+            if self.is_trading_day(cur):
+                return cur
             cur += timedelta(days=1)
-        return cur
+        return _as_date(day) + timedelta(days=1)
 
     def expected_last_date(self, asof: date) -> date:
         """T+1 数据源在 asof 时点应当到达的最后数据日期。

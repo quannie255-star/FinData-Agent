@@ -258,6 +258,13 @@ class BaselineTriage:
                 confidence=0.9,
                 explanation=f"量级突变至 {finding.value:.6g} 倍，判定为单位或口径变更",
             )
+
+        # 注意（已知局限）：音量放大无法在当前特征集下区分「单位/口径变更」与
+        # 「市场放量」。探针算的是 10 日均量 / 前 30 日均量，会把注入的 20x
+        # 稀释成 5.14x，而真实政策行情的放量是 5.40x —— 两者数值上几乎重合；
+        # 价格判据同样无效（合成语料的价格本就是随机漫步，10 日涨跌 10% 很常见）。
+        # 要有把握地区分，得引入外部业务事实（交易所口径变更公告），
+        # 与停牌 / 上市日属于同一类问题：缺的不是算法，是事实来源。
         return Diagnosis(
             finding_key=finding.key,
             root_cause=RootCause.DISTRIBUTION_DRIFT,

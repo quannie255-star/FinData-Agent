@@ -90,6 +90,8 @@ class IngestSummary:
     failed: list[dict] = field(default_factory=list)
     total_rows: int = 0
     list_date_backfilled: int = 0  # 本次回填了上市日的股票数
+    trading_calendar_rows: int = 0  # 交易日历天数（0 = 采失败，节假日误报会回来）
+    corporate_event_rows: int = 0  # 公司事件条数（0 = 没开 --events 或采失败）
 
     def report(self) -> str:
         lines = [
@@ -100,6 +102,12 @@ class IngestSummary:
             lines.append(
                 f"  上市日回填：{self.list_date_backfilled} 只（取自 stock_daily 首日）"
             )
+        lines.append(
+            f"  交易日历：{self.trading_calendar_rows} 个交易日"
+            + ("（采集失败，节假日会误报）" if not self.trading_calendar_rows else "")
+        )
+        if self.corporate_event_rows:
+            lines.append(f"  公司事件：{self.corporate_event_rows} 条")
         for f in self.failed:
             lines.append(f"  [失败] {f['target']} {f['symbol']}: {f['error']}")
         return "\n".join(lines)
@@ -204,6 +212,127 @@ def fetch_valuation(symbol: str, start: str) -> pd.DataFrame:
     return df[df["date"] >= start_date].reset_index(drop=True)
 
 
+def fetch_trading_calendar() -> pd.DataFrame:
+    """交易所真实交易日历（1990 至今，约 8800 天）。
+
+    硬编码节假日表只能覆盖写死的年份，往前一点（如 2022 春节）就会把
+    **全市场同时休市**报成"缺失行情"——而"所有标的同一天缺失"恰恰是
+    靠数据本身推不出来的（with_observed 会把有数据的日子并进来，但集体
+    休市的日子没有任何观测）。节假日是查表问题，不是推断问题。
+    """
+    df = _retry(
+        lambda: ak.tool_trade_date_hist_sina(),
+        attempts=3,
+        tag="ak.tool_trade_date_hist_sina",
+        sleep=settings.ingest_sleep_seconds,
+    )
+    out = pd.DataFrame({"date": pd.to_datetime(df["trade_date"]).dt.date})
+    return out.drop_duplicates(subset=["date"]).sort_values("date").reset_index(drop=True)
+
+
+def fetch_dividend_events(symbol: str) -> pd.DataFrame:
+    """历史除权除息日。归因器用它解释"价格跳变"是正常事件而非脏数据。"""
+    df = _retry(
+        lambda: ak.stock_history_dividend_detail(symbol=symbol, indicator="分红"),
+        attempts=2,
+        tag=f"ak.stock_history_dividend_detail({symbol})",
+        sleep=settings.ingest_sleep_seconds,
+    )
+    if df is None or df.empty or "除权除息日" not in df.columns:
+        return pd.DataFrame(columns=["symbol", "date", "kind", "end_date", "detail"])
+    out = df[df["除权除息日"].notna()].copy()
+    out["date"] = pd.to_datetime(out["除权除息日"]).dt.date
+    out["symbol"] = symbol
+    out["kind"] = "ex_rights"
+    out["end_date"] = None
+    out["detail"] = out.apply(
+        lambda r: f"派息{_fmt(r['派息'])} 送股{_fmt(r['送股'])} 转增{_fmt(r['转增'])}",
+        axis=1,
+    )
+    return out[["symbol", "date", "kind", "end_date", "detail"]].drop_duplicates(
+        subset=["symbol", "date", "kind"]
+    )
+
+
+def fetch_suspension_snapshot() -> pd.DataFrame:
+    """当日停牌快照（东财口径）。
+
+    注意语义：这是"此刻谁停着"的快照，不是历史事件流——接口不返回停牌
+    起止日期。所以 end_date 留空，归因器按 `end_date IS NULL → 当日` 处理。
+    对历史回溯帮助有限，但至少让"停牌导致缺行"这条归因在真实数据上可达。
+    """
+    df = _retry(
+        lambda: ak.stock_zh_a_stop_em(),
+        attempts=2,
+        tag="ak.stock_zh_a_stop_em",
+        sleep=settings.ingest_sleep_seconds,
+    )
+    if df is None or df.empty or "代码" not in df.columns:
+        return pd.DataFrame(columns=["symbol", "date", "kind", "end_date", "detail"])
+    today = date.today()
+    out = pd.DataFrame(
+        {
+            "symbol": df["代码"].astype(str).str.zfill(6),
+            "date": today,
+            "kind": "suspension",
+            "end_date": None,
+            "detail": "当日停牌快照：" + df["名称"].astype(str),
+        }
+    )
+    return out.drop_duplicates(subset=["symbol", "date", "kind"])
+
+
+def _fmt(v: object) -> str:
+    try:
+        if v is None or pd.isna(v):
+            return "-"
+    except (TypeError, ValueError):
+        return "-"
+    return str(v)
+
+
+def ingest_trading_calendar(conn: duckdb.DuckDBPyConnection) -> int:
+    df = fetch_trading_calendar()
+    with tracked_run(
+        conn, source="ak.tool_trade_date_hist_sina", target_table="trading_calendar"
+    ) as (_, t):
+        n = upsert_dataframe(conn, "trading_calendar", df, ["date"])
+        t.add(n)
+    return n
+
+
+def ingest_corporate_events(
+    conn: duckdb.DuckDBPyConnection, symbols: list[str] | None = None
+) -> int:
+    """采集公司事件（除权除息 + 停牌快照）到 corporate_event。
+
+    没有这个，corporate_event 永远是空表 —— 停牌/除权的抑制能力在真实数据
+    上就只是"设计过的对照"，而不是能跑的链路。
+    """
+    symbols = symbols or [s for s, _, _ in UNIVERSE]
+    frames: list[pd.DataFrame] = []
+    with tracked_run(
+        conn, source="ak.corporate_events", target_table="corporate_event"
+    ) as (_, t):
+        for symbol in symbols:
+            try:
+                frames.append(fetch_dividend_events(symbol))
+            except Exception as exc:  # 单只失败不影响整批
+                logger.warning("除权除息 %s 采集失败: %s", symbol, exc)
+            time.sleep(settings.ingest_sleep_seconds)
+        try:
+            frames.append(fetch_suspension_snapshot())
+        except Exception as exc:
+            logger.warning("停牌快照采集失败: %s", exc)
+
+        if not frames:
+            return 0
+        df = pd.concat(frames, ignore_index=True)
+        n = upsert_dataframe(conn, "corporate_event", df, ["symbol", "date", "kind"])
+        t.add(n)
+    return n
+
+
 def ingest_universe(conn: duckdb.DuckDBPyConnection) -> int:
     # list_date 先留空：akshare 拿上市日要额外调接口，而日线还没采，
     # 此刻也没有素材可推算。ingest_all 末尾会调 backfill_list_date 回填。
@@ -267,12 +396,23 @@ def ingest_all(
     end: str | None = None,
     full_refresh: bool = False,
     universe: list[tuple[str, str, str]] | None = None,
+    with_events: bool = False,
 ) -> IngestSummary:
-    """采集股票池全部日线 + 估值 + 指数日线。默认增量模式。"""
+    """采集股票池全部日线 + 估值 + 指数日线。默认增量模式。
+
+    `with_events=True` 额外采公司事件（除权除息/停牌）。默认关：它要按标的
+    逐个调接口，比日线慢一个量级，而日线才是巡检的主输入。
+    """
     summary = IngestSummary()
     universe = universe if universe is not None else UNIVERSE
     end = end or date.today().strftime("%Y%m%d")
     ingest_universe(conn)
+
+    # 交易日历很便宜（一次调用 8800 行）且是消除节假日误报的前提，总是采。
+    try:
+        summary.trading_calendar_rows = ingest_trading_calendar(conn)
+    except Exception as exc:
+        logger.error("交易日历采集失败（节假日误报会回来）: %s", exc)
 
     def _do(source: str, table: str, symbol: str, fetch) -> None:
         try:
@@ -336,5 +476,15 @@ def ingest_all(
 
     # 日线都采完了才有素材推算上市日；幂等，重复跑返回 0
     summary.list_date_backfilled = backfill_list_date(conn)
+
+    if with_events:
+        try:
+            summary.corporate_event_rows = ingest_corporate_events(
+                conn, [s for s, _, _ in universe]
+            )
+        except Exception as exc:
+            logger.error("公司事件采集失败（停牌/除权抑制将无据可依）: %s", exc)
+
+    return summary
 
     return summary
