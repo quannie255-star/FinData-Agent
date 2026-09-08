@@ -14,7 +14,7 @@ from __future__ import annotations
 
 # 单一版本源：`pyproject.toml` 的 version。镜像里不走 pip install（源码 +
 # PYTHONPATH 直跑），拿不到 installed metadata，所以这里必须留一致的兜底值。
-_FALLBACK_VERSION = "0.5.0"
+_FALLBACK_VERSION = "0.6.0"
 
 try:
     from importlib.metadata import PackageNotFoundError, version
