@@ -103,7 +103,7 @@ except Exception:  # pragma: no cover
     ChatOpenAI = None  # type: ignore[assignment]
 
 
-def make_chat_model(temperature: float = 0.0) -> "ChatOpenAI":
+def make_chat_model(temperature: float = 0.0) -> ChatOpenAI:
     """构建 OpenAI 兼容的 Chat 模型，供 LangGraph 分析链路（semantic/agent）使用。
 
     temperature=0 保证"选指标 + 填参"的确定性。监控链路的归因器走

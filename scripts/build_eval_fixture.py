@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import argparse
 from datetime import date
+from pathlib import Path
 
 import pandas as pd
 
+from findata.config import settings
 from findata.core.db import connect
 
 FIXTURE_DB = "data/eval_fixture.duckdb"
@@ -19,6 +21,14 @@ FIXTURE_DB = "data/eval_fixture.duckdb"
 
 def build(db_path: str | None = None) -> None:
     target = db_path or FIXTURE_DB
+    # 防护：fixture 第一步会清空 stock_daily/valuation_daily，
+    # 误指向生产仓库会直接毁掉真实数据，这里直接拒绝。
+    resolved = Path(target).resolve()
+    if resolved == Path(settings.dsn).resolve():
+        raise SystemExit(
+            f"拒绝执行：{resolved} 是生产仓库路径。"
+            "fixture 构建会清空其中的行情表，请使用 data/eval_fixture.duckdb 等独立路径。"
+        )
     conn = connect(target)
 
     # 清空（fixture 表），保证幂等
@@ -97,13 +107,14 @@ def build(db_path: str | None = None) -> None:
     conn.execute("INSERT INTO valuation_daily SELECT * FROM _v")
     conn.unregister("_v")
 
-    # universe
+    # universe（list_date 给足历史，避免被归因器当成新股短历史）
     universe = pd.DataFrame(
         {
             "symbol": ["600519", "000858", "300750"],
             "name": ["贵州茅台", "五粮液", "宁德时代"],
             "industry": ["白酒", "白酒", "动力电池"],
             "listed_board": ["main", "main", "chinext"],
+            "list_date": [date(2001, 8, 27), date(1998, 4, 3), date(2011, 6, 10)],
         }
     )
     conn.register("_u", universe)

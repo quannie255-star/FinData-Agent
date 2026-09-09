@@ -292,8 +292,9 @@ def agent_answer(req: AgentRequest) -> dict[str, Any]:
 @app.post("/agent/stream")
 def agent_stream(req: AgentRequest) -> StreamingResponse:
     """问答的 SSE 流式版本。"""
-    from findata.agent.graph import build_agent
     from langchain_core.messages import HumanMessage
+
+    from findata.agent.graph import build_agent
 
     conn, _ = _get_conn()
 

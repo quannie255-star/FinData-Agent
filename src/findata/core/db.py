@@ -5,7 +5,8 @@
 - 数值单位在列注释中声明，语义层引用时不再猜单位
 
 本文件是 findata 两套互补能力的共享数据底座：
-- 数据质量监控（dq/）：ingest_run / stock_universe / trading_calendar / corporate_event / stock_daily ...
+- 数据质量监控（dq/）：ingest_run / stock_universe / trading_calendar
+  / corporate_event / stock_daily 等
 - 可信问数分析（semantic/）：query_run / verify_run 记录每次指标查询与交叉验证血缘
 """
 
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS verify_run (
 MIGRATIONS = [
     "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS query_run_id VARCHAR",
     "ALTER TABLE verify_run ADD COLUMN IF NOT EXISTS note TEXT",
+    "ALTER TABLE stock_universe ADD COLUMN IF NOT EXISTS list_date DATE",
 ]
 
 
