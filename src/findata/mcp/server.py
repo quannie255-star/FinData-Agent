@@ -9,8 +9,10 @@ stdio 让 Claude Desktop / Cursor / Cline 这类现成的客户端零配置接�
 - `findata_health_check`  : 跑一次巡检，返回 JSON 摘要
 - `findata_dashboard`     : 拼一份自包含 HTML 看板
 - `findata_validate`      : 跑评测，返回 5 项指标；可选 κ 一致性
-- `findata_list_metrics`  : 列出指标字典里所有 metric 元数据 (M2 增量)
-- `findata_execute_metric`: 跑某一个 SQL-kind metric, 确定性返回 (sql, params, result) (M2 增量)
+- `findata_list_metrics`  : 列出语义层指标字典元数据
+- `findata_metric_query`  : 语义层可信查询——确定性编译 + 交叉验证 + run_id 溯源（招牌能力）
+- `findata_execute_metric`: 跑 dq 诊断字典里的 SQL-kind metric（运维诊断用途，
+                            无交叉验证；可信查询请走 findata_metric_query）
 
 调用 `findata-mcp` 启动。
 """
@@ -26,6 +28,7 @@ from typing import Any
 import duckdb
 from mcp.server.mcpserver import MCPServer
 
+from findata.config import settings
 from findata.dq import MetricRegistry, compile_metric, default_ctx
 from findata.service import build_dashboard_html, eval_to_json, inspect, result_to_json
 
@@ -48,12 +51,14 @@ def _registry() -> MetricRegistry:
 mcp = MCPServer(
     name="findata",
     instructions=(
-        "findata: 数据质量监控 Agent。五个工具——"
+        "findata: 数据质量监控 + 可信问数 Agent。六个工具——"
         "health_check 返回告警/抑制摘要；"
         "dashboard 返回自包含 HTML 看板；"
         "validate 跑评测并可选输出 baseline vs LLM 归因的 Cohen's κ；"
-        "list_metrics 列出指标字典；"
-        "execute_metric 确定性跑某个 SQL-kind metric。"
+        "list_metrics 列出语义层指标字典；"
+        "metric_query 是可信问数入口（确定性编译 + 交叉验证 + run_id 溯源，"
+        "回答数字类问题请优先用它）；"
+        "execute_metric 跑 dq 诊断字典的 SQL 指标（运维诊断用，无交叉验证）。"
     ),
 )
 
@@ -163,6 +168,70 @@ def findata_validate(
 
 
 @mcp.tool(
+    name="findata_metric_query",
+    title="Findata Metric Query",
+    description=(
+        "语义层可信查询：给定指标名与参数，编译器确定性生成 SQL（LLM/调用方"
+        "绝不接触裸 SQL），执行后自动用第二口径交叉验证，返回数值 + 单位 + "
+        "run_id 溯源 + 验证结论（verified/mismatch/not_verifiable）。"
+        "回答数字类问题请优先使用本工具而非 execute_metric。"
+        "指标元数据用 findata_list_metrics 查看。"
+    ),
+)
+def findata_metric_query(
+    metric: str,
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run a trusted semantic-layer metric query with cross-verification.
+
+    Args:
+        metric: Registered metric name, e.g. close_price / pct_change /
+            valuation_pe_ttm.
+        params: Parameter dict, e.g. {"symbol": "600519"} or
+            {"symbol": "600519", "start": "2024-01-01", "end": "2024-12-31"}.
+
+    Returns:
+        Dict with value / unit / as_of / run_id / verification. Every number
+        can be traced back via its run_id (see the query_run / verify_run
+        lineage tables).
+    """
+    from findata.core.db import connect
+    from findata.semantic.catalog import MetricCatalog
+    from findata.semantic.tools import metric_query as _metric_query
+
+    path = Path(settings.dsn)
+    if not path.exists():
+        return {
+            "error": f"数据仓库不存在：{path}。请先运行 scripts/ingest_finance.py。",
+            "metric": metric,
+        }
+    conn = connect(settings.dsn, read_only=False)
+    try:
+        r = _metric_query(conn, metric, params or {}, MetricCatalog())
+    except Exception as exc:  # 语义层校验失败（未知指标/参数非法）
+        return {"error": str(exc), "metric": metric, "params": params}
+    finally:
+        conn.close()
+    out: dict[str, Any] = {
+        "metric": r.metric,
+        "label": r.label,
+        "value": r.value,
+        "unit": r.unit,
+        "as_of": r.as_of,
+        "source": r.source,
+        "run_id": r.run_id,
+        "params": r.params,
+    }
+    if r.verification is not None:
+        out["verification"] = {
+            "status": r.verification.status.value,
+            "note": r.verification.note,
+            "verify_run_id": r.verification.verify_run_id,
+        }
+    return out
+
+
+@mcp.tool(
     name="findata_list_metrics",
     title="Findata List Metrics",
     description=(
@@ -182,8 +251,10 @@ def findata_list_metrics() -> dict[str, Any]:
     name="findata_execute_metric",
     title="Findata Execute Metric",
     description=(
-        "确定性跑一个 SQL-kind metric: 把指标字典里的 sql_template 编译成"
-        "(sql, params), 拿数据源里读出来的 duckdb 视图直接执行, 返回结果行。"
+        "确定性跑一个 dq 诊断字典里的 SQL-kind metric: 把指标字典里的 "
+        "sql_template 编译成 (sql, params), 拿数据源里读出来的 duckdb 视图直接执行, "
+        "返回结果行。注意：这是运维诊断用途，无交叉验证与溯源；"
+        "面向用户的数字类查询请走 findata_metric_query（语义层，带验证+溯源）。"
         "只支持 kind=sql 的 metric; kind=probe 的请走 findata_health_check。"
         "source=synthetic 时, 会在内存里建一张合成的 stock_daily 视图再跑。"
     ),
@@ -239,9 +310,14 @@ def _connect_for_execute(source: str, seed: int) -> duckdb.DuckDBPyConnection:
         if not snap.valuation_daily.empty:
             conn.register("valuation_daily", snap.valuation_daily)
     elif source == "duckdb":
-        raise NotImplementedError(
-            "execute_metric(source=duckdb) 暂未接通真实仓库, 请用 synthetic"
-        )
+        conn.close()
+        path = Path(settings.dsn)
+        if not path.exists():
+            raise ValueError(
+                f"数据仓库不存在：{path}。请先运行 scripts/ingest_finance.py，"
+                "或改用 source='synthetic'。"
+            )
+        conn = duckdb.connect(str(path), read_only=True)
     else:
         raise ValueError(f"unknown source: {source!r}")
     return conn

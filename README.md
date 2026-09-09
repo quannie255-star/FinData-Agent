@@ -75,13 +75,16 @@ findata 不是孤岛。三个项目用**同一套"质量协议"串联**——采
 └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 
-**真实借用**：
-- `cohen_kappa` 借自 mm-curation-pipeline 的 `curation-eval` 包——LLM 归因器 vs 规则归因器的一致性指标（修正随机一致），跑 `--triage both` 时输出
+**与 curation-eval 的关系（从借用走向收敛）**：
+- `cohen_kappa`（LLM 归因器 vs 规则归因器的一致性，修正随机一致）最初桥接自
+  mm-curation-pipeline 的 `curation-eval` 包；因外部路径依赖破坏"任何干净环境
+  可复现"，已收敛为本地实现（`eval/runner.py::cohen_kappa`，教科书语义、单元
+  测试钉死）。桥接层的边界分析保留在 git 历史（`eval/_interop.py`，已删）。
 - `pr_from_drops` 的语义等价于 findata 的告警精确率——`drop=你认为是问题的信号`，`dirty=真实故障标注`。同一语义，findata 写在评测内核里更直接
 - `Triage` 协议与 `LLMTriage` 框架（白名单校验 + 逐条降级 + 全批兜底）可以被任何"判定"类项目复用
 
 **真实边界（不接的）**：
-- `Contaminator` 借不到——它是样本级接口（sample.id + image/text），findata 的故障是表级（symbol + date + column），硬接要写厚适配层。详见 `src/findata/eval/_interop.py`
+- `Contaminator` 接不了——它是样本级接口（sample.id + image/text），findata 的故障是表级（symbol + date + column），硬接要写厚适配层
 - `Operator` / `BatchOperator` 同上——单样本签名 vs 全表上下文签名
 
 **真实联动**：
@@ -313,11 +316,15 @@ uv run findata-mcp            # MCP stdio server（挂给 Claude Desktop / Curso
 }
 ```
 
-挂载后多出五个工具：
+挂载后多出六个工具：
 `findata_health_check` / `findata_dashboard` / `findata_validate` /
-`findata_list_metrics` / `findata_execute_metric`（基于指标字典 YAML 的
-确定性 SQL 执行，外部 Agent 可以直接给 Claude Desktop / Cursor 拉指标层；
-`findata_execute_metric` 走的就是语义层 `metric_query`，绝不接受裸 SQL）。
+`findata_list_metrics` / `findata_metric_query` / `findata_execute_metric`。
+
+其中 **`findata_metric_query` 是语义层可信查询的对外出口**：确定性编译 +
+参数绑定 + 自动交叉验证，返回值带 `run_id` 与验证结论，外部 Agent 拿到的
+每个数字都可溯源（绝不接受裸 SQL）。`findata_execute_metric` 则面向
+dq 诊断字典的 SQL 指标，用于运维诊断场景，**没有**交叉验证——两类工具
+职责不同，回答数字类问题请优先用前者。
 
 ### Docker
 
@@ -517,7 +524,7 @@ src/findata/
 ├── agent/           # 能力二：graph(LangGraph 问数) · llm(LLM 客户端 + make_chat_model)
 ├── service.py       # 共享服务层：监控与分析都经过它
 ├── api/app.py       # 共享 HTTP 入口：监控路由 + 分析路由并存
-├── mcp/server.py    # 共享 MCP 入口：5 个工具
+├── mcp/server.py    # 共享 MCP 入口：6 个工具
 └── cli/serve.py     # 演示站
 
 tests/               # 两套能力的单测（test_dq/ test_eval/ test_semantic/ test_agent/ test_verifier/ test_golden_eval/ ...）

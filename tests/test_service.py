@@ -68,3 +68,70 @@ def test_result_to_json_is_jsonable_roundtrip():
     assert "summary" in parsed
     assert "alerts" in parsed
     assert "suppressed" in parsed
+
+
+# ─────────────────────── duckdb 源：必须接真实仓库或显式报错 ───────────────────────
+
+
+def _build_tiny_warehouse(db_path):
+    """最小真实仓库：1 只股票 2 个交易日，足以让巡检读到行。"""
+    import pandas as pd
+
+    from findata.core.db import connect, upsert_dataframe
+
+    conn = connect(str(db_path))
+    daily = pd.DataFrame(
+        {
+            "symbol": ["600519"] * 2,
+            "date": [pd.to_datetime("2024-01-02").date(), pd.to_datetime("2024-01-03").date()],
+            "open": [100.0, 110.0],
+            "high": [101.0, 111.0],
+            "low": [99.0, 109.0],
+            "close": [100.0, 110.0],
+            "volume": [1e6, 1e6],
+            "amount": [1e8, 1.1e8],
+            "pct_chg": [0.0, 10.0],
+            "turnover": [1.0, 1.0],
+        }
+    )
+    upsert_dataframe(conn, "stock_daily", daily, ["symbol", "date"])
+    universe = pd.DataFrame(
+        {
+            "symbol": ["600519"],
+            "name": ["贵州茅台"],
+            "industry": ["白酒"],
+            "listed_board": ["main"],
+            "list_date": [pd.to_datetime("2001-08-27").date()],
+        }
+    )
+    upsert_dataframe(conn, "stock_universe", universe, ["symbol"])
+    conn.close()
+
+
+def test_inspect_duckdb_missing_warehouse_raises(tmp_path):
+    """仓库缺失必须显式报错——巡检空库给 100 分是"可信"项目最不该有的失败模式。"""
+    import pytest
+
+    with pytest.raises(FileNotFoundError, match="ingest_finance"):
+        svc_inspect("duckdb", db_path=str(tmp_path / "nope.duckdb"))
+
+
+def test_inspect_duckdb_real_warehouse(tmp_path):
+    db = tmp_path / "real.duckdb"
+    _build_tiny_warehouse(db)
+    result = svc_inspect("duckdb", db_path=str(db))
+    assert result.summary.n_rows > 0
+    assert result.summary.n_symbols >= 1
+
+
+def test_eval_reports_llm_backend(monkeypatch):
+    """无 key 时 llm_backend 必须如实标 mock——κ 是"规则 vs 静默桩"，不是"规则 vs 真模型"。"""
+    from findata.config import settings
+    from findata.service import eval_to_json, evaluate
+
+    monkeypatch.setattr(settings, "llm_api_key", "")
+    result = evaluate(seed=20240102, triage="both")
+    assert result.llm_backend == "mock"
+    payload = eval_to_json(result)
+    assert payload["llm_backend"] == "mock"
+    assert "triage_agreement" in payload

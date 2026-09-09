@@ -102,11 +102,34 @@ jobs:
         if: always()
         run: kill "$(cat /tmp/serve.pid)" 2>/dev/null || true
 
+  eval-gate:
+    # 评测门禁（离线）：合成 fixture 上跑 golden set（语义层数值/单位/验证状态断言）
+    # + 归因层质量下限（召回/精确/抑制）。语义层回归或归因变差，这里直接红——
+    # 评测不是文档里的口号，是挡 merge 的关卡。
+    name: eval-gate (golden + quality)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.3"
+          enable-cache: true
+      - name: uv sync
+        run: uv sync --all-extras
+      - name: build eval fixture (synthetic, offline)
+        run: uv run python scripts/build_eval_fixture.py
+      - name: golden set gate (semantic layer)
+        run: uv run python scripts/eval_golden.py --strict --db data/eval_fixture.duckdb
+      - name: dq quality gate (attribution layer)
+        run: >-
+          uv run python scripts/run_eval.py
+          --min-recall 0.9 --min-precision 0.9 --min-suppression 0.9
+
   ci-gate:
-    # 聚合点：lint + 两侧 python + smoke 全过才让这条线变绿。
-    # PR 列表上不再同时显示 4 条绿，避免 reviewer 视觉疲劳。
+    # 聚合点：lint + 两侧 python + smoke + eval-gate 全过才让这条线变绿。
+    # PR 列表上不再同时显示 5 条绿，避免 reviewer 视觉疲劳。
     name: ci-gate
-    needs: [lint, test, smoke]
+    needs: [lint, test, smoke, eval-gate]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -116,9 +139,10 @@ jobs:
           LINT: ${{ needs.lint.result }}
           TESTS: ${{ needs.test.result }}
           SMOKE: ${{ needs.smoke.result }}
+          EVAL: ${{ needs.eval-gate.result }}
         run: |
-          if [ "$LINT" != "success" ] || [ "$TESTS" != "success" ] || [ "$SMOKE" != "success" ]; then
-            echo "ci-gate failing: lint=$LINT tests=$TESTS smoke=$SMOKE"
+          if [ "$LINT" != "success" ] || [ "$TESTS" != "success" ] || [ "$SMOKE" != "success" ] || [ "$EVAL" != "success" ]; then
+            echo "ci-gate failing: lint=$LINT tests=$TESTS smoke=$SMOKE eval=$EVAL"
             exit 1
           fi
           echo "all green"

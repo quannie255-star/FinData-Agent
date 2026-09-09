@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 
 from findata.dq.models import Diagnosis, Finding
 from findata.dq.probes import ProbeContext, run_probes
+from findata.dq.protocol import Triage
 from findata.dq.triage import BaselineTriage
-from findata.eval._interop import import_curation_eval
 from findata.eval.faults import InjectedFault, benign_expectations, inject_faults
 from findata.eval.fixtures import SyntheticConfig, build_baseline
 from findata.eval.metrics import EvalReport, evaluate
@@ -25,23 +25,25 @@ class EvalResult:
     faults: list[InjectedFault]
     benigns: list[InjectedFault]
     # 当 baseline + llm 两条归因都跑了，这里有两份 diagnoses；
-    # 一致性 κ（修正随机一致）由 curation-eval 的 Cohen's κ 实现
+    # 一致性 κ（修正随机一致，Cohen 1960）由本模块的 cohen_kappa 计算
     baseline_diagnoses: list[Diagnosis] = field(default_factory=list)
     llm_diagnoses: list[Diagnosis] = field(default_factory=list)
-    triage_agreement: dict | None = None  # 根因 κ / 抑制 κ / 来源
+    triage_agreement: dict | None = None  # 根因 κ / 抑制 κ / 对比样本数
+    # 参与对比的 LLM 后端："baseline" / "mock" / "openai_compat"，供调用方如实展示
+    llm_backend: str = "baseline"
 
 
 def run_evaluation(
     cfg: SyntheticConfig | None = None,
     fault_seed: int = 20240102,
-    triage: BaselineTriage | None = None,
-    second_triage: BaselineTriage | None = None,
+    triage: Triage | None = None,
+    second_triage: Triage | None = None,
 ) -> EvalResult:
     """跑一轮完整评测。相同参数必得相同结果。
 
     second_triage 给定时，同一份 findings 会再跑一次归因，产出两套
     diagnoses 的 Cohen's κ 一致性指标——这是评估"两套归因器差异"
-    的统计量，借自 mm-curation 的 curation-eval。
+    的统计量。归因器只依赖 dq.protocol.Triage 协议，换实现不动评测。
     """
     cfg = cfg or SyntheticConfig()
     triage = triage or BaselineTriage()
@@ -84,8 +86,8 @@ def _agreement(
 ) -> dict:
     """两套归因器的一致性：根因标签 κ + 抑制决策 κ。
 
-    借自 mm-curation-pipeline 的 `curation_eval.cohen_kappa`：
-    见 findata/eval/_interop.py 的边界说明。包未就绪时优雅降级。
+    κ 用本模块的 cohen_kappa（Cohen 1960 标准定义）。
+    曾经依赖外部兄弟仓库的实现，因破坏"任何干净环境可复现"而收敛为本地实现。
     """
     by_key = {d.finding_key: d for d in a}
     causes_a: list[str] = []
@@ -101,32 +103,18 @@ def _agreement(
         sup_a.append(peer.suppressed)
         sup_b.append(dx.suppressed)
 
-    source = "local"  # 默认用本地实现
-    k_cause = _local_kappa(causes_a, causes_b)
-    k_suppress = _local_kappa([int(x) for x in sup_a], [int(x) for x in sup_b])
-
-    ce = import_curation_eval()
-    if ce is not None:
-        k_cause_ce = ce.cohen_kappa(causes_a, causes_b)
-        k_suppress_ce = ce.cohen_kappa([int(x) for x in sup_a], [int(x) for x in sup_b])
-        if k_cause_ce is not None:
-            k_cause = k_cause_ce
-        if k_suppress_ce is not None:
-            k_suppress = k_suppress_ce
-        source = "curation_eval"
-
     return {
-        "kappa_root_cause": k_cause,
-        "kappa_suppress": k_suppress,
+        "kappa_root_cause": cohen_kappa(causes_a, causes_b),
+        "kappa_suppress": cohen_kappa([int(x) for x in sup_a], [int(x) for x in sup_b]),
         "n_compared": len(causes_a),
-        "source": source,
     }
 
 
-def _local_kappa(y1, y2):
-    """与 curation_eval.cohen_kappa 同语义，本地副本用于包未就绪时降级。
+def cohen_kappa(y1: list, y2: list) -> float | None:
+    """Cohen's κ（1960）：po 为观测一致率，pe 为边际频率期望一致率。
 
-    边际概率用 empirical 频率；n=0 或 p_e=1 时返回 None（无可评）。
+    完全一致 = 1.0；与随机抽签一致 = 0.0；< 0 = 比随机还差。
+    n=0 或两序列类别退化到 pe=1（无可修正的一致）时返回 None。
     """
     if len(y1) != len(y2) or len(y1) == 0:
         return None

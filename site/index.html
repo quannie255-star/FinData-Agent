@@ -29,7 +29,7 @@
   <div class="card">
     <h3><span class="num">1</span>探针观测</h3>
     <p>
-      6 类探针独立工作：freshness / completeness / uniqueness / validity
+      7 类探针独立工作：freshness / completeness / uniqueness / validity
       / drift / null_sweep。每类只答"观测到什么"，不带判断。
     </p>
     <div class="code">run_probes(ctx) → List[Finding]</div>
@@ -102,7 +102,7 @@
   <h2 style="margin-top:28px">MCP Server</h2>
   <p>
     <code>findata-mcp</code> stdio transport，已被 Claude Desktop / Cursor /
-    Cline 等原生支持。挂载到 MCP 客户端后，多出三个工具：
+    Cline 等原生支持。挂载到 MCP 客户端后，多出六个工具：
   </p>
   <div class="endpoint">
     <code>findata_health_check</code>

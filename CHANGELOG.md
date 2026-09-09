@@ -2,6 +2,60 @@
 
 本项目遵循语义化版本（SemVer）。所有显著变更记录于此。
 
+## [0.7.1] - 2026-09-09
+
+### 修复（审计收敛：让声明与代码一致）
+
+- **评测可复现性**：删除对兄弟仓库 `mm-curation-pipeline/curation-eval` 的
+  环境依赖（`eval/_interop.py` 整个移除）。Cohen's κ 收敛为本地实现
+  （`eval/runner.py::cohen_kappa`，教科书语义、单元测试钉死）。
+  此前在干净环境 clone 后会有 2 个测试必挂。
+- **Agent 图三处实质修复**（`agent/graph.py`）：
+  1. parse 节点补上 `bind_tools` —— 此前真实模型发不出 tool_calls，图结构性
+     到不了工具节点（旧测试用会发 tool_calls 的桩掩盖了这一点）；
+  2. 工具执行后回环到 parse，LLM 可多轮补查（上限 `MAX_TOOL_ROUNDS=4`，
+     防失控循环）—— README 宣称的"多轮回环"自此成真；
+  3. `run_ids` 提取从"按括号切"改为正则截取，不再把验证标记混进 id。
+  无 API key 时报错带可行动指引（指明 `FINDATA_LLM_API_KEY`）。
+- **两处"假满分"**（对"可信"叙事最危险的失败模式）：
+  1. `service.evaluate` 此前把 LLM 写死为静默 Mock，API/MCP 展示的 κ 恒为
+     1.0 空洞值 —— 现配置了 `FINDATA_LLM_API_KEY` 即走真实模型，且结果通过
+     `llm_backend` 字段（`mock` / `openai_compat`）如实暴露参与对比的 backend；
+  2. API/MCP 巡检 `source=duckdb` 此前静默连空内存库返回 100 分 —— 现默认
+     连生产仓库，仓库缺失直接 `FileNotFoundError`（报错好过假满分）。
+- **MCP 补齐招牌能力**：新增 `findata_metric_query` 工具（语义层可信查询，
+  带交叉验证 + run_id 溯源）；`findata_execute_metric(source=duckdb)` 接通
+  真实仓库（此前 `NotImplementedError`）。README 中"execute_metric 走语义层"
+  的错误声明一并更正：两者职责不同，诊断用途无交叉验证。
+- **数据安全**：`scripts/build_eval_fixture.py` 拒绝生产仓库路径 ——
+  fixture 第一步会清空行情表，此前误指路径已实际毁掉一次 warehouse（已
+  全量重采恢复）。
+- **schema 漂移**：`stock_universe.list_date` 补入 MIGRATIONS，老库自动补列
+  （此前旧库再采集必崩）；评测 fixture 同步该列（修复 `test_eval_runs_on_fixture`）。
+- `findata-api` 入口点指向 `main()` 函数（此前指向 ASGI 对象，一跑就 TypeError）；
+  SSE 路由改用公开的 `agent.app` 属性（不再摸私有 `_app`）；
+  `dq/protocol.py` 的 `Triage` Protocol 接线为 `run_evaluation` 的参数类型。
+
+### CI
+
+- **eval-gate job 真正落地**（`test.yml`）：合成 fixture 上跑 golden set
+  （`eval_golden.py --strict`）+ 归因层质量下限（`run_eval.py --min-*`），
+  并纳入 ci-gate 聚合。0.5.0 曾声称"CI 新增 eval-gate job"，当时实际只有
+  一行注释 —— 本次补齐，声明自此为真。
+
+### 文档
+
+- README 的 MCP 工具清单更正为 6 个并区分两类工具职责；
+  site 演示站文案同步（探针数 / 工具数）。
+
+## [0.7.0] - 2026-09-08
+
+### 合并
+
+- 数据质量监控（dq/）与可信问数分析（semantic/）合并为统一项目 v0.7.0：
+  共享 `core/db.py` 数据底座（ingest_run / query_run / verify_run 血缘表），
+  监控域与问数域各自独立成层，`service.py` 统一封装供 API 与 MCP 复用。
+
 ## [0.6.0] - 2026-09-08
 
 ### 新增（M6 产品化落地）

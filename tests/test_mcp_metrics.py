@@ -85,8 +85,3 @@ def test_execute_metric_unknown_name():
     assert "error" in r
     assert "nope_metric" in r["error"]
 
-
-def test_execute_metric_duckdb_source_not_implemented():
-    r = mcp_server.findata_execute_metric("row_count", source="duckdb", asof="2024-01-02")
-    assert "error" in r
-    assert "duckdb" in r["error"].lower() or "暂未" in r["error"]

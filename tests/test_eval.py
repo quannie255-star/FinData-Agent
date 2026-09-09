@@ -43,12 +43,8 @@ def test_triage_beats_naive_baseline():
     assert report.n_alerts < report.n_findings, "归因层未抑制任何告警"
 
 
-def test_triage_agreement_kappa_via_curation_eval():
-    """双归因器一致性 κ 必须经由 mm-curation 的 curation_eval 计算。
-
-    source=curation_eval 是 B1 的"真实借用"证据——如果哪天
-    import_curation_eval 退化失败，本测试会立刻报警。
-    """
+def test_triage_agreement_flat_llm():
+    """双归因器一致性 κ：LLM 全部判同一根因时，κ 必须被计算且可解释。"""
     # 让 LLM 把所有 finding 都判成同一个合法根因
     flat_reply = json.dumps(
         {
@@ -68,16 +64,12 @@ def test_triage_agreement_kappa_via_curation_eval():
     result = run_evaluation(fault_seed=20240102, second_triage=llm)
     agreement = result.triage_agreement
     assert agreement is not None
-    assert agreement["source"] == "curation_eval", (
-        "B1 借用失败：未走 curation_eval.cohen_kappa，"
-        "可能 import_curation_eval() 已退化"
-    )
     assert agreement["n_compared"] > 0
-    # 至少要算出一个 κ（n>0 且 label 类别数>1）；退化为单类别时为 None 也算通过
+    # 根因维度：一边类别多样、一边全同 → 必然可算出 κ（非 None）
     assert agreement["kappa_root_cause"] is not None
 
 
-def test_triage_agreement_zero_when_llm_returns_nothing():
+def test_triage_agreement_one_when_llm_returns_nothing():
     """LLM 全静默（不可用）时，runner 里 κ 应等于规则归因器自身的 κ = 1.0。
 
     这不是 bug，是"模型不可用时系统退化为纯规则"承诺的统计证据。
@@ -85,4 +77,20 @@ def test_triage_agreement_zero_when_llm_returns_nothing():
     llm = LLMTriage(MockLLMClient())  # 没有任何 replies，模型全静默
     result = run_evaluation(fault_seed=20240102, second_triage=llm)
     assert result.triage_agreement["kappa_root_cause"] == 1.0
-    assert result.triage_agreement["source"] == "curation_eval"
+    assert result.llm_backend == "mock" or result.llm_backend == "baseline"
+
+
+def test_cohen_kappa_textbook_cases():
+    """κ 数学性质：教科书用例直接钉死，防止实现漂移。"""
+    from findata.eval.runner import cohen_kappa
+
+    # 完全一致 → 1.0
+    assert cohen_kappa(["a", "b", "a", "b"], ["a", "b", "a", "b"]) == 1.0
+    # 教科书 2x2：po=0.5, pe=0.5 → κ=0.0（与随机一致）
+    assert cohen_kappa(["a", "a", "b", "b"], ["a", "b", "a", "b"]) == 0.0
+    # 两边都只有一个类别（pe=1，无可修正）→ None
+    assert cohen_kappa(["a", "a"], ["a", "a"]) is None
+    # 长度不等 → None
+    assert cohen_kappa(["a"], ["a", "b"]) is None
+    # 空序列 → None
+    assert cohen_kappa([], []) is None

@@ -8,10 +8,12 @@ API 不能直接调用 repo 内部函数（会让层边界变糊），所以这�
 from __future__ import annotations
 
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Literal
 
 import duckdb
 
+from findata.config import settings
 from findata.dq.triage import BaselineTriage
 from findata.eval.fixtures import SyntheticConfig
 from findata.eval.runner import EvalResult, run_evaluation
@@ -98,32 +100,46 @@ def evaluate(
 ) -> EvalResult:
     """跑评测。triage=both 时同 batch 跑两份归因并算 κ。
 
-    LLM 客户端缺省用项目内的 MockLLMClient，使外部 Agent 接入无需配置
-    OPENAI_API_KEY 也能跑通对照；接入真实 LLM 时通过环境变量即可切换。
+    LLM 后端选择（结果里通过 result.llm_backend 如实暴露）：
+    - 配置了 FINDATA_LLM_API_KEY → OpenAICompatClient 调真实模型；
+    - 未配置 → MockLLMClient 确定性桩（全静默，归因退化为纯规则），
+      保证无 key 环境下对照链路依然可跑，但 κ 的含义是"规则 vs 静默桩"，
+      不是"规则 vs 真实大模型"——演示与解读时必须区分。
     """
     with _tracer.start_as_current_span("service.evaluate") as span:
         span.set_attribute("findata.fault_seed", seed)
         span.set_attribute("findata.triage_kind", triage)
         if triage == "baseline":
             return run_evaluation(fault_seed=seed)
-        from findata.agent.llm import MockLLMClient
+        from findata.agent.llm import MockLLMClient, OpenAICompatClient
         from findata.agent.llm_triage import LLMTriage
 
-        mock = MockLLMClient()
-        llm_triage = LLMTriage(client=mock)
+        real_client = OpenAICompatClient()
+        if real_client.available:
+            client, backend = real_client, "openai_compat"
+        else:
+            client, backend = MockLLMClient(), "mock"
+        span.set_attribute("findata.llm_backend", backend)
+        llm_triage = LLMTriage(client=client)
         if triage == "llm":
-            return run_evaluation(fault_seed=seed, triage=llm_triage)
-        # both: run_evaluation 内部跑 baseline + llm 双归因
-        with _tracer.start_as_current_span("service.evaluate.both_triage") as sub:
-            result = run_evaluation(
-                fault_seed=seed,
-                triage=BaselineTriage(),
-                second_triage=llm_triage,
-            )
-            if result.triage_agreement:
-                k = result.triage_agreement.get("kappa_root_cause")
-                if k is not None:
-                    sub.set_attribute("findata.llm_kappa_root_cause", float(k))
+            result = run_evaluation(fault_seed=seed, triage=llm_triage)
+        else:
+            # both: baseline + llm 双归因；κ 记在子 span 上便于 trace 检索
+            with _tracer.start_as_current_span("service.evaluate.both_triage") as sub:
+                result = run_evaluation(
+                    fault_seed=seed,
+                    triage=BaselineTriage(),
+                    second_triage=llm_triage,
+                )
+                if result.triage_agreement:
+                    k = result.triage_agreement.get("kappa_root_cause")
+                    if k is not None:
+                        sub.set_attribute("findata.llm_kappa_root_cause", float(k))
+        result.llm_backend = backend
+        if result.triage_agreement:
+            k = result.triage_agreement.get("kappa_root_cause")
+            if k is not None:
+                span.set_attribute("findata.llm_kappa_root_cause", float(k))
         return result
 
 
@@ -134,12 +150,20 @@ def _load_snapshot(
     source: Source, asof: date | None, seed: int, db_path: str | None
 ) -> Snapshot:
     if source == "synthetic":
-        snap = Snapshot.from_synthetic(seed=seed)
-    else:
-        path = db_path or ":memory:"
-        conn = duckdb.connect(path)
-        snap = Snapshot.from_duckdb(conn, asof=asof)
-    return snap
+        return Snapshot.from_synthetic(seed=seed)
+    # duckdb 源：默认连生产仓库。仓库缺失必须显式报错——
+    # 悄悄巡检一个空库然后给出 100 分，是"可信"项目最不该有的失败模式。
+    path = Path(str(db_path or settings.db_path))
+    if not path.exists():
+        raise FileNotFoundError(
+            f"duckdb 仓库不存在：{path}。请先跑 scripts/ingest_finance.py 采集，"
+            "或改用 source='synthetic'。"
+        )
+    conn = duckdb.connect(str(path), read_only=True)
+    try:
+        return Snapshot.from_duckdb(conn, asof=asof)
+    finally:
+        conn.close()
 
 
 def _header(result: InspectionResult, source: Source) -> str:
@@ -212,4 +236,5 @@ def eval_to_json(result: EvalResult) -> dict[str, Any]:
     }
     if result.triage_agreement:
         out["triage_agreement"] = result.triage_agreement
+    out["llm_backend"] = result.llm_backend
     return out

@@ -104,7 +104,7 @@ def _llm_report_from(both_result):
 
 
 def _print_agreement(agreement: dict | None) -> None:
-    """打印归因器一致性 κ（借自 mm-curation 的 curation_eval.cohen_kappa）。
+    """打印归因器一致性 κ（Cohen's κ，本模块由 findata.eval.runner 计算）。
 
     完全一致 = 1.0；与随机抽签一致 = 0.0；< 0 = 比随机还差。
     这是"两套归因器是否在做同一件事"的统计量，比逐条 diff 更稳。
@@ -114,9 +114,8 @@ def _print_agreement(agreement: dict | None) -> None:
     k_cause = agreement["kappa_root_cause"]
     k_sup = agreement["kappa_suppress"]
     n = agreement["n_compared"]
-    src = agreement["source"]
     print(
-        f"\n两套归因器一致性（{src}，n={n}）\n"
+        f"\n两套归因器一致性（Cohen's κ，n={n}）\n"
         + "-" * 46
     )
 

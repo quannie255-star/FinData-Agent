@@ -36,7 +36,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 | --- | --- | --- |
 | **100% vs 61.5%** | `examples/eval-rule-triage.txt` | 同一批 13 条信号，不做归因时精确率只有 61.5%。这 38.5 个百分点是归因层存在的全部理由 |
 | **84 → 92 分，告警 4 → 2** | `examples/inspection-warehouse-2026-09-07.md` | 真实数据上实测。不是跑通了，是**跑出了误报然后修掉** |
-| **109 个测试 + CI 门禁** | GitHub Actions | 评测指标进 CI，归因变差就红。这是"承诺"和"承诺被执行"的区别 |
+| **139 个测试 + CI 门禁（含 eval-gate）** | GitHub Actions | 评测指标进 CI，归因变差就红。这是"承诺"和"承诺被执行"的区别 |
 
 ---
 
@@ -122,7 +122,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 
 ## 五、投递前自检
 
-- [ ] `ghcr.io/quannie255-star/findata-agent:0.6.0` 能 pull（已验证多架构）
+- [ ] `ghcr.io/quannie255-star/findata-agent:0.7.1` 能 pull（多架构）
 - [ ] GitHub 仓库 description / topics 已补
 - [ ] CI 全绿 badge 正常显示
 - [ ] `examples/` 里的 4 份产出能打开

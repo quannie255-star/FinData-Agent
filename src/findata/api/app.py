@@ -302,7 +302,7 @@ def agent_stream(req: AgentRequest) -> StreamingResponse:
         try:
             agent = build_agent(conn)
             initial = {"messages": [HumanMessage(content=req.question)], "run_ids": []}
-            async for chunk in agent._app.astream(initial, stream_mode="messages"):
+            async for chunk in agent.app.astream(initial, stream_mode="messages"):
                 msg, _ = chunk
                 if getattr(msg, "content", None):
                     text = msg.content
@@ -354,3 +354,20 @@ def trace(run_id: str) -> dict[str, Any]:
         "finished_at": str(row[5]) if row[5] else None,
         "verification": verification,
     }
+
+
+def main() -> None:
+    """findata-api console_scripts 入口。
+
+    入口必须是函数而不能是 ASGI app 对象——console_scripts 直接调用目标，
+    指向 app 对象会变成"调用 FastAPI 实例"而 TypeError。
+    """
+    import os
+
+    import uvicorn
+
+    uvicorn.run(
+        "findata.api.app:app",
+        host=os.environ.get("FINDATA_API_HOST", "127.0.0.1"),
+        port=int(os.environ.get("FINDATA_API_PORT", "8000")),
+    )
