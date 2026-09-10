@@ -45,7 +45,7 @@ def _coerce(spec_type: str, key: str, raw) -> object:
             raise CompileError(f"参数 '{key}' 应为整数，实际 {type(raw).__name__}")
         return raw
     if spec_type == "float":
-        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        if isinstance(raw, bool) or not isinstance(raw, int | float):
             raise CompileError(f"参数 '{key}' 应为数值，实际 {type(raw).__name__}")
         return float(raw)
     if spec_type == "date":

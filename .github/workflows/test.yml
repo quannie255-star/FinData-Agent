@@ -18,15 +18,18 @@ concurrency:
 
 jobs:
   lint:
-    name: ruff (src + tests)
+    name: ruff (src + tests, locked version)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
-      - run: pip install ruff==0.5.*
-      - run: ruff check src tests
+          version: "0.7.3"
+          enable-cache: true
+      - name: uv sync (dev)
+        run: uv sync --dev
+      # 用项目锁定的 ruff 版本，避免 CI 独立装 ruff 造成规则漂移
+      - run: uv run ruff check src tests
 
   test:
     name: pytest (py ${{ matrix.python-version }})
