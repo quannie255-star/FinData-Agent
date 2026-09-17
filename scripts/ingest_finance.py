@@ -26,6 +26,12 @@ def main() -> int:
         action="store_true",
         help="额外采集公司事件（除权除息/停牌）。按标的逐个调接口，比日线慢一个量级",
     )
+    parser.add_argument(
+        "--events-only",
+        action="store_true",
+        help="只采公司事件（含停牌历史种子），不动行情。供每日管线把事件采集"
+        "拆成独立步骤：事件挂了也不阻塞行情巡检",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -42,6 +48,12 @@ def main() -> int:
 
     conn = connect(settings.dsn)
     try:
+        if args.events_only:
+            from findata.domains.finance.ingest import ingest_corporate_events
+
+            n = ingest_corporate_events(conn, [s for s, _, _ in universe])
+            print(f"公司事件采集完成：本次写入 {n} 条")
+            return 0
         summary = ingest_all(
             conn, full_refresh=args.full, universe=universe, with_events=args.events
         )

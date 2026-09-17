@@ -1,7 +1,7 @@
 [project]
 name = "findata"
-version = "0.7.1"
-description = "面向 A 股金融数据的智能体：数据质量监控（异常探测+根因归因+误报抑制）与可信问数分析（语义指标层+交叉验证+溯源）两套互补能力，共享同一 DuckDB 数据底座"
+version = "2.2.0"
+description = "Findata 可信数据增强模块：挂到成熟 Agent 项目上的四档可信徽章（MCP/HTTP trust 接口）+ 任意数据表的带徽章可信报告（通用包）+ A 股领域包（探针-归因-抑制-可信日报）"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -27,6 +27,15 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
 ]
+evolve = [
+    "dspy>=3.3.1",
+    "gepa>=0.1.4",
+]
+# M14 RL 管线的可选依赖：JSONL 导出零依赖可跑，parquet 导出（verl 直连）需要 pyarrow。
+# 训练侧（agentlightning / verl / torch）是 GPU 机器上的独立环境，不进本项目依赖。
+rl = [
+    "pyarrow>=15.0",
+]
 
 [build-system]
 # 不用 hatchling —— hatchling 的 PEP 660 editable install 走 `editables`
@@ -44,6 +53,7 @@ include = ["findata*"]
 findata-api = "findata.api.app:main"
 findata-mcp = "findata.mcp.server:main"
 findata-serve = "findata.cli.serve:main"
+findata-trust-report = "findata.cli.trust_report:main"
 
 [tool.ruff]
 line-length = 100
@@ -51,6 +61,13 @@ src = ["src", "tests", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# llm_triage 的 prompt 模板须与 eval/prompts/ 版本档案逐字节一致（可回滚可
+# 对比），折行会破坏一致性，因此豁免行宽。
+"src/findata/agent/llm_triage.py" = ["E501"]
+# rl/policy 的窄 agent prompt 模板同理：折行会改变 prompt 本身，豁免行宽。
+"src/findata/rl/policy.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -176,3 +176,29 @@ def test_inspection_is_deterministic(seed):
     b = run_inspection(Snapshot.from_synthetic(seed=seed))
     assert a.summary.health_score == b.summary.health_score
     assert a.summary.n_alerts == b.summary.n_alerts
+
+
+def test_knowledge_layer_status_visible_in_report():
+    """R1.0（P0d）：日报必须展示知识层状态行（事件表行数 / 最新事件日期）。"""
+    result = run_inspection(_clean_snapshot())
+    s = result.summary
+    assert s.knowledge_event_rows > 0, "合成基线自带公司事件，知识层不应为空"
+    md = render_markdown(result)
+    html = render_html(result)
+    assert f"corporate_event` {s.knowledge_event_rows} 行" in md
+    assert str(s.knowledge_latest_event) in md
+    assert "知识层" in html
+    assert str(s.knowledge_event_rows) in html
+
+
+def test_empty_knowledge_layer_shows_degradation():
+    """R1.0 验收：corporate_event 为空时日报出现降级提示——抑制失效必须可见。"""
+    snap = _clean_snapshot()
+    snap.corporate_event = snap.corporate_event.iloc[0:0].copy()
+    result = run_inspection(snap)
+    assert result.summary.knowledge_degraded
+    md = render_markdown(result)
+    html = render_html(result)
+    assert "知识层未上线" in md
+    assert "知识层未上线" in html
+    assert "无法抑制" in md

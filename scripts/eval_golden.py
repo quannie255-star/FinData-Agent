@@ -8,6 +8,10 @@
     0   所有 case 通过
     1   有 case 失败
     2   数据仓库缺失
+
+R1.2 起，本门禁除语义层 golden 外还跑**真实回放 golden**
+（eval/golden/replay.yaml + eval/fixtures/replay_20260915/，复盘 P0c）：
+合成语料证明「机制对」，真实回放证明「事实够」。回放失败同样挡 merge。
 """
 
 from __future__ import annotations
@@ -112,7 +116,12 @@ def run(strict: bool, db_path: str | None = None) -> int:
         for n, msg in failed:
             print(f"  ✗ {n}: {msg}")
         return 1
-    return 0
+
+    # ── 真实回放 golden（R1.2 / 复盘 P0c）──
+    from findata.eval.replay import run_strict as run_replay_strict
+
+    print("\n=== 真实回放 golden（2026-09-15 固化快照）===")
+    return run_replay_strict()
 
 
 def main() -> int:

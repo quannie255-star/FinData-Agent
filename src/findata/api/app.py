@@ -84,12 +84,49 @@ def healthz() -> dict[str, Any]:
 
 @app.post("/v1/inspect")
 def post_inspect(req: InspectRequest) -> dict[str, Any]:
-    """跑一次巡检，返回 JSON 摘要 + 告警/抑制明细。"""
+    """跑一次巡检，返回 JSON 摘要 + 告警/抑制明细 + 全板徽章。"""
     try:
         result = inspect(req.source, req.asof, req.seed)
     except Exception as exc:  # noqa: BLE001 — 顶层兜底，反回 4xx 业务错
         raise HTTPException(status_code=400, detail=f"inspect failed: {exc}") from exc
     return result_to_json(result)
+
+
+@app.get("/v1/trust")
+def get_trust(
+    table: str = Query(description="数据表，如 stock_daily"),  # noqa: B008
+    metric: str = Query(description="指标/列名，如 close"),  # noqa: B008
+    source: Source = "duckdb",
+    asof: _date | None = Query(default=None, description="回放观察日 YYYY-MM-DD"),  # noqa: B008
+    seed: int = Query(default=20240102, ge=1),  # noqa: B008
+) -> dict[str, Any]:
+    """查单个 (table, metric) 的可信徽章——外部 Agent 引用数字前的标准动作。
+
+    usable=false（⚠️ 仅借鉴 / ✗ 不可用）时调用方不得把该数字当作已核验引用。
+    """
+    from findata.service import trust_check
+
+    try:
+        return trust_check(table, metric, source, asof, seed)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/v1/trust/board")
+def get_trust_board(
+    source: Source = "duckdb",
+    asof: _date | None = Query(default=None, description="回放观察日 YYYY-MM-DD"),  # noqa: B008
+    seed: int = Query(default=20240102, ge=1),  # noqa: B008
+) -> dict[str, Any]:
+    """全板逐指标可信徽章。外部 Agent 会话开始时拉一次，批量引用不再逐个查。"""
+    from findata.service import trust_board
+
+    try:
+        return trust_board(source, asof, seed)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.post("/v1/eval")
@@ -273,14 +310,30 @@ def query_metric(req: MetricRequest) -> dict[str, Any]:
     return payload
 
 
+def _agent_arch() -> str:
+    """问数链路架构选择：multi（默认，Supervisor 多智能体）/ single（单 Agent 基线）。
+
+    环境变量 FINDATA_AGENT_ARCH 可切回单 Agent——它是对比评测的对照组，
+    不是被删除的旧实现。
+    """
+    import os
+
+    return os.environ.get("FINDATA_AGENT_ARCH", "multi")
+
+
 @app.post("/agent")
 def agent_answer(req: AgentRequest) -> dict[str, Any]:
-    """自然语言问答（LangGraph Agent）：选指标 → 填参 → 确定性查询 → 验证。"""
-    from findata.agent.graph import answer_question
-
+    """自然语言问答（默认多智能体：Supervisor + Schema/Query/Verifier/Triage）。"""
     conn, _ = _get_conn()
     try:
-        answer = answer_question(conn, req.question)
+        if _agent_arch() == "single":
+            from findata.agent.graph import answer_question
+
+            answer = answer_question(conn, req.question)
+        else:
+            from findata.agent.supervisor import answer_question
+
+            answer = answer_question(conn, req.question)
     except Exception as exc:
         raise HTTPException(
             status_code=502,
@@ -291,17 +344,29 @@ def agent_answer(req: AgentRequest) -> dict[str, Any]:
 
 @app.post("/agent/stream")
 def agent_stream(req: AgentRequest) -> StreamingResponse:
-    """问答的 SSE 流式版本。"""
+    """问答的 SSE 流式版本（架构随 _agent_arch 切换）。"""
     from langchain_core.messages import HumanMessage
-
-    from findata.agent.graph import build_agent
 
     conn, _ = _get_conn()
 
     async def event_source():
         try:
-            agent = build_agent(conn)
-            initial = {"messages": [HumanMessage(content=req.question)], "run_ids": []}
+            if _agent_arch() == "single":
+                from findata.agent.graph import build_agent
+
+                agent = build_agent(conn)
+                initial = {
+                    "messages": [HumanMessage(content=req.question)],
+                    "run_ids": [],
+                    "usage": {},
+                }
+            else:
+                from findata.agent.nodes.state import initial_state
+                from findata.agent.supervisor import build_multi_agent
+
+                agent = build_multi_agent(conn)
+                initial = initial_state(req.question)
+                initial["messages"] = [HumanMessage(content=req.question)]
             async for chunk in agent.app.astream(initial, stream_mode="messages"):
                 msg, _ = chunk
                 if getattr(msg, "content", None):

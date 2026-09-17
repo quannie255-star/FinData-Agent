@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通用数据可信报告 · orders</title>
+<style>
+body{margin:0;padding:28px 20px;background:#f7f8fa;color:#1f2328;
+font:14px/1.6 -apple-system,"Segoe UI","PingFang SC",sans-serif}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:21px;margin:0 0 4px}
+.sub{color:#6b7280;font-size:13px;margin-bottom:18px}
+.sec{background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+padding:16px 20px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+th{color:#6b7280;font-weight:500;font-size:12px}
+code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12px}
+.note{background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;
+font-size:13px;color:#b45309;margin-bottom:14px}
+.skip{color:#6b7280;font-size:13px}
+</style></head><body><div class="wrap">
+<h1>通用数据可信报告 · orders</h1>
+<div class="sub">csv:orders.csv · 5,005 行 × 6 列 · 观察日 2026-09-17
+ · schema 声明式</div>
+<div class="sec"><h2>结论</h2>
+<p style="font-size:17px;font-weight:600;margin:0 0 6px">健康分 0.0
+（严重）</p>
+<p class="skip">徽章 ✓0
+ ⚠️0 ✗6
+ · 信号 3 条</p></div>
+<div class="note"><b>通用包上限声明</b>：无领域知识，最高只能给「✓ 基线通过」
+（= 没查出毛病，不是证明可靠）。「✓ 已核验」需要领域包的归因背书。</div>
+
+<div class="sec"><h2>指标可信度（逐列徽章）</h2>
+<table><thead><tr><th>列</th><th>类型</th><th>徽章</th><th>依据</th></tr></thead>
+<tbody><tr><td><code>amount</code></td><td>numeric</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td><code>category</code></td><td>categorical</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td><code>order_id</code></td><td>id</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td><code>order_ts</code></td><td>datetime</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td><code>quantity</code></td><td>numeric</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td><code>user_id</code></td><td>id</td><td><span style="color:#b91c1c;font-weight:600">✗ 不可用</span></td><td>duplicate_write：duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr></tbody></table>
+<p class="skip">徽章口径：✓ 已核验 · ✓ 基线通过 · ⚠️ 仅借鉴 · ✗ 不可用</p></div>
+<div class='sec'><h2>待处理信号</h2><table><thead><tr><th>探针</th><th>位置</th><th>级别</th><th>根因</th><th>说明</th></tr></thead><tbody><tr><td>uniqueness</td><td>*</td><td>P0</td><td><code>duplicate_write</code></td><td>duplicate_keys 命中（观测 5.0，阈值 0.0）</td></tr><tr><td>outlier</td><td>amount</td><td>P2</td><td><code>distribution_drift</code></td><td>近期均值/历史均值 = 3.83，分布疑似整体迁移</td></tr><tr><td>outlier</td><td>amount</td><td>P1</td><td><code>distribution_drift</code></td><td>近期均值/历史均值 = 3.83，分布疑似整体迁移</td></tr></tbody></table></div>
+</div></body></html>

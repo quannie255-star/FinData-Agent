@@ -1,0 +1,13 @@
+# UCI Beijing PM2.5 Data（CC BY 4.0），2013-01..03 单站点整点切片
+table: beijing_pm25
+timestamp_column: datetime
+primary_key: datetime
+freshness_days: 30
+columns:
+  datetime: {kind: datetime, nullable: false, description: 观测时间（北京时间，整点）}
+  pm25: {kind: numeric, nullable: true, null_tolerance: 0.05, description: PM2.5 浓度}
+  temp: {kind: numeric, description: 气温（摄氏度）}
+  dewp: {kind: numeric, description: 露点}
+  pres: {kind: numeric, description: 气压（hPa）}
+  iws: {kind: numeric, description: 累积风速（m/s）}
+  cbwd: {kind: categorical, description: 风向}

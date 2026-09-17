@@ -1,0 +1,54 @@
+# 真实回放 Golden Set（R1.2 / 复盘 P0c）
+#
+# 数据：eval/fixtures/replay_20260915/（2026-09-15 真实仓库只读固化），
+# 知识层由停牌种子（domains/finance/seeds.py）确定性重建。
+# 每个 case 是 2026-09-15 真实告警复盘的一条：期望根因 + 抑制 + 证据链。
+#
+# 合成语料证明「机制对」，真实回放证明「事实够」，两者缺一不可。
+# 期望值全部来自 docs/reviews/2026-09-15-attribution.md 的逐条人工归因：
+# 4 × 停牌缺口 → 抑制；4/5 漂移窗口 → 市场行情抑制；中芯国际 2023-03
+# 孤立事件保留告警（个股级行情需外部新闻事实源，P2 观察级已知残留）。
+
+asof: "2026-09-15"
+
+expect_summary:
+  n_findings: 9
+  n_alerts: 1
+  n_suppressed: 8
+
+cases:
+  - name: 中信证券配股停牌（2022-01，280 亿配股缴款+清算）
+    finding: {probe: completeness, symbol: "600030", window: "2022-01-19..2022-01-26"}
+    expect: {root_cause: benign_suspension, suppressed: true, evidence_refs: ["corporate_event"]}
+
+  - name: 长江电力重组上会停牌（2022-10-26）
+    finding: {probe: completeness, symbol: "600900", window: "2022-10-26..2022-10-26"}
+    expect: {root_cause: benign_suspension, suppressed: true, evidence_refs: ["corporate_event"]}
+
+  - name: 中国神华重组停牌（2025-08，两周）
+    finding: {probe: completeness, symbol: "601088", window: "2025-08-04..2025-08-15"}
+    expect: {root_cause: benign_suspension, suppressed: true, evidence_refs: ["corporate_event"]}
+
+  - name: 中芯国际购中芯北方停牌（2025-09）
+    finding: {probe: completeness, symbol: "688981", window: "2025-09-01..2025-09-08"}
+    expect: {root_cause: benign_suspension, suppressed: true, evidence_refs: ["corporate_event"]}
+
+  - name: "924 行情·东方财富（全市场共动）"
+    finding: {probe: drift, symbol: "300059", window: "2024-09-18..2024-10-21"}
+    expect: {root_cause: benign_market_event, suppressed: true, evidence_refs: ["cross_section"]}
+
+  - name: "924 行情·中信证券（全市场共动）"
+    finding: {probe: drift, symbol: "600030", window: "2024-09-19..2024-10-18"}
+    expect: {root_cause: benign_market_event, suppressed: true, evidence_refs: ["cross_section"]}
+
+  - name: "924 行情·中芯国际（全市场共动）"
+    finding: {probe: drift, symbol: "688981", window: "2024-09-20..2024-10-22"}
+    expect: {root_cause: benign_market_event, suppressed: true, evidence_refs: ["cross_section"]}
+
+  - name: "724 行情·中信证券（大金融板块共动，全市场平静）"
+    finding: {probe: drift, symbol: "600030", window: "2023-07-25..2023-08-07"}
+    expect: {root_cause: benign_market_event, suppressed: true, evidence_refs: ["cross_section"]}
+
+  - name: "2023-03 AI 行情·中芯国际（孤立事件，已知残留误报）"
+    finding: {probe: drift, symbol: "688981", window: "2023-03-09..2023-03-27"}
+    expect: {root_cause: distribution_drift, suppressed: false}

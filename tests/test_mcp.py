@@ -5,6 +5,8 @@ from __future__ import annotations
 from findata.mcp.server import (
     findata_dashboard,
     findata_health_check,
+    findata_trust_board,
+    findata_trust_check,
     findata_validate,
 )
 
@@ -107,3 +109,92 @@ def test_execute_metric_duckdb_source_connects(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "db_path", tmp_path / "missing.duckdb")
     with pytest.raises(ValueError, match="不存在"):
         _connect_for_execute("duckdb", seed=0)
+
+
+# ─────────────────────── findata_ask（可信问数多智能体，M12） ───────────────────────
+
+
+def _fake_state(question: str) -> dict:
+    from langchain_core.messages import AIMessage
+
+    return {
+        "messages": [AIMessage(content="茅台最新收盘价 121.0 元 [run_id=abcd1234] ✓")],
+        "question": question,
+        "mode": "direct",
+        "run_ids": ["abcd1234"],
+        "tool_rounds": 1,
+        "usage": {"input_tokens": 100, "output_tokens": 20, "total_tokens": 120},
+    }
+
+
+def test_ask_returns_answer_with_lineage(tmp_path, monkeypatch):
+    from findata.mcp.server import findata_ask
+
+    _fixture_db(tmp_path, monkeypatch)
+    import findata.agent.supervisor as sup
+
+    monkeypatch.setattr(
+        sup, "invoke_state", lambda conn, q: _fake_state(q)
+    )
+    payload = findata_ask(question="茅台最新收盘价是多少？")
+    assert "error" not in payload
+    assert payload["answer"].startswith("茅台最新收盘价")
+    assert payload["mode"] == "direct"
+    assert payload["run_ids"] == ["abcd1234"]
+    assert payload["usage"]["total_tokens"] == 120
+
+
+def test_ask_llm_failure_is_actionable(tmp_path, monkeypatch):
+    """LLM 未配置时返回可行动错误（指明环境变量），而不是裸异常。"""
+    from findata.mcp.server import findata_ask
+
+    _fixture_db(tmp_path, monkeypatch)
+    import findata.agent.supervisor as sup
+
+    def _boom(conn, q):
+        raise RuntimeError("分析链路 LLM 不可用：请配置 FINDATA_LLM_API_KEY")
+
+    monkeypatch.setattr(sup, "invoke_state", _boom)
+    payload = findata_ask(question="茅台最新收盘价是多少？")
+    assert "FINDATA_LLM_API_KEY" in payload["error"]
+    assert "hint" in payload
+
+
+def test_ask_missing_warehouse(tmp_path, monkeypatch):
+    from findata.config import settings
+    from findata.mcp.server import findata_ask
+
+    monkeypatch.setattr(settings, "db_path", tmp_path / "missing.duckdb")
+    payload = findata_ask(question="茅台最新收盘价是多少？")
+    assert "error" in payload and "不存在" in payload["error"]
+
+
+# ─────────────────────── findata_trust_check / trust_board（增强模块） ───────────────────────
+
+
+def test_trust_check_returns_usable_badge():
+    payload = findata_trust_check("stock_daily", "close", source="synthetic", seed=20240102)
+    assert "error" not in payload
+    assert payload["badge"] in ("verified", "baseline", "caution", "unusable")
+    assert isinstance(payload["usable"], bool)
+    assert payload["summary"]
+    assert payload["health_score"]
+
+
+def test_trust_check_unknown_metric_returns_available_keys():
+    payload = findata_trust_check("stock_daily", "ghost", source="synthetic")
+    assert "error" in payload
+    assert "stock_daily.close" in payload["error"]
+
+
+def test_trust_check_rejects_unknown_source():
+    payload = findata_trust_check("stock_daily", "close", source="oracle")
+    assert "error" in payload
+
+
+def test_trust_board_returns_all_badges():
+    payload = findata_trust_board(source="synthetic", seed=20240102)
+    assert len(payload["badges"]) == 12
+    assert payload["counts"]["unusable"] + payload["counts"]["caution"] >= 1  # 注入语料必触发
+    usable = [b for b in payload["badges"] if b["usable"]]
+    assert all(b["badge"] in ("verified", "baseline") for b in usable)

@@ -14,6 +14,7 @@ from typing import Any, Literal
 import duckdb
 
 from findata.config import settings
+from findata.dq.badges import BadgeLevel
 from findata.dq.triage import BaselineTriage
 from findata.eval.fixtures import SyntheticConfig
 from findata.eval.runner import EvalResult, run_evaluation
@@ -44,6 +45,8 @@ def inspect(
         snap = _load_snapshot(source, asof, seed, db_path)
         target = snap.as_of(asof) if asof is not None else snap
         result = run_inspection(target)
+        if source == "duckdb":
+            _persist_signals(result, db_path)
         # 把核心健康指标塞进 span attribute,便于 trace ↔ alert 双向跳转
         s = result.summary
         span.set_attribute("findata.health_score", s.health_score)
@@ -52,6 +55,35 @@ def inspect(
         span.set_attribute("findata.n_suppressed", s.n_suppressed)
         span.set_attribute("findata.grade", s.grade())
         return result
+
+
+def _persist_signals(result: InspectionResult, db_path: str | None) -> None:
+    """巡检产物落 dq_signal 表（M12：给 VerifierAgent 的运行时背书供数）。
+
+    best-effort：写历史失败只记日志，绝不打挂巡检本身——巡检的主职责是
+    出报告，历史表是增强，不能本末倒置。
+    synthetic 源不落库（调用方保证）：合成故障写进历史会污染真实信号。
+    """
+    import logging
+
+    from findata.core.db import connect
+    from findata.dq.history import record_signals
+
+    pairs = [(a.finding, a.diagnosis) for a in result.alerts]
+    pairs += list(result.suppressed)
+    if not pairs:
+        return
+    try:
+        conn = connect(str(db_path or settings.db_path))
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("dq_signal 落库失败（打开仓库）：%s", exc)
+        return
+    try:
+        record_signals(conn, pairs, result.asof)
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning("dq_signal 落库失败：%s", exc)
+    finally:
+        conn.close()
 
 
 def render_report(
@@ -205,6 +237,84 @@ def result_to_json(result: InspectionResult) -> dict[str, Any]:
                 "explanation": d.explanation,
             }
             for f, d in result.suppressed
+        ],
+        "badges": badges_to_json(result),
+    }
+
+
+def trust_check(
+    table: str,
+    metric: str,
+    source: Source = "duckdb",
+    asof: date | None = None,
+    seed: int = 20240102,
+    db_path: str | None = None,
+) -> dict[str, Any]:
+    """查询单个 (table, metric) 的可信徽章——外部 Agent 引用数字前的标准动作。
+
+    这是「增强模块」定位（v2.1）的最小接入面：任何外部 Agent 在引用一个
+    数字前调用本接口，拿到四档徽章 + 证据链，决定「直接引用 / 仅借鉴 /
+    拒绝引用」。找不到该指标时抛 ValueError（MCP/API 层负责转成各自
+    的错误形态），错误信息带全部可用指标键，调用方可以自愈。
+    """
+    result = inspect(source, asof, seed, db_path)
+    badge = result.badges.of(table, metric)
+    if badge is None:
+        known = ", ".join(b.metric_key for b in result.badges.badges)
+        raise ValueError(f"未知指标 {table}.{metric}。可用指标：{known}")
+    return {
+        "asof": result.asof.isoformat(),
+        "source": source,
+        "table": table,
+        "metric": metric,
+        "badge": badge.level.value,
+        "mark": badge.mark,
+        "usable": badge.level in (BadgeLevel.VERIFIED, BadgeLevel.BASELINE),
+        "summary": badge.summary,
+        "evidence": [[src, text] for src, text in badge.evidence],
+        "health_score": result.summary.health_score,
+        "grade": result.summary.grade(),
+    }
+
+
+def trust_board(
+    source: Source = "duckdb",
+    asof: date | None = None,
+    seed: int = 20240102,
+    db_path: str | None = None,
+) -> dict[str, Any]:
+    """整板徽章（逐指标可信度）。外部 Agent 会话开始时拉一次，批量引用不再逐个查。"""
+    result = inspect(source, asof, seed, db_path)
+    out = badges_to_json(result)
+    out["source"] = source
+    return out
+
+
+def badges_to_json(result: InspectionResult) -> dict[str, Any]:
+    """徽章板序列化：四档计数 + 逐列徽章（含证据链）。"""
+    board = result.badges
+    return {
+        "asof": result.asof.isoformat(),
+        "health_score": result.summary.health_score,
+        "grade": result.summary.grade(),
+        "counts": {
+            "verified": len(board.by_level(BadgeLevel.VERIFIED)),
+            "baseline": len(board.by_level(BadgeLevel.BASELINE)),
+            "caution": len(board.by_level(BadgeLevel.CAUTION)),
+            "unusable": len(board.by_level(BadgeLevel.UNUSABLE)),
+        },
+        "badges": [
+            {
+                "table": b.table,
+                "metric": b.column,
+                "key": b.metric_key,
+                "badge": b.level.value,
+                "mark": b.mark,
+                "usable": b.level in (BadgeLevel.VERIFIED, BadgeLevel.BASELINE),
+                "summary": b.summary,
+                "evidence": [[src, text] for src, text in b.evidence],
+            }
+            for b in board.badges
         ],
     }
 

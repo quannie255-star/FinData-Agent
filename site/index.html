@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>findata · 数据质量监控 Agent</title>
+<title>findata · 可信数据增强模块</title>
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
@@ -12,16 +12,15 @@
 <section class="hero">
   <h1>findata</h1>
   <p class="tagline">
-    数据质量监控 Agent。异常探测 → 根因归因 → 误报抑制 → eval 门禁。
-    不只是"找异常"，而是分辨"该告警"与"该忽略"，并在评测里立得住。
+    可信数据增强模块。挂到成熟 Agent 项目上：宿主负责对话与编排，
+    findata 负责回答「这个数字能不能引用、凭什么」——每个数字带
+    四档可信徽章，徽章可点开看归因证据链。
   </p>
   <div class="badges">
-    <span class="badge">M1 数据层</span>
-    <span class="badge">M2 质量内核</span>
-    <span class="badge">M3 巡检流水线</span>
-    <span class="badge">M4 LLM 归因</span>
-    <span class="badge">M5 看板</span>
-    <span class="badge">M6 API + MCP + Docker</span>
+    <span class="badge">v2.0 带徽章可信日报</span>
+    <span class="badge">v2.1 增强模块（MCP/HTTP trust 接口）</span>
+    <span class="badge">v2.2 通用包 trust-report</span>
+    <span class="badge">eval 门禁 + 真实回放 golden</span>
   </div>
 </section>
 
@@ -29,8 +28,9 @@
   <div class="card">
     <h3><span class="num">1</span>探针观测</h3>
     <p>
-      7 类探针独立工作：freshness / completeness / uniqueness / validity
-      / drift / null_sweep。每类只答"观测到什么"，不带判断。
+      A 股领域包 7 类探针 + 通用包 5 类检查（完整性/唯一性/新鲜度/离群值/
+      Schema 一致），任意 csv/excel/duckdb/sqlite 表开箱即用。
+      每类只答"观测到什么"，不带判断。
     </p>
     <div class="code">run_probes(ctx) → List[Finding]</div>
   </div>
@@ -43,10 +43,11 @@
     <div class="code">diagnose_all(findings, ctx) → List[Diagnosis]</div>
   </div>
   <div class="card">
-    <h3><span class="num">3</span>eval 先行</h3>
+    <h3><span class="num">3</span>eval 先行 + 真实回放</h3>
     <p>
-      确定性合成语料 + 故障注入 + 5 项指标 + Cohen's κ 一致性。
-      CI 门禁把"归因层有 100% 增量"做成可证伪命题，不靠感觉。
+      合成语料证明机制对，真实回放 golden 证明事实够：2026-09-15 真实考试
+      抑制 0/9 → 修复后 8/9（9 案例进 CI 门禁）。通用包 vs 领域包同数据
+      对比：60 分 vs 100 分。
     </p>
     <div class="code">run_evaluation(seed=…) → EvalReport</div>
   </div>
@@ -102,7 +103,8 @@
   <h2 style="margin-top:28px">MCP Server</h2>
   <p>
     <code>findata-mcp</code> stdio transport，已被 Claude Desktop / Cursor /
-    Cline 等原生支持。挂载到 MCP 客户端后，多出六个工具：
+    Cline 等原生支持。挂载后共 9 个工具——引用任何数字前先查
+    <code>findata_trust_check</code>（usable=false 不得作为已核验引用）：
   </p>
   <div class="endpoint">
     <code>findata_health_check</code>
@@ -115,6 +117,18 @@
   <div class="endpoint">
     <code>findata_validate</code>
     <div class="desc">跑评测 → 5 项指标；triage=both 时输出 Cohen's κ。</div>
+  </div>
+  <div class="endpoint">
+    <code>findata_metric_query</code> / <code>findata_ask</code>
+    <div class="desc">可信问数：确定性 SQL + 交叉验证 + run_id 溯源 / 多智能体问答。</div>
+  </div>
+  <div class="endpoint">
+    <code>findata_trust_check</code> / <code>findata_trust_board</code>
+    <div class="desc">增强模块核心：单指标四档徽章+证据链 / 会话开始拉全板。</div>
+  </div>
+  <div class="endpoint">
+    <code><span class="tag t-get">GET</span> /v1/trust</code>
+    <div class="desc">HTTP 同源接口：给只能调 REST 的平台型宿主做引用门禁。</div>
   </div>
 
   <pre class="code" style="margin-top:8px">{

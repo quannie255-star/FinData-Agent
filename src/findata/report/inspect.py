@@ -12,6 +12,7 @@ from logging import getLogger
 
 import pandas as pd
 
+from findata.dq.badges import BadgeBoard, build_badges
 from findata.dq.calendar import TradingCalendar
 from findata.dq.models import Diagnosis, Finding, RootCause, Severity
 from findata.dq.probes import ProbeContext, run_probes
@@ -72,6 +73,8 @@ class Snapshot:
     ingest_run: pd.DataFrame
     calendar: TradingCalendar
     asof: date
+    # 指数日线，可选。漂移归因的截面共动判据要拿指数量能做市场基准
+    index_daily: pd.DataFrame = field(default_factory=lambda: _empty(("symbol", "date")))
 
     @classmethod
     def from_duckdb(cls, conn, asof: date | None = None) -> Snapshot:
@@ -100,6 +103,7 @@ class Snapshot:
             ingest_run=read("SELECT * FROM ingest_run", _EMPTY_RUN),
             calendar=cal,
             asof=asof,
+            index_daily=read("SELECT * FROM index_daily", ("symbol", "date")),
         )
 
     @classmethod
@@ -137,6 +141,7 @@ class Snapshot:
             ingest_run=self._cut(self.ingest_run, day, col="started_at"),
             calendar=self.calendar,
             asof=day,
+            index_daily=self._cut(self.index_daily, day),
         )
 
     @staticmethod
@@ -154,6 +159,7 @@ class Snapshot:
             ingest_run=self.ingest_run,
             calendar=self.calendar,
             asof=self.asof,
+            index_daily=self.index_daily,
         )
 
 
@@ -187,6 +193,15 @@ class InspectionSummary:
     by_root_cause: dict[str, int] = field(default_factory=dict)
     health_score: float = 100.0
     noise_reduction: float = 0.0
+    # 知识层状态（P0d）：抑制规则靠 corporate_event 吃饭，表空 = 抑制必然失效。
+    # 这件事必须对值班的人可见，不能以"降噪 0%"的形式无声出现。
+    knowledge_event_rows: int = 0
+    knowledge_latest_event: date | None = None
+
+    @property
+    def knowledge_degraded(self) -> bool:
+        """事件表为空 = 停牌/除权抑制在生产上不可用。"""
+        return self.knowledge_event_rows == 0
 
     def grade(self) -> str:
         s = self.health_score
@@ -205,6 +220,8 @@ class InspectionResult:
     alerts: list[Alert]
     suppressed: list[tuple[Finding, Diagnosis]]
     summary: InspectionSummary
+    # 逐指标徽章板（R1.2）：每个 (table, column) 一个可信判定 + 证据链
+    badges: BadgeBoard = field(default_factory=BadgeBoard)
 
     @property
     def p0(self) -> list[Alert]:
@@ -243,11 +260,9 @@ def run_inspection(
 
     sev: dict[str, int] = {}
     causes: dict[str, int] = {}
-    penalty = 0.0
     for a in alerts:
         s = a.diagnosis.severity.value
         sev[s] = sev.get(s, 0) + 1
-        penalty += _PENALTY.get(a.diagnosis.severity, 1.0)
     for _, d in suppressed:
         causes[d.root_cause.value] = causes.get(d.root_cause.value, 0) + 1
     for a in alerts:
@@ -255,6 +270,21 @@ def run_inspection(
 
     n_findings = len(findings)
     n_sup = len(suppressed)
+    events = snapshot.corporate_event
+    latest_event = None
+    if not events.empty and "date" in events.columns and len(events["date"]):
+        dmax = pd.to_datetime(events["date"]).max()
+        latest_event = dmax.date() if pd.notna(dmax) else None
+    # 逐指标徽章层（R1.2）：健康分由徽章聚合得出（口径见 dq/badges.py 模块注释）。
+    # 只对已观测的表发徽章——探针跑在空表上等于什么都没查，不能给 ✓。
+    board = build_badges(
+        findings,
+        diagnoses,
+        observed_tables={
+            "stock_daily": not snapshot.stock_daily.empty,
+            "valuation_daily": not snapshot.valuation_daily.empty,
+        },
+    )
     summary = InspectionSummary(
         asof=snapshot.asof,
         n_symbols=int(snapshot.universe["symbol"].nunique()) if not snapshot.universe.empty else 0,
@@ -264,14 +294,17 @@ def run_inspection(
         n_suppressed=n_sup,
         by_severity=sev,
         by_root_cause=causes,
-        health_score=max(0.0, round(100.0 - penalty, 1)),
+        health_score=board.health_score,
         noise_reduction=(n_sup / n_findings) if n_findings else 0.0,
+        knowledge_event_rows=len(events),
+        knowledge_latest_event=latest_event,
     )
     return InspectionResult(
         asof=snapshot.asof,
         alerts=alerts,
         suppressed=suppressed,
         summary=summary,
+        badges=board,
     )
 
 
@@ -311,4 +344,6 @@ def benign_label(cause: RootCause) -> str:
         RootCause.BENIGN_CORPORATE_ACTION: "除权除息",
         RootCause.BENIGN_NEW_LISTING: "新股上市",
         RootCause.BENIGN_NON_TRADING_DAY: "非交易日",
+        RootCause.BENIGN_MARKET_ACTION: "放量脉冲",
+        RootCause.BENIGN_MARKET_EVENT: "市场行情",
     }.get(cause, cause.value)

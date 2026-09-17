@@ -1,0 +1,79 @@
+findata 可信增强模块 · 接入面实测归档（v2.1.0，2026-09-17）
+================================================================
+
+定位：findata 不做通用 Agent 基座，作为「可信增强模块」挂载到
+成熟 Agent 项目上。三个接入面：MCP 工具 / HTTP API / Python 服务层，
+同一份 service 实现，不许两套口径。
+
+── 1. MCP 工具：findata_trust_check（引用前检查）──
+调用: findata_trust_check(table="stock_daily", metric="close", source="duckdb")
+{
+  "asof": "2026-09-16",
+  "source": "duckdb",
+  "table": "stock_daily",
+  "metric": "close",
+  "badge": "verified",
+  "mark": "✓ 已核验",
+  "usable": true,
+  "summary": "窗口内 100% 交易日处于停牌区间，缺失为合法业务状态，告警已抑制",
+  "evidence": [
+    [
+      "corporate_event:suspension:600030",
+      "已核验停牌 · 600030 2022-01-19..2022-01-26"
+    ],
+    [
+      "corporate_event:suspension:600900",
+      "已核验停牌 · 600900 2022-10-26..2022-10-26"
+    ],
+    [
+      "corporate_event:suspension:601088",
+      "已核验停牌 · 601088 2025-08-04..2025-08-15"
+    ],
+    [
+      "corporate_event:suspension:688981",
+      "已核验停牌 · 688981 2025-09-01..2025-09-08"
+    ]
+  ],
+  "health_score": 95.8,
+  "grade": "健康"
+}
+
+调用: findata_trust_check(table="stock_daily", metric="volume", source="duckdb")
+{
+  "badge": "caution",
+  "mark": "⚠️ 仅借鉴",
+  "usable": false,
+  "summary": "疑点：近期均值/历史均值 = 5.19，超出漂移阈值"
+}
+
+── 2. MCP 工具：findata_trust_board（会话开始拉全板）──
+counts={"verified": 7, "baseline": 4, "caution": 1, "unusable": 0} health_score=95.8 grade=健康
+badges:
+  stock_daily.open             ✓ 已核验    usable=True
+  stock_daily.high             ✓ 已核验    usable=True
+  stock_daily.low              ✓ 已核验    usable=True
+  stock_daily.close            ✓ 已核验    usable=True
+  stock_daily.volume           ⚠️ 仅借鉴   usable=False
+  stock_daily.amount           ✓ 已核验    usable=True
+  stock_daily.pct_chg          ✓ 已核验    usable=True
+  stock_daily.turnover         ✓ 已核验    usable=True
+  valuation_daily.pe           ✓ 基线通过   usable=True
+  valuation_daily.pe_ttm       ✓ 基线通过   usable=True
+  valuation_daily.pb           ✓ 基线通过   usable=True
+  valuation_daily.total_mv     ✓ 基线通过   usable=True
+
+── 3. 错误契约：未知指标带可用键（调用方可自愈）──
+未知指标 stock_daily.ghost。可用指标：stock_daily.open, stock_daily.high, stock_daily.low, stock_daily.close, stock_daily.volume, stock_daily.amount, stock_daily.pct_chg, stock_daily.turnover, valuation_daily.p
+
+── 4. HTTP API 同源实现 ──
+GET /v1/trust?table=stock_daily&metric=close -> 200
+（响应体与 MCP 工具逐字节一致 —— 一份 service，两份协议）
+GET /v1/trust/board -> 200, badges=12
+
+── 5. 可嵌入徽章芯片（宿主页面直接贴）──
+badge_chip_html(stock_daily.close) -> <span title="窗口内 100% 交易日处于停牌区间，缺失为合法业务状态，告警已抑制" style="display:inline-block;margin-left:4px;padding:1px 8px;border-radi...
+
+外部 Agent 集成契约（详见 docs/integration.md）：
+  1. 会话开始调 trust_board 拿全板；
+  2. 引用任何数字前查 trust_check，usable=false 不得作为已核验引用；
+  3. 徽章与证据随答案一起返回给最终读者（芯片组件可嵌入 HTML）。

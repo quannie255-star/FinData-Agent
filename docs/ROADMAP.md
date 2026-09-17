@@ -1,0 +1,242 @@
+# 开发路线图 v2.0 · 可信数据引擎 与 可信报告 Agent（2026-09-16 起）
+
+> **定位升级**：v0.7–v0.10 完成了"检测—归因—抑制"监控层与多智能体问数层
+> （多智能体 ✅ / 自进化 ✅ / RL 环境封装 ✅·训练待卡；旧路线图归档于
+> `docs/archive/ROADMAP-v0.8-multi-agent-rl.md`）。v2.0 起主线转向 PITCH Q6
+> 预告的第二条主线的泛化——**"消费时可信"**：
+>
+> **可信数据引擎**（通用协议 + 领域包：接入数据源，对每张表、每个指标给出
+> 带证据链的可信判定）× **可信报告 Agent**（多智能体生成当日数据分析报告，
+> 报告上每个数字带可信徽章：哪些可直接引用、哪些只能借鉴、哪些不可用）。
+>
+> A 股是第一个领域包（知识层已建成），不是这个产品的边界。
+>
+> 原则不变：**声明与代码一致**。每个阶段验收门禁先写在这里，做完的才算数；
+> 成本（token/延迟）如实入账；评测不过不许合入。
+
+---
+
+## 零、定位与护城河（先读这段，防止做偏）
+
+**一句话**：接入数据源，产出经分析可视化的报告，报告上每个数字带
+"可信/仅借鉴/不可用"徽章，徽章可点开看归因证据。
+
+- **护城河不是统计检查，是归因证据链**。完整性/唯一性/新鲜度/离群值这些
+  通用检查是 Great Expectations / dbt tests / Soda 的主场，我们只把它们
+  作为"通用基线包"；差异化在领域包的归因知识：缺 6 行是漏采还是 2022-01
+  中信证券配股停牌——这决定徽章是 ✗ 还是 ✓（真实案例见
+  `docs/reviews/2026-09-15-attribution.md`）
+- **徽章四档，每档可点开看证据**：
+  | 徽章 | 含义 | 证据要求 |
+  | --- | --- | --- |
+  | ✓ 已核验 | 领域知识归因背书 | 归因结论 + 证据引用（公告/事件表/截面共动） |
+  | ✓ 基线通过 | 仅通用检查通过，无领域知识参与 | 检查项清单 |
+  | ⚠️ 仅借鉴 | 有疑点，人工判断 | 疑点描述（如"近 30 日空值率 0→40%"） |
+  | ✗ 不可用 | 归因为真实故障 | 根因 + 建议动作 |
+- **多智能体是手段不是卖点**。报告生成有真实分工（采集→分析→可视化→
+  可信审校），用现成 Supervisor + nodes 架构；对外叙事的主角是徽章
+  与证据链。单 vs 多的 token 账沿用 `eval-agent-single-vs-multi` 的纪律如实归档
+- **"任意数据"在 v1 不做承诺**。协议通用（任何数据可跑通用包），智能在
+  领域包（首发只有 A 股包）。演示泛化的方式是对比页：同一数据集
+  仅通用包 vs +领域包，徽章含金量的差值就是产品本身
+
+---
+
+## 一、资产盘点（新方向视角：复用 / 保留 / 封存）
+
+| 模块 | 状态 | 在 v2.0 中的角色 |
+| --- | --- | --- |
+| `dq/`（probes · triage · calendar · compiler） | ✅ 已验收 | **引擎核心**，直接复用；R1 加逐指标映射 |
+| `report/`（inspect · render · notify） | ✅ 已验收 | 日报骨架；R1 加徽章层 |
+| `agent/`（supervisor · nodes · llm · tools） | ✅ v0.8 验收 | 报告 Agent 编排底座；R1 扩 viz/审校节点 |
+| `core/db` · `domains/finance/ingest` | ✅ 已验收 | A 股领域包的数据接入（含 `--events` 事件采集路径，**从未跑过**） |
+| `eval/`（fixtures · faults · runner · golden） | ✅ 已验收 | CI 门禁照旧；新增徽章层评测 |
+| `semantic/` · `mcp/server.py` | ✅ 已验收 | 保留；R3 给 MCP 挂 `trust_check` 工具 |
+| `eval/extended.py` · `dq/memory.py` · `agent/llm_triage.py` · `eval/evolution.py` | ✅ v0.9 验收 | **封存保留**：已验收里程碑 + 投递材料证据，不删不改不发展 |
+| `rl/` · `scripts/rl_pipeline.py` | ⏸ M14 环境封装完成，训练待 GPU | **封存**：有卡再按 `docs/rl-experiment.md` 继续，主线不再投入 |
+| `scripts/attribute_alerts.py` · `docs/reviews/` | ✅ | v2.0 的奠基案例：7/7 真实误报考试与归因 |
+
+**清理决策（2026-09-16）**：不删任何已验收代码——它们有测试、有 CI、
+有 PITCH 数字背书，删除等于烧掉简历资产。"冗余"以封存标注解决：
+新任务严禁往封存模块里加功能。真正清除的是位置错误的产物：
+旧路线图归档至 `docs/archive/`，归因复盘从 gitignore 的 `reports/`
+迁入 `docs/reviews/`（纳入版本库），归因脚本从临时目录迁入 `scripts/`。
+
+---
+
+## 二、Phase R1 · v2.0.0 可信日报（第 1–2 周）
+
+**交付物：自己每天真读的那份 A 股日报，每个数字带徽章。**
+
+### R1.0 知识层上线（前置，来自归因复盘 P0a）✅ 2026-09-16
+
+归因复盘已证明：`corporate_event` 0 行 → 停牌抑制规则在生产是死代码 →
+7/7 真实告警全是误报。徽章的"✓ 已核验"依赖这层知识，必须最先修。
+
+- `daily_pipeline.py` 常态化带事件采集（`--events`），失败不阻塞行情巡检
+- 历史种子：4 笔已核实停牌写入 `corporate_event`（kind=suspension，
+  公告链接入 detail；来源见归因复盘）
+- 日报新增"知识层状态"行（事件表行数/最新事件日期）——抑制能力降级必须可见
+- 验收：
+  - [x] 重跑 2026-09-15 巡检，7 条真实告警 ≥4 条转抑制
+        （漂移 3 条由 R1.1 截面共动规则处理，可后置）
+        ——实测：种子落地后 4 条 missing_rows 全部转 `benign_suspension`（7 告警 → 3）
+  - [x] 新增测试：corporate_event 为空时日报出现降级提示
+        （`tests/test_report.py::test_empty_knowledge_layer_shows_degradation`；
+        种子契约另见 `tests/test_seeds.py`）
+
+### R1.2 逐指标徽章层 ✅ 2026-09-16
+
+- `findings → (table, metric) → 徽章` 映射：探针按表/列产出，
+  归因给出根因与证据，映射层聚合成每个指标一个徽章
+- 新增根因 `BENIGN_MARKET_EVENT`：drift 归因先查截面共动性
+  （同窗全市场放量分布 + `index_daily` 指数量能），共动显著判合法
+  ——可抑制 2024-09 等真实行情误报（见归因复盘 P0b）
+- 真实回放 golden：7 条真实告警用 `Snapshot.as_of()` 固化为评测用例
+  进 CI 门禁（P0c）——合成语料证明机制对，真实回放证明事实够
+- 验收：
+  - [x] 日报（md/html）每个数字带徽章，徽章可展开证据链
+        （12 项列徽章 + `<details>` 证据链；报告 Agent 解读逐数字带徽章，
+        样例 `examples/daily-badge-report-2026-09-15.md`）
+  - [x] 健康分由徽章聚合得出，口径写入文档
+        （`docs/badge.md` + `dq/badges.py`；真实回放健康分 72.0 → 95.8）
+  - [x] 真实回放 golden 进 `eval_golden.py --strict`，CI 挂红
+        （`eval/golden/replay.yaml` 9/9 通过：4×停牌 + 4×市场行情抑制，
+        唯一残留 2023-03 中芯国际孤立事件按复盘保留为已知误报）
+
+### R1.3 报告 Agent（多智能体）✅ 2026-09-16
+
+- 复用 Supervisor 编排，扩展节点：分析（指标解读）→ 可视化（图表
+  选择与生成）→ 可信审校（核对每个引用数字的徽章，无徽章不得引用）
+- 简单任务直通快路径（沿用 v0.8 结论）；单 vs 多 token/延迟如实归档
+- 验收：
+  - [x] `daily_pipeline.py` 一条命令出带徽章的 md+html 报告并推送
+        （实测：真实 LLM 分析 710/472 字符、审校 0 拦截、SVG 图表；
+        无 key/LLM 失败自动降级确定性模板，管线不因 Agent 失败中断）
+  - [x] 审校节点单测：引用无徽章数字必须被拦截
+        （`tests/test_report_agent.py`：裸数字/幽灵引用/✗ 徽章引用三条拦截路径
+        + 日期与整数计数放行 + 模板零拦截自洽）
+  - [x] 全部测试绿 + ruff 无告警（331 例绿，ruff clean）
+
+---
+
+## 三、Phase R2 · v2.1.0 可信增强模块（2026-09-17 维护者决策：主线重定向）
+
+> **定位修订**：从头做通用 Agent 基座是重造轮子，findata 的正确位置是
+> **挂到成熟 Agent 项目上的"可信增强模块"**——宿主负责对话与编排，
+> findata 负责回答「这个数字能不能引用、凭什么」。原 R2 的通用包
+> （trust-report / 任意数据接入）**延后**到 R3 之后；原 R3 的引擎 API
+> 提前为本阶段。判断依据：对话编排已是充分竞争的成熟能力，而
+> 归因证据链 + 无徽章不引用闸门 + 评测门禁方法论是 findata 独有的
+> 增量；接入面做成标准协议（MCP/HTTP）后，宿主换成谁都不影响增量价值。
+> 拒绝的路线：fork/焊接进某个具体平台（如 WrenAI）——那会把独有
+> 增量绑死在别人的发版节奏上；对平台型宿主用 HTTP 面做松耦合门禁即可。
+
+**交付物：外部 Agent 引用任何数字前，都有一条标准协议可以查到
+「这个数字带什么徽章、证据是什么」。**
+
+- MCP 工具：`findata_trust_check(table, metric)` + `findata_trust_board()`
+  （挂在现有 `findata-mcp` stdio 服务上，任何 MCP host 零配置接入）
+- HTTP API：`GET /v1/trust` + `GET /v1/trust/board`（给只能调 REST 的
+  GenBI/平台型宿主做松耦合门禁）
+- 可嵌入徽章芯片：`badge_chip_html`（内联样式，宿主报告数字旁直接贴）
+- 集成契约文档：宿主 Agent 的三条接入纪律（会话拉全板 / 引用前检查 /
+  未知键自愈），参照实现是 findata 自己的审校节点
+- 验收：
+  - [x] MCP + HTTP + Python 三个接入面同一份 service 实现，响应同构
+        （实测归档 `examples/trust-module-integration.txt`）
+  - [x] 真实仓库实测：close=✓ 已核验（停牌证据链）、volume=⚠️ 仅借鉴、
+        健康分 95.8，未知指标错误带可用键
+  - [x] 测试覆盖三面（MCP 4 例 / API 3 例 / 芯片转义 1 例）
+  - [x] 宿主集成演示：一个真实的外部 Agent（非 findata 自己的）通过
+        MCP 消费 trust_check 并在回答中带徽章引用
+        （`scripts/mcp_host_demo.py` = 只讲标准 MCP 协议的通用宿主——
+        官方 MCP Python SDK stdio 客户端 + 宿主自己的 DeepSeek 配置，
+        零 findata 导入；真实 LLM 实测：metric_query → trust_check →
+        回答逐数字带验证状态/徽章/run_id，transcript 归档
+        `examples/mcp-host-integration.txt`，线级协议测试
+        `tests/test_mcp_host.py` 进 CI）
+
+---
+
+## 四、Phase R3 · v2.2.0 通用包与分发（原 R2 内容并入）✅ 2026-09-17
+
+- **通用基线检查包**（原 R2 主体，延后至此）：完整性/唯一性/新鲜度/
+  离群值/Schema 一致，声明式 schema 描述，`findata trust-report <csv|db|table>`；
+  两个公开数据集 demo + 对比页（仅通用包 vs +领域包 的徽章差异）。
+  含金量自检继续有效：若通用包报告连自己都觉得没有引用价值，
+  说明领域包战略需要修正。
+- 验收：
+  - [x] 非金融数据集端到端出带徽章报告
+        （`src/findata/generic/`：5 类通用探针 + 通用归因器 + 徽章聚合
+        复用 `dq/badges` 单一实现；`findata-trust-report` CLI；
+        demo① = UCI Beijing PM2.5 真实公开数据（新鲜度拦截 4917 天停更，
+        `examples/generic-trust-report-air-quality.md`）；
+        demo② = 脱敏电商订单合成数据（主键重复 ✗ + 组内金额水平迁移 ⚠️，
+        `examples/generic-trust-report-ecommerce.md`））
+  - [x] 对比页：同一数据集 仅通用包 vs +A 股领域包 的徽章差异
+        （`scripts/compare_domain_vs_generic.py` → `examples/domain-vs-generic-comparison.md`：
+        同一 stock_daily 2025 切片，通用包 60 分 / 8 列 ⚠️ / 11 信号无法归因
+        vs 领域包 100 分 / 8 列 ✓ 已核验 / 2 信号停牌归因——
+        「没查出毛病」与「证明可靠」的差值即产品本身，含金量自检通过）
+  - [x] 诚实边界测试钉死：通用包永不出 BENIGN_*/✓ 已核验
+        （`tests/test_generic.py::test_generic_never_verifies`）；
+        过程中发现并修复徽章聚合的 P0 优先级 bug（⚠️ 曾可掩盖 ✗）
+- [x] README/PITCH 按增强模块定位重写（README 687 → 230 行，三组成结构：
+      增强模块/通用包/A股领域包；PITCH 简历描述、电梯演讲、Q1/Q2/Q4/Q5
+      全部对齐 v2.2 口径——旧"撤回改动"故事补上了 v2.0 的后续：换证据源
+      而不是换阈值）
+- [x] 分发止损启动：计划落 `docs/distribution.md`（launch 定义 / 唯一指标 =
+      可验证的陌生宿主集成 / 无遥测的人肉测量方式 / 30 天决策门 A 加领域包
+      B 停线复盘 / 窗口期克制清单）。计时起点待 tag v2.2.0 后回填
+
+---
+
+## 五、诚实边界（本阶段明确不做）
+
+- **不过度承诺"任意数据可信"**：v1 只承诺通用包基线 + 领域包核验，
+  徽章必须如实区分"✓ 已核验"与"✓ 基线通过"
+- **可信分只对已观测事实归因**，不做预测性声明（"这数据以后会坏"不归我们说）
+- **可视化够用即可**：图表服务于报告可读性，不做花哨前端（沿用旧边界）
+- **实盘 / 交易信号红线不变**
+- **封存模块不投入**：RL 训练等有卡；eval-gate 独立产品线封存
+  （其判官校准思想在 R1.3 审校节点中以"无徽章不引用"的形式落地）
+
+---
+
+## 六、与 mm-curation-pipeline 的协同
+
+架构模式同构、处理对象不同，**协同设计 schema，不合并代码库**：
+
+| 模式 | mm-curation | 本项目 v2.0 |
+| --- | --- | --- |
+| 通用引擎 + 领域配置 | 域画像（threshold 画像自校准） | 领域包（A股包首发） |
+| 检查器注册表 + 误杀审计 | operators + threshold_scan + dropped.jsonl | probes + triage + 归因复盘 |
+| 判定 + 门禁 | 域判官 + eval 门禁 | 徽章 + eval-gate |
+| 运维飞轮 | stats.jsonl 每日巡检 | daily pipeline + 真实回放 golden |
+
+已有桥接：mm-curation 的 `scripts/findata_health_stage.py` 直接 import
+findata 做仓库级健康巡检。R2 定领域包 schema 时与 mm-curation 的域画像
+schema 协同设计（一份跨项目规范，两边各自实现），采样级清洗 → 表级可信
+→ 报告消费的三段生态叙事因此更完整。
+
+---
+
+## 七、版本节奏与投递衔接
+
+| 版本 | 内容 | 验收核心 | 前置 |
+| --- | --- | --- | --- |
+| v2.0.0 | 知识层上线 + 徽章层 + 报告 Agent | 真实日报每数字带徽章；7 条真实告警抑制 ≥6；CI 绿 | 无 |
+| v2.1.0 | **可信增强模块**（2026-09-17 重定向）：MCP trust_check / HTTP /v1/trust / 徽章芯片 + 集成契约 | 三接入面同源实测 + 真实宿主集成演示 | R1 |
+| v2.2.0 | 通用包（原 R2）+ 分发与止损 | 非金融数据端到端报告 + 对比页；陌生宿主调用 | R2 |
+
+| JD 关键词 | 对应里程碑 | 证据位置 |
+| --- | --- | --- |
+| 数据智能体 / Data Agent | R1–R2 | 带徽章的可信报告 + examples 归档 |
+| 多智能体协作 | R1.3（复用 v0.8） | 单 vs 多对比报告 |
+| 数据质量 / 可信 AI | R1–R3 全程 | 归因复盘 + 徽章证据链 |
+| 评测系统 / 质量门禁 | 已有 + 真实回放 golden | CI + eval-gate |
+| LLM 归因 / 记忆 / 自进化 | v0.9（封存保留） | `examples/eval-prompt-evolution.txt` 等 |
+
+每完成一个 Phase 的固定动作：CHANGELOG 记录 → 本文档打勾 →
+`examples/` 归档评测报告 → PITCH.md 增补对应数字。

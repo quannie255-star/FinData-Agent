@@ -31,6 +31,44 @@ _BENIGN_COVERAGE = 0.9
 # 上市后数据完整率达到这个比例，才敢认定"历史短"是上市晚导致而非数据缺失
 _COMPLETE_RATIO = 0.9
 
+# ── 截面共动判据（R1.2，P0b）。阈值不是拍的：2026-09-15 复盘对真实窗口
+# 实测标定——924 行情 24-25/25 标的 ≥2x、沪深300 指数 2.2-2.8x；724 行情
+# 全市场仅 6/25 ≥2x（指数 ≤1.45x，全市场判据不命中）但大金融板块 3 只同伴
+# ≥2x；2023-03 中芯国际为孤立事件（同伴 ≤1.6x、指数 1.22x），必须保留告警。
+_MARKET_SHARE = 0.5  # 同窗 ≥ 半数可比标的放量 ≥2x → 全市场行情
+_PEER_X = 2.0  # 同伴放量判定线
+_INDEX_X = 1.5  # 指数量能比判定线
+_SECTOR_PEER_MIN = 2  # 板块共动：≥2 只同板块同伴 ≥2x（不含自己）
+_RATIO_HISTORY_DAYS = 30  # 共动倍率基线：窗口前 30 个交易日均量（与漂移探针同口径）
+
+# 行业 → 板块映射（A 股领域包知识）。截面共动看的是板块而不是细分行业：
+# 724 行情里券商/银行/保险/金融科技同涨，而股票池里 600030 是唯一券商，
+# 只按 industry 同名列分组会让板块共动永远无法命中。未登记的行业映射到
+# 自身（单成员板块，板块判据自然失效）——宁可漏抑制，不可错抑制。
+_SECTOR_OF_INDUSTRY: dict[str, str] = {
+    "券商": "大金融",
+    "银行": "大金融",
+    "保险": "大金融",
+    "金融科技": "大金融",
+    "半导体": "半导体链",
+    "半导体设备": "半导体链",
+    "消费电子": "电子链",
+    "通信": "电子链",
+    "安防": "电子链",
+    "白酒": "食品饮料",
+    "食品饮料": "食品饮料",
+    "创新药": "医药医疗",
+    "医疗器械": "医药医疗",
+    "新能源汽车": "新能源链",
+    "动力电池": "新能源链",
+    "光伏": "新能源链",
+    "电力": "能源资源",
+    "煤炭": "能源资源",
+    "有色金属": "能源资源",
+    "化工": "化工",
+    "家电": "家电",
+}
+
 
 def _parse_window(window: str) -> tuple[date, date] | None:
     if ".." not in window:
@@ -75,11 +113,16 @@ def _coverage(ctx: ProbeContext, start: date, end: date, day_set: set[date]) -> 
 def _has_event(ctx: ProbeContext, symbol: str, kind: str, start: date, end: date) -> bool:
     if ctx.corporate_event.empty or "kind" not in ctx.corporate_event.columns:
         return False
+    # 日期列可能是 datetime64[us]（duckdb → pandas 的真实仓库路径），也可能是
+    # object dtype 的 datetime.date（合成语料路径）。统一转 Timestamp 再比，
+    # 否则 datetime.date 与 datetime64[us] 比较会抛 InvalidComparison。
+    start_ts, end_ts = pd.Timestamp(start), pd.Timestamp(end)
+    dates = pd.to_datetime(ctx.corporate_event["date"])
     sub = ctx.corporate_event[
         (ctx.corporate_event["symbol"] == symbol)
         & (ctx.corporate_event["kind"] == kind)
-        & (ctx.corporate_event["date"] >= start)
-        & (ctx.corporate_event["date"] <= end)
+        & (dates >= start_ts)
+        & (dates <= end_ts)
     ]
     return not sub.empty
 
@@ -100,6 +143,85 @@ def _failed_run(ctx: ProbeContext, symbol: str, table: str) -> str | None:
         if params.get("symbol") in (None, symbol):
             return str(row.run_id)
     return None
+
+
+def _sector_of(ctx: ProbeContext, symbol: str) -> str:
+    if ctx.universe.empty or "industry" not in ctx.universe.columns:
+        return ""
+    sub = ctx.universe.loc[ctx.universe["symbol"] == symbol, "industry"]
+    if not len(sub) or pd.isna(sub.iloc[0]):
+        return ""
+    industry = str(sub.iloc[0])
+    return _SECTOR_OF_INDUSTRY.get(industry, industry)
+
+
+def _window_volume_ratio(
+    dates: pd.Series, volume: pd.Series, start: date, end: date
+) -> float | None:
+    """单标的在 [start, end] 窗口的量能比：窗口均量 / 窗口前 30 个交易日均量。
+
+    与漂移探针同口径（10 日窗口均值对 30 日基线），倍率才有可比性。
+    窗口前历史不足 30 日的标的不可比，返回 None 从分母中剔除。
+    """
+    d = pd.to_datetime(dates).dt.date
+    idx = [i for i, dd in enumerate(d) if start <= dd <= end]
+    if not idx:
+        return None
+    lo, hi = idx[0], idx[-1]
+    if lo < _RATIO_HISTORY_DAYS:
+        return None
+    vol = pd.to_numeric(volume, errors="coerce")
+    recent = float(vol.iloc[lo : hi + 1].mean())
+    hist = float(vol.iloc[lo - _RATIO_HISTORY_DAYS : lo].mean())
+    if hist <= 0 or pd.isna(recent) or pd.isna(hist):
+        return None
+    return recent / hist
+
+
+def _co_movement(ctx: ProbeContext, symbol: str, start: date, end: date) -> dict | None:
+    """同窗截面共动证据：全市场放量分布 + 指数量能 + 同板块同伴。
+
+    这是漂移归因缺的那类"仓库里就有的事实"（复盘根因二）：量价异常
+    是不是行情，横向问一遍同期所有标的就知道。返回 None 表示无截面证据
+    可言（无可比标的），此时漂移维持原判。
+    """
+    stats: list[tuple[str, float, str]] = []
+    self_sector = _sector_of(ctx, symbol)
+    # 最小上下文替身（如 LLM 归因单测的 fake ctx）可能给无列空表：
+    # 没有截面可言，直接放弃共动证据，漂移维持原判
+    if ctx.stock_daily.empty or "symbol" not in ctx.stock_daily.columns:
+        return None
+    for sym, g in ctx.stock_daily.groupby("symbol"):
+        ratio = _window_volume_ratio(g["date"], g["volume"], start, end)
+        if ratio is not None:
+            stats.append((str(sym), ratio, _sector_of(ctx, str(sym))))
+    if not stats:
+        return None
+
+    n = len(stats)
+    n_ge2 = sum(1 for _, r, _ in stats if r >= _PEER_X)
+    index_ratios: dict[str, float] = {}
+    if not ctx.index_daily.empty:
+        for ix, g in ctx.index_daily.groupby("symbol"):
+            r = _window_volume_ratio(g["date"], g["volume"], start, end)
+            if r is not None:
+                index_ratios[str(ix)] = r
+    sector_peers = sorted(
+        ((s, r) for s, r, sec in stats if s != symbol and sec == self_sector and r >= _PEER_X),
+        key=lambda x: -x[1],
+    )
+    top = sorted(stats, key=lambda x: -x[1])[:5]
+    return {
+        "n": n,
+        "n_ge2": n_ge2,
+        "index_ratios": index_ratios,
+        "sector": self_sector,
+        "sector_peers": sector_peers,
+        "top": top,
+        "market_hit": (n_ge2 / n) >= _MARKET_SHARE
+        or any(r >= _INDEX_X for r in index_ratios.values()),
+        "sector_hit": len(sector_peers) >= _SECTOR_PEER_MIN,
+    }
 
 
 class BaselineTriage:
@@ -259,12 +381,51 @@ class BaselineTriage:
                 explanation=f"量级突变至 {finding.value:.6g} 倍，判定为单位或口径变更",
             )
 
+        # 截面共动判据（R1.2 / P0b）：漂移归因先横向问一遍同期市场。
+        # 上一版注释预言的"缺的不是算法，是事实来源"，事实就在仓库里——
+        # 全市场放量分布、指数量能、板块同伴，都不需要外部数据。
+        parsed = _parse_window(finding.window)
+        if parsed is not None:
+            co = _co_movement(ctx, finding.symbol, parsed[0], parsed[1])
+            if co is not None and co["market_hit"]:
+                ix = max(co["index_ratios"].values()) if co["index_ratios"] else None
+                ix_txt = f"，指数最高 {ix:.2f}x" if ix is not None else ""
+                return Diagnosis(
+                    finding_key=finding.key,
+                    root_cause=RootCause.BENIGN_MARKET_EVENT,
+                    severity=Severity.OK,
+                    confidence=0.9,
+                    explanation=(
+                        f"同窗全市场共动：{co['n_ge2']}/{co['n']} 标的放量 ≥{_PEER_X:.0f}x"
+                        f"{ix_txt}——大盘级行情，非数据故障，告警已抑制"
+                    ),
+                    evidence_refs=(
+                        "cross_section:market_volume",
+                        *(f"index_daily:{k}" for k in sorted(co["index_ratios"])),
+                    ),
+                )
+            if co is not None and co["sector_hit"]:
+                peers = "、".join(f"{s}={r:.1f}x" for s, r in co["sector_peers"][:3])
+                return Diagnosis(
+                    finding_key=finding.key,
+                    root_cause=RootCause.BENIGN_MARKET_EVENT,
+                    severity=Severity.OK,
+                    confidence=0.85,
+                    explanation=(
+                        f"同窗板块共动：{co['sector']}板块 ≥{_SECTOR_PEER_MIN} 只同伴放量"
+                        f" ≥{_PEER_X:.0f}x（{peers}）——板块级行情，非数据故障，告警已抑制"
+                    ),
+                    evidence_refs=("cross_section:sector_volume",),
+                )
+
         # 注意（已知局限）：音量放大无法在当前特征集下区分「单位/口径变更」与
         # 「市场放量」。探针算的是 10 日均量 / 前 30 日均量，会把注入的 20x
         # 稀释成 5.14x，而真实政策行情的放量是 5.40x —— 两者数值上几乎重合；
         # 价格判据同样无效（合成语料的价格本就是随机漫步，10 日涨跌 10% 很常见）。
-        # 要有把握地区分，得引入外部业务事实（交易所口径变更公告），
-        # 与停牌 / 上市日属于同一类问题：缺的不是算法，是事实来源。
+        # 截面共动规则（上方）已把"全市场/板块级行情"分走；剩下的是
+        # 2023-03 中芯国际型的**孤立事件**——个股级行情需要外部事实
+        # （公告/新闻）才能确认，与停牌 / 上市日属于同一类问题：
+        # 缺的不是算法，是事实来源。残留误报按观察级跟踪（复盘 P0b）。
         return Diagnosis(
             finding_key=finding.key,
             root_cause=RootCause.DISTRIBUTION_DRIFT,

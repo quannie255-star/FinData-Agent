@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     llm_model: str = "deepseek-chat"
     llm_timeout_seconds: float = 60.0
 
+    # ---- 告警推送（每日管线 scripts/daily_pipeline.py 用）----
+    # channel 取 wecom（企业微信机器人）/ dingtalk / feishu / serverchan（Server酱）；
+    # 两者任一为空 = 不推送，只写运行日志。
+    notify_channel: str = ""
+    notify_webhook_url: str = ""
+
     @property
     def dsn(self) -> str:
         return str(self.db_path)

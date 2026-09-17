@@ -1,0 +1,89 @@
+# Agent 级 Golden Set — 问数 Agent 评测（M12 起，与语义层 golden.yaml 分工）
+#
+# golden.yaml     : 语义层评测（eval_golden.py，CI 门禁）——指标查询的数字与验证状态
+# agent.yaml(本文件): agent 级评测（scripts/eval_agent.py）——自然语言问题 → 最终答案
+#
+# 每个 case 是一组「已知自然语言问题 + 期望答案特征」：
+#   question  评测输入：原样交给问数 Agent（单 Agent / 多智能体同一份）
+#   expect    期望特征：
+#     values            期望出现在答案里的数值（数值等价匹配，tol 控制容差）
+#     unit              期望答案携带的单位
+#     verification_mark 是否要求答案转述交叉验证标记（✓/⚠/○）
+#     want_run_id       是否要求答案携带 run_id 溯源
+#   mode      期望 Supervisor 路由（仅多智能体校验）：direct=快路径 / deep=全链路
+#   tol       数值容差
+#
+# 数值绑定 scripts/build_eval_fixture.py 的合成数据（确定性），与 golden.yaml 同源。
+# 需要真实 LLM key（FINDATA_LLM_API_KEY）；CI 只跑语义层 golden，本评测
+# 在本地/发布前跑，报告归档 examples/。
+
+cases:
+  - name: 茅台最新收盘价
+    question: 茅台最新收盘价是多少？
+    expect:
+      values: [121.0]
+      unit: "元"
+      verification_mark: true
+      want_run_id: true
+    mode: direct
+    tol: 0.01
+
+  - name: 五粮液最新收盘价
+    question: 五粮液最新收盘价是多少？
+    expect:
+      values: [72.0]
+      unit: "元"
+      verification_mark: true
+      want_run_id: true
+    mode: direct
+    tol: 0.01
+
+  - name: 茅台区间涨幅
+    question: 茅台从 2024-01-02 到 2024-01-04 的区间涨幅是多少？
+    expect:
+      values: [21.0]
+      unit: "%"
+      verification_mark: true
+      want_run_id: true
+    mode: direct
+    tol: 0.01
+
+  - name: 茅台最近市盈率
+    question: 茅台最近的市盈率是多少？
+    expect:
+      values: [18.5]
+      unit: "倍"
+      verification_mark: true
+      want_run_id: true
+    mode: direct
+    tol: 0.01
+
+  - name: 宁德时代最新收盘价
+    question: 宁德时代最新收盘价是多少？
+    expect:
+      values: [385.0]
+      unit: "元"
+      verification_mark: true
+      want_run_id: true
+    mode: direct
+    tol: 0.01
+
+  - name: 对比两股收盘价（多指标 deep）
+    question: 对比茅台和五粮液的最新收盘价
+    expect:
+      values: [121.0, 72.0]
+      unit: "元"
+      verification_mark: true
+      want_run_id: true
+    mode: deep
+    tol: 0.01
+
+  - name: 同一标的两个指标（多指标 deep）
+    question: 茅台最新收盘价和从 2024-01-02 到 2024-01-04 的区间涨幅分别是多少？
+    expect:
+      values: [121.0, 21.0]
+      unit: "元"
+      verification_mark: true
+      want_run_id: true
+    mode: deep
+    tol: 0.01

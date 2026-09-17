@@ -120,6 +120,50 @@ CREATE TABLE IF NOT EXISTS verify_run (
     note          TEXT,               -- 验证口径说明 / 不一致原因
     finished_at   TIMESTAMP
 );
+
+-- DQ 信号历史（M12 起）：巡检产物（Finding+Diagnosis）落库，让分析层的
+-- VerifierAgent 能在运行时查询「这个标的的数据最近有没有问题 / 有没有刚
+-- 被抑制过的误报」。主键 (asof, finding_key)：同一天重跑巡检幂等覆盖。
+-- 注意：asof / window 是 DuckDB 保留字，列名必须加引号。
+CREATE TABLE IF NOT EXISTS dq_signal (
+    "asof"         DATE,
+    finding_key  VARCHAR,
+    probe        VARCHAR,
+    table_name   VARCHAR,
+    symbol       VARCHAR,
+    "window"     VARCHAR,
+    metric       VARCHAR,
+    value        DOUBLE,
+    threshold    DOUBLE,
+    severity_hint VARCHAR,
+    root_cause   VARCHAR,
+    severity     VARCHAR,
+    suppressed   BOOLEAN,
+    confidence   DOUBLE,
+    explanation  TEXT,
+    PRIMARY KEY ("asof", finding_key)
+);
+
+-- 归因经验记忆（M13 起）：LLM 归因的跨 run 沉淀。形态指纹 → 根因 → 教训。
+-- 两阶段写入：observe 先落 pending（单次观察不可信），同指纹再次出现且
+-- 结论一致才 confirm；pending 不参与召回。weight 是冲突消解：同一形态
+-- 先判合法后判故障（或反之）时，对立记忆权重减半，跌破阈值不再召回——
+-- 记忆污染会让系统理直气壮地抑制真告警，宁缺毋滥。
+-- 主键 (fingerprint, root_cause)：同一形态允许保留对立结论的历史（冲突本身是信息）。
+CREATE TABLE IF NOT EXISTS triage_memory (
+    fingerprint    VARCHAR,
+    root_cause     VARCHAR,
+    label          VARCHAR,          -- fault / benign
+    status         VARCHAR,          -- pending / confirmed
+    confidence     DOUBLE,
+    weight         DOUBLE,
+    hits           BIGINT,
+    lesson         TEXT,
+    created_asof   DATE,
+    confirmed_asof DATE,
+    updated_asof   DATE,
+    PRIMARY KEY (fingerprint, root_cause)
+);
 """
 
 # 老库兼容迁移：已存在表用 ALTER 补列（SCHEMA_SQL 的 IF NOT EXISTS 不会改旧表）

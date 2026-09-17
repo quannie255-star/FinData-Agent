@@ -12,6 +12,7 @@ from findata.dq.models import Diagnosis, Finding
 from findata.dq.probes import ProbeContext, run_probes
 from findata.dq.protocol import Triage
 from findata.dq.triage import BaselineTriage
+from findata.eval.extended import build_extended_corpus
 from findata.eval.faults import InjectedFault, benign_expectations, inject_faults
 from findata.eval.fixtures import SyntheticConfig, build_baseline
 from findata.eval.metrics import EvalReport, evaluate
@@ -31,6 +32,11 @@ class EvalResult:
     triage_agreement: dict | None = None  # 根因 κ / 抑制 κ / 对比样本数
     # 参与对比的 LLM 后端："baseline" / "mock" / "openai_compat"，供调用方如实展示
     llm_backend: str = "baseline"
+    # 是否叠加了扩充语料（合法放量脉冲 vs 单位变更的混淆对）
+    extended: bool = False
+    # 探针证据上下文（与 findings 同源）。进化器做失败归因时要复用同一份
+    # 证据，而不是重建——重建虽确定性一致，但两份数据不如一份诚实。
+    ctx: ProbeContext | None = None
 
 
 def run_evaluation(
@@ -38,18 +44,27 @@ def run_evaluation(
     fault_seed: int = 20240102,
     triage: Triage | None = None,
     second_triage: Triage | None = None,
+    extended: bool = False,
 ) -> EvalResult:
     """跑一轮完整评测。相同参数必得相同结果。
 
     second_triage 给定时，同一份 findings 会再跑一次归因，产出两套
     diagnoses 的 Cohen's κ 一致性指标——这是评估"两套归因器差异"
     的统计量。归因器只依赖 dq.protocol.Triage 协议，换实现不动评测。
+
+    extended=True 叠加扩充语料（M13 难例靶子：合法放量脉冲 vs 单位变更），
+    脉冲作为合法事件标注进入抑制率分母——规则归因器在扩充语料上的
+    抑制率下降正是它的已知局限，如实测量，不粉饰。
     """
     cfg = cfg or SyntheticConfig()
     triage = triage or BaselineTriage()
 
     baseline = build_baseline(cfg)
-    injected = inject_faults(baseline, seed=fault_seed)
+    if extended:
+        corpus = build_extended_corpus(baseline, fault_seed=fault_seed)
+        injected = corpus.injected
+    else:
+        injected = inject_faults(baseline, seed=fault_seed)
 
     ctx = ProbeContext.of(
         stock_daily=injected.stock_daily,
@@ -62,6 +77,8 @@ def run_evaluation(
     findings = run_probes(ctx)
     baseline_dx = triage.diagnose_all(findings, ctx)
     benigns = benign_expectations(baseline)
+    if extended:
+        benigns = benigns + corpus.surge_benigns
     report = evaluate(findings, baseline_dx, injected.faults, benigns)
 
     result = EvalResult(
@@ -71,6 +88,8 @@ def run_evaluation(
         baseline_diagnoses=baseline_dx,
         faults=injected.faults,
         benigns=benigns,
+        extended=extended,
+        ctx=ctx,
     )
 
     if second_triage is not None:

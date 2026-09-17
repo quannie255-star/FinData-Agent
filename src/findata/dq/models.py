@@ -43,12 +43,21 @@ class RootCause(StrEnum):
     DISTRIBUTION_DRIFT = "distribution_drift"  # 分布漂移（量级/波动率突变）
     SCHEMA_NULL_SWEEP = "schema_null_sweep"  # 某列整段变 NULL（接口字段失效）
     UNIT_SHIFT = "unit_shift"  # 单位跳变（元 → 万元）
+    # 通用包（generic）专用：无领域知识可依赖的纯结构性故障
+    NULL_RATE_BREACH = "null_rate_breach"  # 空值率超容忍 / 违反 NOT NULL 声明
+    OUTLIER_BURST = "outlier_burst"  # 离群率超容忍（IQR 围栏）
 
     # ---- 合法业务事件（应被抑制）----
     BENIGN_SUSPENSION = "benign_suspension"  # 停牌：合法缺失，非故障
     BENIGN_CORPORATE_ACTION = "benign_corporate_action"  # 除权除息：合法价格跳变
     BENIGN_NEW_LISTING = "benign_new_listing"  # 新股：历史长度天然不足
     BENIGN_NON_TRADING_DAY = "benign_non_trading_day"  # 非交易日：本就不该有数据
+    BENIGN_MARKET_ACTION = "benign_market_action"  # 行情放量：量额同涨的合法市场行为
+    # 市场行情（R1.2）：截面共动确认的全市场/板块级行情。与 MARKET_ACTION 的
+    # 区别在证据来源：MARKET_ACTION 看个股量额一致性，MARKET_EVENT 看同窗
+    # 截面的横向共动（全市场放量分布 + 指数量能 + 板块同伴）——2026-09-15
+    # 复盘的 924/724 真实窗口都属此类（docs/reviews/2026-09-15-attribution.md）
+    BENIGN_MARKET_EVENT = "benign_market_event"
 
     UNKNOWN = "unknown"  # 归因失败，兜底为最保守级别
 

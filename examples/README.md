@@ -9,6 +9,22 @@
 | `dashboard.html` | `uv run python scripts/build_dashboard.py` | 20 个交易日健康分趋势 + 回放 + 朴素基线对照 |
 | `eval-rule-triage.txt` | `uv run python scripts/run_eval.py` | 评测门禁输出：召回 / 精确率 / 抑制率 + 不做归因的朴素基线 |
 | `inspection-warehouse-2026-09-07.md` | 先 `ingest_finance.py --symbols ...` 再 `run_inspection.py --source warehouse` | **真实 akshare 数据**上的巡检：25 只标的 / 3,396 行 |
+| `eval-llm-triage-real.txt` | `run_eval.py --triage both`（配真实 key） | 规则 vs LLM 归因对比：κ=0.74/0.65，LLM 在该语料上低于规则 |
+| `eval-agent-single-vs-multi.txt` | `scripts/eval_agent.py --arch both`（配真实 key） | **单 vs 多智能体**同题同库对比：正确率持平 100%，token +21% 如实入账（v0.8.0） |
+| `eval-prompt-evolution.txt` | `scripts/evolve_prompt.py`（配真实 key） | **prompt 进化三代对比（v0.9.0）**：进化产物在扩充语料（合法放量 vs 单位变更混淆对）上根因/抑制/精确全 100%，规则抑制率 62.5%；prompt 版本档案 `eval/prompts/` 可回滚 |
+| `rl-baseline.txt` | `scripts/rl_pipeline.py --seeds 3 --extended --archive examples/rl-baseline.txt`（配真实 key） | **RL 管线训练前基线（v0.10.0）**：归因多轮窄 agent + golden 问数在确定性环境里的 reward 分布，与规则基线（同一把奖励尺子）对照；含 eval-gate 回归结果。权重训练待 GPU，步骤见 `docs/rl-experiment.md` |
+
+### v2.0 – v2.2（可信日报 / 增强模块 / 通用包）
+
+| 文件 | 怎么来的 | 看什么 |
+| --- | --- | --- |
+| `replay-badge-report.txt` | `findata/eval/replay.py`（fixture：`eval/fixtures/replay_20260915/`） | **真实回放 golden（v2.0 R1）**：2026-09-15 真实考试抑制 0/9 → 修复后 8/9，健康分 72 → 95.8；9 case 进 `eval_golden.py --strict` |
+| `daily-badge-report-2026-09-15.md` | `scripts/daily_pipeline.py --skip-ingest` | **带徽章日报**：知识层状态行、12 项逐列徽章+证据链、报告 Agent 解读（真实 LLM，710/472 字符，审校 0 拦截） |
+| `trust-module-integration.txt` | 三个接入面实测脚本 | **增强模块接口归档（v2.1）**：MCP `trust_check`/`trust_board` 与 HTTP `/v1/trust` 响应逐字节一致；close=✓ 已核验、volume=⚠️ 仅借鉴 |
+| `mcp-host-integration.txt` | `scripts/mcp_host_demo.py`（真实 key） | **真实外部宿主集成**：对 findata 零导入的通用宿主，经标准 MCP 协议发现 9 工具 → 查数 → 过 trust 门禁 → 带徽章引用 |
+| `generic-trust-report-air-quality.md/.html` | `findata-trust-report`（UCI Beijing PM2.5，真实公开数据 CC BY 4.0） | **通用包（v2.2）**：真实数据停更 4917 天被新鲜度拦成 ⚠️，健康分 50 |
+| `generic-trust-report-ecommerce.md/.html` | `findata-trust-report`（脱敏电商合成 fixture，seed 可复现） | 通用包：主键重复 → ✗ 不可用；组内金额水平迁移 → ⚠️ 仅借鉴 |
+| `domain-vs-generic-comparison.md` | `scripts/compare_domain_vs_generic.py`（需真实仓库） | **对比页（含金量自检）**：同一 stock_daily 2025 切片，通用包 60 分/8 列 ⚠️/11 信号无法归因 vs 领域包 100 分/8 列 ✓ 已核验/停牌归因 |
 
 ## 最该看的一行
 
@@ -52,7 +68,13 @@
 2022-01-19..2022-01-26 缺 6 个交易日，而同窗口 600519 / 000858 都有 6 天数据——
 个别缺失而非集体休市，判"回补漏采"成立。
 
-### 未修：抑制率在真实数据上是 0
+### 已修（v2.0 R1）：抑制率在真实数据上是 0
+
+以下为 v0.9 时代的历史记录，问题已在 v2.0 解决——4 笔公告级核实的历史停牌
+种子入库（`domains/finance/seeds.py`）+ 真实回放 golden 进 CI，抑制 0/9 → 8/9
+（见上文 `replay-badge-report.txt` 与 `docs/reviews/2026-09-15-attribution.md`）。
+
+<details><summary>历史记录（v0.9 口径，保留作证据）</summary>
 
 `corporate_event` 现在有 553 条真实除权除息记录（覆盖 24 只，1995–2026），
 但**告警窗口内一条事件都没落上**，所以抑制仍是 0。停牌接口
@@ -62,7 +84,17 @@
 结论要说清楚：**合成语料里 100% 的精确率是设计出来的对照，真实数据上归因层的
 抑制能力尚未被触发**。缺的不是算法，是停牌历史这个事实来源。
 
-### 未修：成交量漂移分不清"单位变更"和"市场放量"
+</details>
+
+### 已修（v2.0 R1）：成交量漂移分不清"单位变更"和"市场放量"
+
+以下为 v0.9 时代的历史记录。v2.0 的正解不是换更好的阈值，是**换证据源**：
+漂移归因先查截面共动（同窗全市场放量分布 + 指数量能 + 板块同伴，全部仓库自证），
+上文的 `600030 2023-07` 行情窗口现被归因为 `benign_market_event` 并抑制；
+合成语料门禁零回归。唯一残留：中芯国际 2023-03 的**个股级**孤立行情
+（截面判据不命中），待公告/新闻事实源，按 P2 观察级跟踪。
+
+<details><summary>历史记录（v0.9 口径，保留作证据）</summary>
 
 另一条告警是 600030 在 2023-07-25..2023-08-07 成交量放大 5.40 倍。核查后这是
 **合法市场行为**——同期价格上涨 14.8%（2023 年 7 月"活跃资本市场"政策行情，券商放量）。
@@ -73,7 +105,16 @@
 硬塞规则会让根因准确率从 100% 掉到 85.7%、评测门禁挂掉——
 **为了修一条告警牺牲门禁是负收益，所以撤回，留作已知局限**。
 
-要真正区分，得引入外部业务事实（交易所口径变更公告）——和停牌、上市日属于同一类问题。
+</details>
+
+**v0.9.0 更新（合成语料侧已破）**：M13 扩充语料把这对形态复现为「合法放量脉冲 vs
+单位变更故障」的混淆对（探针比值区间重叠，阈值规则数学上无缝隙），并给证据层
+补了两个确定性事实：**量额一致性**（单位变更只放大 volume，量/额比值跳 ~20 倍；
+合法放量量额同涨，比值不变）与**市场共振**（同窗口多标的同时放量）。
+进化出的 prompt（`eval/prompts/triage_v2.yaml`）凭这两条事实在扩充语料上做到
+根因/抑制/精确全 100%（规则引擎抑制率 62.5%），见 `eval-prompt-evolution.txt`。
+**真实数据侧的结论不变**：600030 那条 2023-07 的放量要坐实「合法」，仍需
+外部事实（公告/行情背景）——合成语料证明的是判别方法可行，不是真实数据已接入。
 
 ---
 

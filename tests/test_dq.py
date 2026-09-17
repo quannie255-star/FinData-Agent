@@ -9,13 +9,13 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 
 from findata.dq.calendar import TradingCalendar
 from findata.dq.models import RootCause, Severity
-from findata.dq.probes import ProbeContext, run_probes
+from findata.dq.probes import ProbeContext, probe_drift, run_probes
 from findata.dq.triage import BaselineTriage
 from findata.eval.fixtures import SyntheticConfig, build_baseline
 
@@ -228,3 +228,131 @@ def test_with_observed_merges_into_exchange_calendar():
     extra = date(2022, 2, 5)  # 日历里没有，但数据里出现过
     assert not cal.is_trading_day(extra)
     assert cal.with_observed([extra]).is_trading_day(extra)
+
+
+# ── R1.2 截面共动归因（BENIGN_MARKET_EVENT）─────────────────────────────
+# 阈值场景按 2026-09-15 真实窗口实测标定：924 = 全市场 24-25/25 ≥2x + 指数
+# 2.2-2.8x；724 = 大金融板块 3 只同伴 ≥2x（全市场仅 6/25，指数 ≤1.45x）；
+# 2023-03 中芯国际 = 孤立事件（同伴 ≤1.6x，指数 1.22x），保留为残留误报。
+
+_CO_INDUSTRIES = [
+    "券商", "银行", "保险", "金融科技", "白酒", "光伏", "家电", "化工", "煤炭", "通信",
+]
+# 10 标的、仅大金融 4 只构成板块：板块共动不满足全市场判据（4/10 < 0.5）
+
+
+def _co_universe(n: int = 10) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "symbol": [f"{600000 + i}" for i in range(n)],
+            "name": [f"股{i}" for i in range(n)],
+            "industry": _CO_INDUSTRIES[:n],
+            "listed_board": ["main"] * n,
+            "list_date": [date(2023, 1, 2)] * n,
+        }
+    )
+
+
+def _co_daily(n: int = 10, days: int = 60, base_vol: float = 1_000.0) -> pd.DataFrame:
+    """量能恒定的干净日线：窗口倍率 = 人为乘数，不会被随机噪声稀释。"""
+    # 先生成足够的自然日再滤掉周末，保证截取后足 days 个"交易日"
+    raw = [date(2023, 1, 2) + timedelta(days=i) for i in range(days * 2)]
+    cal_days = [d for d in raw if d.weekday() < 5][:days]
+    rows = []
+    for i in range(n):
+        for d in cal_days:
+            rows.append({"symbol": f"{600000 + i}", "date": d, "volume": base_vol})
+    return pd.DataFrame(rows), cal_days
+
+
+def _co_context(daily, universe, index=None):
+    cal = TradingCalendar.from_trading_days(sorted(daily["date"].unique()))
+    return ProbeContext.of(
+        stock_daily=daily,
+        valuation_daily=pd.DataFrame(),
+        universe=universe,
+        corporate_event=pd.DataFrame(),
+        calendar=cal,
+        asof=daily["date"].max(),
+        index_daily=index if index is not None else pd.DataFrame(),
+    )
+
+
+def _surge(daily, symbols, lo, hi, x):
+    out = daily.copy()
+    mask = out["symbol"].isin(symbols)
+    dates = pd.to_datetime(out["date"]).dt.date
+    out.loc[mask & (dates >= lo) & (dates <= hi), "volume"] *= x
+    return out
+
+
+def _first_drift_finding(ctx):
+    # 共动场景的日线只有 volume 列，全量探针会在 validity 上崩；
+    # 本组测试只关心 drift 探针的归因，直接单跑它
+    findings = probe_drift(ctx)
+    assert findings, "放大窗口后必须有漂移信号，否则测试场景不成立"
+    return findings[0]
+
+
+def test_market_wide_surge_is_suppressed_as_market_event():
+    """924 形态：全市场同步放量（≥半数标的 ≥2x）→ 抑制为市场行情。"""
+    daily, cal_days = _co_daily()
+    lo, hi = cal_days[45], cal_days[54]
+    symbols = [f"{600000 + i}" for i in range(6)]
+    daily = _surge(daily, symbols, lo, hi, 5.5)  # 全部 ≥2x：命中全市场判据
+    ctx = _co_context(daily, _co_universe())
+    d = BaselineTriage().diagnose(_first_drift_finding(ctx), ctx)
+    assert d.root_cause is RootCause.BENIGN_MARKET_EVENT
+    assert d.suppressed
+
+
+def test_sector_surge_is_suppressed_even_when_market_is_calm():
+    """724 形态：全市场平静（4/10 < 半数），但同板块 ≥2 只同伴共动 → 抑制。"""
+    daily, cal_days = _co_daily()
+    lo, hi = cal_days[45], cal_days[54]
+    # 目标(券商) ×5.5 触发漂移探针；银行/保险/金融科技 3 只同伴 ×3 共动；
+    # 漂移探针阈值 5x，同伴 3x 只参与共动统计、自身不产生信号
+    daily = _surge(daily, {"600000"}, lo, hi, 5.5)
+    daily = _surge(daily, {"600001", "600002", "600003"}, lo, hi, 3.0)
+    ctx = _co_context(daily, _co_universe())
+    finding = _first_drift_finding(ctx)
+    assert finding.symbol == "600000"
+    d = BaselineTriage().diagnose(finding, ctx)
+    assert d.root_cause is RootCause.BENIGN_MARKET_EVENT
+    assert d.suppressed
+    assert "大金融" in d.explanation
+
+
+def test_index_surge_confirms_market_event():
+    """指数同窗放量 ≥1.5x 也是市场级行情的直接证据（复盘 P0b 口径）。"""
+    daily, cal_days = _co_daily()
+    lo, hi = cal_days[45], cal_days[54]
+    daily = _surge(daily, {"600000"}, lo, hi, 5.5)  # 只有目标自己
+    index = pd.DataFrame(
+        [
+            {"symbol": "000300", "date": d, "volume": 3.0 if lo <= d <= hi else 1.0}
+            for d in cal_days
+        ]
+    )
+    ctx = _co_context(daily, _co_universe(), index=index)
+    d = BaselineTriage().diagnose(_first_drift_finding(ctx), ctx)
+    assert d.root_cause is RootCause.BENIGN_MARKET_EVENT
+    assert d.suppressed
+
+
+def test_isolated_surge_stays_a_fault():
+    """2023-03 中芯国际形态：孤立放量（无同伴、无指数证据）→ 保留漂移告警。"""
+    daily, cal_days = _co_daily()
+    lo, hi = cal_days[45], cal_days[54]
+    daily = _surge(daily, {"600000"}, lo, hi, 5.5)
+    ctx = _co_context(daily, _co_universe())
+    d = BaselineTriage().diagnose(_first_drift_finding(ctx), ctx)
+    assert d.root_cause is RootCause.DISTRIBUTION_DRIFT
+    assert not d.suppressed
+
+
+def test_benign_label_covers_market_event_and_action():
+    from findata.report.inspect import benign_label
+
+    assert benign_label(RootCause.BENIGN_MARKET_EVENT) == "市场行情"
+    assert benign_label(RootCause.BENIGN_MARKET_ACTION) != RootCause.BENIGN_MARKET_ACTION.value

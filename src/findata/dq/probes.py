@@ -46,6 +46,9 @@ class ProbeContext:
     asof: date
     # 采集血缘，可选。有它才能把"数据缺失"直接归因到"这次采集挂了"
     ingest_run: pd.DataFrame = field(default_factory=pd.DataFrame)
+    # 指数日线，可选。漂移归因的截面共动判据要用指数量能做市场基准；
+    # 没有时归因器退化为"只看个股截面"，合成语料路径即如此
+    index_daily: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     @classmethod
     def of(
@@ -57,6 +60,7 @@ class ProbeContext:
         calendar: TradingCalendar | None = None,
         asof: date | None = None,
         ingest_run: pd.DataFrame | None = None,
+        index_daily: pd.DataFrame | None = None,
     ) -> ProbeContext:
         cal = calendar or TradingCalendar.default()
         if asof is None:
@@ -70,6 +74,7 @@ class ProbeContext:
             calendar=cal,
             asof=asof,
             ingest_run=ingest_run if ingest_run is not None else pd.DataFrame(),
+            index_daily=index_daily if index_daily is not None else pd.DataFrame(),
         )
 
 

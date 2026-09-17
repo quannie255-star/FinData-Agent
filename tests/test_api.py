@@ -86,3 +86,80 @@ def test_dashboard_returns_html_with_meta():
     assert m is not None
     parsed = json.loads(m.group(1).replace("&quot;", '"').replace("&amp;", "&"))
     assert "asof" in parsed
+
+
+# ─────────────────────── 可信问数 /agent（M12 多智能体） ───────────────────────
+
+
+def test_agent_endpoint_defaults_to_multi_arch(monkeypatch):
+    """/agent 默认走多智能体；supervisor.answer_question 被调用且结果透传。"""
+    import findata.agent.supervisor as sup
+
+    called = {}
+
+    def _fake(conn, question):
+        called["arch"] = "multi"
+        return "121.0 元 [run_id=abcd1234] ✓"
+
+    monkeypatch.setattr(sup, "answer_question", _fake)
+    r = client.post("/agent", json={"question": "茅台最新收盘价是多少？"})
+    assert r.status_code == 200, r.text
+    assert r.json()["answer"].startswith("121.0")
+    assert called["arch"] == "multi"
+
+
+def test_agent_endpoint_can_switch_to_single(monkeypatch):
+    """FINDATA_AGENT_ARCH=single 切回单 Agent 基线（对比评测的对照组入口）。"""
+    import findata.agent.graph as g
+
+    called = {}
+
+    def _fake(conn, question):
+        called["arch"] = "single"
+        return "single arch answer"
+
+    monkeypatch.setattr(g, "answer_question", _fake)
+    monkeypatch.setenv("FINDATA_AGENT_ARCH", "single")
+    r = client.post("/agent", json={"question": "问题"})
+    assert r.status_code == 200, r.text
+    assert called["arch"] == "single"
+
+
+def test_agent_arch_helper_default():
+    from findata.api.app import _agent_arch
+
+    assert _agent_arch() in ("multi", "single")
+
+
+# ─────────────────────── /v1/trust（增强模块接入面） ───────────────────────
+
+
+def test_trust_check_returns_badge_for_known_metric():
+    r = client.get(
+        "/v1/trust", params={"table": "stock_daily", "metric": "close", "source": "synthetic"}
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["table"] == "stock_daily"
+    assert body["metric"] == "close"
+    assert body["badge"] in ("verified", "baseline", "caution", "unusable")
+    assert isinstance(body["usable"], bool)
+    assert "health_score" in body and "evidence" in body
+
+
+def test_trust_check_unknown_metric_is_404_with_known_keys():
+    r = client.get(
+        "/v1/trust", params={"table": "stock_daily", "metric": "ghost", "source": "synthetic"}
+    )
+    assert r.status_code == 404
+    assert "stock_daily.close" in r.json()["error"]  # 错误信息带可用键，调用方可自愈
+
+
+def test_trust_board_returns_full_badge_board():
+    r = client.get("/v1/trust/board", params={"source": "synthetic"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert len(body["badges"]) == 12  # stock_daily 8 列 + valuation_daily 4 列
+    assert set(body["counts"]) == {"verified", "baseline", "caution", "unusable"}
+    keys = {b["key"] for b in body["badges"]}
+    assert "stock_daily.close" in keys and "valuation_daily.total_mv" in keys

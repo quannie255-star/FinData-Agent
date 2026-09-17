@@ -10,9 +10,14 @@ stdio 让 Claude Desktop / Cursor / Cline 这类现成的客户端零配置接�
 - `findata_dashboard`     : 拼一份自包含 HTML 看板
 - `findata_validate`      : 跑评测，返回 5 项指标；可选 κ 一致性
 - `findata_list_metrics`  : 列出语义层指标字典元数据
-- `findata_metric_query`  : 语义层可信查询——确定性编译 + 交叉验证 + run_id 溯源（招牌能力）
+- `findata_metric_query`  : 语义层可信查询——确定性编译 + 交叉验证 + run_id 血缘（招牌能力）
+- `findata_ask`           : 可信问数多智能体（M12）——自然语言问题直答，
+                            Supervisor + Schema/Query/Verifier/Triage 子 Agent
 - `findata_execute_metric`: 跑 dq 诊断字典里的 SQL-kind metric（运维诊断用途，
                             无交叉验证；可信查询请走 findata_metric_query）
+- `findata_trust_check`   : 查单个指标的可信徽章（v2.1 增强模块接口：
+                            外部 Agent 引用数字前先查，usable=false 不许引用）
+- `findata_trust_board`   : 一次拉全板逐指标徽章（外部 Agent 会话开始时调用）
 
 调用 `findata-mcp` 启动。
 """
@@ -51,14 +56,16 @@ def _registry() -> MetricRegistry:
 mcp = MCPServer(
     name="findata",
     instructions=(
-        "findata: 数据质量监控 + 可信问数 Agent。六个工具——"
+        "findata: 数据质量监控 + 可信问数多智能体 + 可信增强模块。九个工具——"
         "health_check 返回告警/抑制摘要；"
         "dashboard 返回自包含 HTML 看板；"
         "validate 跑评测并可选输出 baseline vs LLM 归因的 Cohen's κ；"
         "list_metrics 列出语义层指标字典；"
-        "metric_query 是可信问数入口（确定性编译 + 交叉验证 + run_id 溯源，"
-        "回答数字类问题请优先用它）；"
-        "execute_metric 跑 dq 诊断字典的 SQL 指标（运维诊断用，无交叉验证）。"
+        "metric_query 是可信问数的单指标入口（确定性编译 + 交叉验证 + run_id 溯源）；"
+        "ask 是自然语言问答入口（Supervisor 编排多智能体，带数据质量运行时背书）；"
+        "execute_metric 跑 dq 诊断字典的 SQL 指标（运维诊断用，无交叉验证）；"
+        "trust_check 查单个指标的可信徽章（外部 Agent 引用数字前先查，四档徽章+证据链）；"
+        "trust_board 一次拉全板徽章（会话开始时调用，批量引用不再逐个查）。"
     ),
 )
 
@@ -232,6 +239,73 @@ def findata_metric_query(
 
 
 @mcp.tool(
+    name="findata_ask",
+    title="Findata Trusted Q&A (Multi-Agent)",
+    description=(
+        "可信问数多智能体入口（M12）：给定任意自然语言金融数据问题，"
+        "由 Supervisor 编排 SchemaAgent（选指标填参）→ QueryAgent（语义层"
+        "确定性查询 + run_id 溯源）→ VerifierAgent（独立交叉验证 + 数据质量"
+        "运行时背书）→ TriageAgent（归因追问）完成回答。简单问题走快路径省"
+        "token；每个数字都带 run_id，可回追 SQL 与验证结论。"
+        "需要 LLM 配置（FINDATA_LLM_API_KEY）；只查单个指标请用 findata_metric_query。"
+    ),
+)
+def findata_ask(question: str) -> dict[str, Any]:
+    """Ask the trusted Q&A multi-agent system a natural-language question.
+
+    Args:
+        question: Natural-language question, e.g. "茅台最新收盘价是多少？" or
+            "对比茅台和五粮液的最新收盘价".
+
+    Returns:
+        Dict with `answer` (final text, run_ids embedded), `mode`
+        (direct=fast path / deep=full multi-agent), `run_ids` (lineage ids
+        produced by the query chain, resolvable via any /trace endpoint),
+        `verdict` (VerifierAgent conclusion, deep mode only) and `usage`
+        (token cost). On failure returns `error` with an actionable hint.
+    """
+    from findata.agent.supervisor import invoke_state
+    from findata.core.db import connect
+
+    path = Path(settings.dsn)
+    if not path.exists():
+        return {
+            "error": f"数据仓库不存在：{path}。请先运行 scripts/ingest_finance.py。",
+            "question": question,
+        }
+    try:
+        conn = connect(settings.dsn, read_only=False)
+    except Exception as exc:  # noqa: BLE001
+        return {"error": f"打开数据仓库失败：{exc}", "question": question}
+    try:
+        state = invoke_state(conn, question)
+    except Exception as exc:  # noqa: BLE001 — LLM 未配置等，返回可行动错误
+        return {
+            "error": str(exc),
+            "question": question,
+            "hint": "是否已配置 FINDATA_LLM_API_KEY？",
+        }
+    finally:
+        conn.close()
+
+    final = state["messages"][-1]
+    answer = getattr(final, "content", "") or ""
+    out: dict[str, Any] = {
+        "question": question,
+        "answer": answer,
+        "mode": state.get("mode"),
+        "run_ids": state.get("run_ids", []),
+        "tool_rounds": state.get("tool_rounds", 0),
+        "usage": state.get("usage", {}),
+    }
+    if state.get("verdict"):
+        out["verdict"] = state["verdict"]
+    if state.get("dq_signals"):
+        out["dq_signals_n"] = len(state["dq_signals"])
+    return out
+
+
+@mcp.tool(
     name="findata_list_metrics",
     title="Findata List Metrics",
     description=(
@@ -297,6 +371,93 @@ def findata_execute_metric(
         "rows": rows,
         "threshold": metric.get("threshold", {}),
     }
+
+
+@mcp.tool(
+    name="findata_trust_check",
+    title="Findata Trust Check",
+    description=(
+        "查询单个指标（table.metric，如 stock_daily.close）的可信徽章："
+        "四档（✓ 已核验 / ✓ 基线通过 / ⚠️ 仅借鉴 / ✗ 不可用）+ 证据链 + 健康分。"
+        "外部 Agent 引用任何数字前应先调用本工具：usable=true 可直接引用，"
+        "usable=false（仅借鉴/不可用）只能标注疑点或不引用。"
+        "这是把 findata 作为「可信增强模块」挂到成熟 Agent 基座上的标准接口。"
+    ),
+)
+def findata_trust_check(
+    table: str,
+    metric: str,
+    source: str = "duckdb",
+    asof: str | None = None,
+    seed: int = 20240102,
+) -> dict[str, Any]:
+    """Return the trust badge for one (table, metric) key.
+
+    Args:
+        table: Data table, e.g. `stock_daily` / `valuation_daily`.
+        metric: Column name, e.g. `close` / `volume` / `total_mv`.
+        source: `duckdb` (real warehouse) or `synthetic` (deterministic demo).
+        asof: Optional YYYY-MM-DD replay day; defaults to the latest day.
+        seed: Synthetic-fault seed (only honored when source=synthetic).
+
+    Returns:
+        Dict with badge level / mark / usable / summary / evidence chain and
+        warehouse health score. `usable=false` means the number must not be
+        cited as verified. Unknown keys return `error` plus the list of
+        available metric keys so the caller can self-correct.
+    """
+    from findata.service import trust_check as _trust_check
+
+    try:
+        return _trust_check(table, metric, _parse_source(source), _parse_date(asof), seed)
+    except ValueError as exc:
+        return {"error": str(exc), "table": table, "metric": metric}
+    except FileNotFoundError as exc:
+        return {
+            "error": str(exc),
+            "table": table,
+            "metric": metric,
+            "hint": "真实仓库缺失可改用 source='synthetic' 演示。",
+        }
+
+
+@mcp.tool(
+    name="findata_trust_board",
+    title="Findata Trust Board",
+    description=(
+        "一次拉取全板逐指标可信徽章（12 项：stock_daily 8 列 + valuation_daily 4 列）"
+        "与健康分。外部 Agent 会话开始时调用一次，之后引用任何数字都可本地对照，"
+        "不必逐个查 trust_check。"
+    ),
+)
+def findata_trust_board(
+    source: str = "duckdb",
+    asof: str | None = None,
+    seed: int = 20240102,
+) -> dict[str, Any]:
+    """Return the full per-metric badge board as JSON.
+
+    Args:
+        source: `duckdb` (real warehouse) or `synthetic` (deterministic demo).
+        asof: Optional YYYY-MM-DD replay day.
+        seed: Synthetic-fault seed.
+
+    Returns:
+        Dict with `counts` (per-level tallies), `health_score`, `grade` and a
+        `badges` list (table / metric / badge / usable / summary / evidence).
+    """
+    from findata.service import trust_board as _trust_board
+
+    try:
+        return _trust_board(_parse_source(source), _parse_date(asof), seed)
+    except FileNotFoundError as exc:
+        return {"error": str(exc), "hint": "真实仓库缺失可改用 source='synthetic' 演示。"}
+
+
+def _parse_source(source: str) -> str:
+    if source not in ("duckdb", "synthetic"):
+        raise ValueError(f"unknown source: {source!r}（可选 duckdb / synthetic）")
+    return source
 
 
 def _connect_for_execute(source: str, seed: int) -> duckdb.DuckDBPyConnection:

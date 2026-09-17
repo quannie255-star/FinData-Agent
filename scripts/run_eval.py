@@ -48,9 +48,16 @@ def main() -> int:
         default="baseline",
         help="归因器：baseline=规则；llm=大模型（需 FINDATA_LLM_API_KEY）；both=对比",
     )
+    parser.add_argument(
+        "--corpus",
+        choices=("base", "extended"),
+        default="base",
+        help="语料：base=7 故障+5 合法事件；extended 叠加 M13 放量脉冲混淆对",
+    )
     args = parser.parse_args()
 
-    result = run_evaluation(fault_seed=args.seed)
+    extended = args.corpus == "extended"
+    result = run_evaluation(fault_seed=args.seed, extended=extended)
     report = result.report
 
     if args.triage == "baseline":
@@ -71,7 +78,7 @@ def main() -> int:
         # 之所以不在脚本里再调一次 run_evaluation：避免重复跑探针
         # 与重新注入故障（两次结果会因为时钟等非确定性微差而对不齐 κ）。
         both_result = run_evaluation(
-            fault_seed=args.seed, second_triage=llm
+            fault_seed=args.seed, second_triage=llm, extended=extended
         )
         llm_report = _llm_report_from(both_result)
         _print("Findata 数据质量评测 · 规则 vs LLM", report)

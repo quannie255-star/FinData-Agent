@@ -21,6 +21,7 @@ import pandas as pd
 from findata.config import settings
 from findata.core.db import upsert_dataframe
 from findata.core.lineage import tracked_run
+from findata.domains.finance.seeds import apply_suspension_seeds
 
 logger = logging.getLogger(__name__)
 
@@ -308,6 +309,11 @@ def ingest_corporate_events(
 
     没有这个，corporate_event 永远是空表 —— 停牌/除权的抑制能力在真实数据
     上就只是"设计过的对照"，而不是能跑的链路。
+
+    历史停牌种子随本路径幂等补写：akshare 只能拿到除权除息历史与当日停牌
+    快照，历史停牌的起止区间只能来自人工核实的种子（见 seeds.py，来源为
+    2026-09-15 归因复盘核对的公告）。采集全挂也要保证种子落库——知识层
+    的历史事实不依赖网络。
     """
     symbols = symbols or [s for s, _, _ in UNIVERSE]
     frames: list[pd.DataFrame] = []
@@ -325,12 +331,15 @@ def ingest_corporate_events(
         except Exception as exc:
             logger.warning("停牌快照采集失败: %s", exc)
 
-        if not frames:
-            return 0
-        df = pd.concat(frames, ignore_index=True)
-        n = upsert_dataframe(conn, "corporate_event", df, ["symbol", "date", "kind"])
-        t.add(n)
-    return n
+        n = 0
+        if frames:
+            df = pd.concat(frames, ignore_index=True)
+            n = upsert_dataframe(conn, "corporate_event", df, ["symbol", "date", "kind"])
+            t.add(n)
+        n_seeded = apply_suspension_seeds(conn)
+        if n_seeded:
+            logger.info("停牌历史种子写入 %d 条", n_seeded)
+    return n + n_seeded
 
 
 def ingest_universe(conn: duckdb.DuckDBPyConnection) -> int:

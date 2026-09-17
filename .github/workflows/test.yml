@@ -127,6 +127,13 @@ jobs:
         run: >-
           uv run python scripts/run_eval.py
           --min-recall 0.9 --min-precision 0.9 --min-suppression 0.9
+      # 扩充语料（M13）：钉住故障侧质量（召回/精确）。不钉抑制——
+      # 合法放量脉冲压不住是规则归因的已知局限（见 triage.py 注释），
+      # 门禁钉它会把已知局限变成回归噪音。
+      - name: dq extended-corpus gate (confusable pair, fault side)
+        run: >-
+          uv run python scripts/run_eval.py --corpus extended
+          --min-recall 1.0 --min-precision 1.0
 
   ci-gate:
     # 聚合点：lint + 两侧 python + smoke + eval-gate 全过才让这条线变绿。

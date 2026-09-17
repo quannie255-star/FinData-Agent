@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 from datetime import datetime
 
+from findata.dq.badges import BadgeLevel, MetricBadge
 from findata.dq.models import Severity
 from findata.report.inspect import ROUTES, Alert, InspectionResult, benign_label
 
@@ -33,7 +34,114 @@ def _fmt(v: float) -> str:
     return f"{v:.4g}"
 
 
-def render_markdown(result: InspectionResult, header_extra: str = "") -> str:
+def knowledge_line(s) -> str:
+    """知识层状态行（P0d）：抑制能力降级必须对值班的人可见。
+
+    事件表为空时，停牌/除权归因没有事实可依，误报无法被抑制——
+    这时报告必须显式降级，而不是让读者对着未抑制的误报猜原因。
+    """
+    if s.knowledge_degraded:
+        return (
+            "⚠️ **知识层未上线**：`corporate_event` 0 行——停牌/除权归因无事实可依，"
+            "该类误报无法抑制（修复见 `docs/reviews/2026-09-15-attribution.md` P0a）"
+        )
+    latest = s.knowledge_latest_event or "未知"
+    return f"**知识层**：`corporate_event` {s.knowledge_event_rows} 行 · 最新事件 {latest}"
+
+
+def badge_counts(board) -> str:
+    """结论行的徽章汇总：✓N ⚠️N ✗N（已核验与基线通过都算 ✓，档位在表格里区分）。"""
+    if not board.badges:
+        return ""
+    ok = len(board.by_level(BadgeLevel.VERIFIED)) + len(board.by_level(BadgeLevel.BASELINE))
+    c = len(board.by_level(BadgeLevel.CAUTION))
+    u = len(board.by_level(BadgeLevel.UNUSABLE))
+    return f"✓{ok} ⚠️{c} ✗{u}"
+
+
+def _badge_section_md(result: InspectionResult) -> list[str]:
+    """逐指标徽章表（Markdown）。基线通过的清单内联，疑点/故障证据可展开。"""
+    board = result.badges
+    if not board.badges:
+        return []
+    lines = [
+        f"## 指标可信度（{len(board.badges)} 项，逐数字带徽章）",
+        "",
+        "| 表 | 指标 | 徽章 | 依据 |",
+        "|---|---|---|---|",
+    ]
+    details: list[str] = []
+    for b in board.badges:
+        lines.append(f"| {b.table} | `{b.column}` | {b.mark} | {b.summary} |")
+        if b.level is not BadgeLevel.BASELINE and b.evidence:
+            items = "".join(f"\n  - `{src}` — {txt}" for src, txt in b.evidence)
+            details.append(
+                f"<details>\n<summary>证据链：{b.metric_key}（{b.mark}）</summary>\n{items}\n</details>"
+            )
+    lines.append("")
+    lines.extend(details)
+    if details:
+        lines.append("")
+    return lines
+
+
+def _badge_rows_html(badges: list[MetricBadge]) -> str:
+    rows = []
+    for b in badges:
+        cls = {
+            BadgeLevel.VERIFIED: "t-ok",
+            BadgeLevel.BASELINE: "t-ok",
+            BadgeLevel.CAUTION: "t-p1",
+            BadgeLevel.UNUSABLE: "t-p0",
+        }[b.level]
+        evidence = ""
+        if b.evidence:
+            items = "".join(
+                f"<li><code>{html.escape(src)}</code> — {html.escape(txt)}</li>"
+                for src, txt in b.evidence
+            )
+            evidence = (
+                f"<details><summary>证据链</summary><ul class='ev'>{items}</ul></details>"
+                if b.level is not BadgeLevel.BASELINE
+                else f"<span class='route'>{' · '.join(src for src, _ in b.evidence)}</span>"
+            )
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(b.table)}</td>"
+            f"<td><code>{html.escape(b.column)}</code></td>"
+            f'<td><span class="tag {cls}">{b.mark}</span></td>'
+            f"<td>{html.escape(b.summary)}{evidence}</td>"
+            "</tr>"
+        )
+    return "\n".join(rows)
+
+
+def _badge_section_html(result: InspectionResult) -> str:
+    board = result.badges
+    if not board.badges:
+        return ""
+    order = {
+        BadgeLevel.UNUSABLE: 0,
+        BadgeLevel.CAUTION: 1,
+        BadgeLevel.VERIFIED: 2,
+        BadgeLevel.BASELINE: 3,
+    }
+    badges = sorted(board.badges, key=lambda b: (order[b.level], b.table, b.column))
+    return (
+        '<div class="sec"><h2>指标可信度 · 逐数字徽章</h2>'
+        '<p class="route">✓ 已核验 = 领域知识归因背书 · ✓ 基线通过 = 通用检查通过 · '
+        "⚠️ 仅借鉴 = 有疑点需人工判断 · ✗ 不可用 = 真实故障（口径见 dq/badges.py）</p>"
+        "<table><thead><tr><th>表</th><th>指标</th><th>徽章</th><th>依据 / 证据</th></tr></thead>"
+        f"<tbody>{_badge_rows_html(badges)}</tbody></table>"
+        '<style>details.ev, td details { margin-top:4px; font-size:12px; } '
+        "td details ul.ev { margin:4px 0 0 16px; padding:0; }</style>"
+        "</div>"
+    )
+
+
+def render_markdown(
+    result: InspectionResult, header_extra: str = "", footer_extra: str = ""
+) -> str:
     s = result.summary
     lines: list[str] = [
         "# 数据质量巡检报告",
@@ -41,6 +149,7 @@ def render_markdown(result: InspectionResult, header_extra: str = "") -> str:
         f"- **观察日**：{s.asof}",
         f"- **生成时间**：{datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"- **覆盖**：{s.n_symbols} 只标的 / {s.n_rows:,} 行行情",
+        f"- {knowledge_line(s)}",
         "",
     ]
     if header_extra:
@@ -54,10 +163,13 @@ def render_markdown(result: InspectionResult, header_extra: str = "") -> str:
             "",
             f"**健康分 {s.health_score}（{s.grade()}）** · "
             f"信号 {s.n_findings} → 告警 {s.n_alerts} · "
-            f"抑制误报 {s.n_suppressed}（降噪 {s.noise_reduction:.0%}）",
+            f"抑制误报 {s.n_suppressed}（降噪 {s.noise_reduction:.0%}）"
+            f" · 徽章 {badge_counts(result.badges)}",
             "",
         ]
     )
+
+    lines.extend(_badge_section_md(result))
 
     if not result.alerts:
         lines += ["本轮无待处理告警。", ""]
@@ -100,6 +212,8 @@ def render_markdown(result: InspectionResult, header_extra: str = "") -> str:
             lines.append(f"- `{cause}` × {n}")
         lines.append("")
 
+    if footer_extra:
+        lines += ["---", "", footer_extra, ""]
     return "\n".join(lines)
 
 
@@ -138,6 +252,8 @@ _HTML_TMPL = """<!DOCTYPE html>
   th {{ color:var(--muted); font-weight:500; font-size:12px; }}
   code {{ background:#f3f4f6; padding:1px 5px; border-radius:4px; font-size:12px; }}
   .route {{ color:var(--muted); font-size:12px; margin:-6px 0 10px; }}
+  .kstatus {{ font-size:12px; padding:6px 12px; border-radius:6px; margin:-14px 0 18px;
+    color:var(--muted); background:var(--card); border:1px solid var(--line); }}
   .empty {{ color:var(--muted); }}
   .bar {{ display:flex; align-items:center; gap:8px; margin:6px 0; }}
   .bar .lb {{ width:190px; font-size:12px; color:var(--muted); }}
@@ -150,6 +266,7 @@ _HTML_TMPL = """<!DOCTYPE html>
 <div class="wrap">
   <h1>数据质量巡检报告</h1>
   <div class="sub">观察日 {asof} · 生成于 {now} · 覆盖 {n_symbols} 只标的 / {n_rows} 行行情</div>
+  {knowledge_html}
 
   <div class="cards">
     <div class="card">
@@ -170,6 +287,7 @@ _HTML_TMPL = """<!DOCTYPE html>
 
   {alert_sections}
   {suppress_section}
+  {badge_section}
   {cause_section}
 </div>
 </body>
@@ -194,7 +312,22 @@ def _alert_rows(alerts: list[Alert]) -> str:
     return "\n".join(rows)
 
 
-def render_html(result: InspectionResult) -> str:
+def _knowledge_html(s) -> str:
+    """知识层状态的 HTML 形态。降级时必须醒目（琥珀色警示条）。"""
+    if s.knowledge_degraded:
+        return (
+            '<div class="kstatus" style="color:#b45309;background:#fef3c7;'
+            'border:1px solid #f59e0b">⚠️ 知识层未上线：corporate_event 0 行——'
+            "停牌/除权归因无事实可依，该类误报无法抑制</div>"
+        )
+    latest = s.knowledge_latest_event or "未知"
+    return (
+        '<div class="kstatus">知识层：corporate_event '
+        f"{s.knowledge_event_rows} 行 · 最新事件 {latest}</div>"
+    )
+
+
+def render_html(result: InspectionResult, extra_sections: str = "") -> str:
     s = result.summary
     parts: list[str] = ['<div class="sec"><h2>待处理告警</h2>']
     if not result.alerts:
@@ -259,7 +392,9 @@ def render_html(result: InspectionResult) -> str:
         n_sup=s.n_suppressed,
         noise=f"{s.noise_reduction:.0%}",
         n_findings=s.n_findings,
+        knowledge_html=_knowledge_html(s),
         alert_sections=alert_sec,
         suppress_section=suppress_sec,
-        cause_section=cause_sec,
+        badge_section=_badge_section_html(result),
+        cause_section=cause_sec + extra_sections,
     )

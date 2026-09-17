@@ -1,0 +1,78 @@
+══ 1. 协议握手（stdio JSON-RPC，进程隔离）══
+server: findata v · 协议版本 2025-11-25
+
+══ 2. 工具发现（运行时按 MCP 列出，宿主零硬编码）══
+  - findata_health_check: 对 findata 仓库跑一次巡检：按设定探针扫描数据，返回待处理告警与已抑制信号的 JSON 摘要。s…
+  - findata_dashboard: 拼一份自包含的 HTML 看板（无 CDN、无外部依赖），可直接落盘或回贴给前端。可选附带评测得分。…
+  - findata_validate: 跑 findata 评测：合成基线 + 注入故障 + 跑流水线 + 比对标注。输出 5 项指标（故障召回…
+  - findata_metric_query: 语义层可信查询：给定指标名与参数，编译器确定性生成 SQL（LLM/调用方绝不接触裸 SQL），执行后自…
+  - findata_ask: 可信问数多智能体入口（M12）：给定任意自然语言金融数据问题，由 Supervisor 编排 Schem…
+  - findata_list_metrics: 列出指标字典 (findata/dq/metrics.yaml) 里所有 metric 的元数据: na…
+  - findata_execute_metric: 确定性跑一个 dq 诊断字典里的 SQL-kind metric: 把指标字典里的 sql_templa…
+  - findata_trust_check: 查询单个指标（table.metric，如 stock_daily.close）的可信徽章：四档（✓ 已…
+  - findata_trust_board: 一次拉取全板逐指标可信徽章（12 项：stock_daily 8 列 + valuation_daily…
+共 9 个工具
+
+══ 3. 提问 → 工具环 → 带徽章引用的回答 ══
+问题: 贵州茅台（600519）最新收盘价是多少？这个数字可以放心引用吗？
+
+模式: 真实 LLM（外部宿主自己的模型，与 findata 无关）
+
+── 宿主收到的可信度证据（trust_check / trust_board 原始返回）──
+[
+  {
+    "asof": "2026-09-16",
+    "source": "duckdb",
+    "table": "stock_daily",
+    "metric": "close",
+    "badge": "verified",
+    "mark": "✓ 已核验",
+    "usable": true,
+    "summary": "窗口内 100% 交易日处于停牌区间，缺失为合法业务状态，告警已抑制",
+    "evidence": [
+      [
+        "corporate_event:suspension:600030",
+        "已核验停牌 · 600030 2022-01-19..2022-01-26"
+      ],
+      [
+        "corporate_event:suspension:600900",
+        "已核验停牌 · 600900 2022-10-26..2022-10-26"
+      ],
+      [
+        "corporate_event:suspension:601088",
+        "已核验停牌 · 601088 2025-08-04..2025-08-15"
+      ],
+      [
+        "corporate_event:suspension:688981",
+        "已核验停牌 · 688981 2025-09-01..2025-09-08"
+      ]
+    ],
+    "health_score": 95.8,
+    "grade": "健康"
+  }
+]
+
+── 最终回答（逐数字带徽章）──
+## 贵州茅台（600519）最新收盘价
+
+**1258.0 元**（截至 2026-09-16）
+
+### 可以放心引用吗？—— 可以 ✅
+
+| 项目 | 结论 |
+|---|---|
+| 交叉验证 | **verified** — 主路径「按日期排序取最新」与验证路径「MAX(date) 等值匹配」结果一致 |
+| 可信徽章 | **✓ 已核验**（`stock_daily.close`，健康分 95.8，评级「健康」） |
+| 溯源 | 主查询 `run_id: c38f138d7df0`，验证 `run_id: d58262764622` |
+
+**两点补充说明：**
+
+1. **口径**：这是 `stock_daily` 表的收盘价字段，单位为元，非复权口径（未做前/后复权调整）。若用于收益率计算或跨期比较，需注意除权除息影响。
+2. **关于那条「停牌」证据**：可信徽章里列出的停牌记录（600030、600900、601088、688981）是**其他股票**的合法停牌事件，属于该字段整体质量画像的一部分，**与 600519 无关**——茅台本身在窗口内没有停牌标记，所以这个数字是正常交易日收盘价，不是停牌前的陈旧值。
+
+如需引用，建议带上 `as_of: 2026-09-16` 和 run_id，便于对方复核。
+
+══ 4. 宿主侧契约复核 ══
+trust 检查 1 次，其中 usable=false 0 次
+
+结论：外部宿主经标准 MCP 协议完成 发现→调用→带徽章引用 全流程，零 findata 内部依赖、零协议开发。

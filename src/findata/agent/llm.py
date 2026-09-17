@@ -118,3 +118,19 @@ def make_chat_model(temperature: float = 0.0) -> ChatOpenAI:
         temperature=temperature,
         timeout=settings.llm_timeout_seconds,
     )
+
+
+def make_analysis_llm(temperature: float = 0.0) -> ChatOpenAI:
+    """子 Agent（M12 多智能体）共用的模型入口。
+
+    与 graph._make_llm 同样的契约：配置缺失时报错必须可行动（指明环境变量），
+    而不是裸的 SDK 异常。测试 monkeypatch findata.agent.llm.make_chat_model
+    即可同时影响所有子 Agent。
+    """
+    try:
+        return make_chat_model(temperature)
+    except Exception as exc:
+        raise RuntimeError(
+            f"分析链路 LLM 不可用：{exc}。请配置 FINDATA_LLM_API_KEY"
+            "（及可选 FINDATA_LLM_BASE_URL / FINDATA_LLM_MODEL）"
+        ) from exc

@@ -1,0 +1,14 @@
+# 脱敏电商订单（确定性合成演示数据，结构对标公开电商订单集；非真实交易）
+table: orders
+timestamp_column: order_ts
+primary_key: order_id
+freshness_days: 90
+outlier_tolerance: 0.05
+group_column: category
+columns:
+  order_id: {kind: id, nullable: false, description: 订单号（主键）}
+  user_id: {kind: id, nullable: false, description: 脱敏用户号}
+  category: {kind: categorical, nullable: false, description: 商品类目}
+  amount: {kind: numeric, nullable: false, null_tolerance: 0.0, description: 订单金额（元）}
+  quantity: {kind: numeric, nullable: false, description: 件数}
+  order_ts: {kind: datetime, nullable: false, description: 下单时间}

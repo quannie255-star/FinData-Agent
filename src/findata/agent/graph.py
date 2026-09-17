@@ -17,26 +17,22 @@
 
 from __future__ import annotations
 
-import re
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 import duckdb
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from langchain_core.tools import tool
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 from findata.agent.llm import make_chat_model
-from findata.semantic.catalog import MetricCatalog
-from findata.semantic.executor import format_result
-from findata.semantic.tools import list_metrics, metric_query
+from findata.agent.tools import DATA_TOOLS, RUN_ID_RE, build_data_tools, merge_usage, usage_of
 
 # 工具节点允许的工具名（白名单，防止 LLM 越界调用）
-ALLOWED_TOOLS = {"metric_query", "list_metrics"}
+ALLOWED_TOOLS = DATA_TOOLS
 # 工具调用回环上限：防止 LLM 陷入"查了再查"的失控循环
 MAX_TOOL_ROUNDS = 4
 
-_RUN_ID_RE = re.compile(r"run_id=([0-9a-f]+)")
+_RUN_ID_RE = RUN_ID_RE
 
 
 class AgentState(TypedDict, total=False):
@@ -45,6 +41,13 @@ class AgentState(TypedDict, total=False):
     run_ids: list[str]
     # 已执行的工具轮数（plain channel：每轮 tools 节点 +1）
     tool_rounds: int
+    # 累计 token 用量（对比评测用；reducer 跨节点相加）
+    usage: Annotated[dict, merge_usage]
+
+
+def _build_tools(conn: duckdb.DuckDBPyConnection) -> list:
+    """兼容别名：工具构造已平移到 agent.tools（单/多智能体共享同一套）。"""
+    return build_data_tools(conn)
 
 
 def _make_llm():
@@ -56,36 +59,6 @@ def _make_llm():
             f"分析链路 LLM 不可用：{exc}。请配置 FINDATA_LLM_API_KEY"
             "（及可选 FINDATA_LLM_BASE_URL / FINDATA_LLM_MODEL）"
         ) from exc
-
-
-def _build_tools(conn: duckdb.DuckDBPyConnection) -> list:
-    """构造绑定当前 DuckDB 连接的工具集合。"""
-
-    catalog = MetricCatalog()
-
-    @tool("metric_query")
-    def metric_query_tool(metric: str, params: dict[str, Any] | None = None) -> str:
-        """查询一个预定义金融指标，返回数值与 run_id 溯源。
-
-        metric 必须是已注册的指标名（close_price / pct_change / valuation_pe_ttm）。
-        params 是参数字典，如 {"symbol": "600519"} 或
-        {"symbol": "600519", "start": "2024-01-01", "end": "2024-12-31"}。
-        返回的 run_id 必须原样写进最终答案，用于数据溯源。
-        """
-        try:
-            result = metric_query(conn, metric, params or {}, catalog)
-        except Exception as exc:  # 语义层校验失败 → 返回可读错误，供 LLM 修正重试
-            return f"查询失败：{exc}"
-        return format_result(result)
-
-    @tool("list_metrics")
-    def list_metrics_tool() -> str:
-        """列出所有可查询的指标及其含义，用于不确定该查哪个指标时。"""
-        items = list_metrics(catalog)
-        lines = [f"{m['name']}: {m['label']} — {m['description']}" for m in items]
-        return "\n".join(lines)
-
-    return [metric_query_tool, list_metrics_tool]
 
 
 def _make_parse_node(tools: list):
@@ -111,7 +84,7 @@ def _make_parse_node(tools: list):
         )
         messages = [("system", sys), *state["messages"]]
         response = llm.invoke(messages)
-        return {"messages": [response]}
+        return {"messages": [response], "usage": usage_of(response)}
 
     return _parse_node
 
@@ -181,7 +154,7 @@ def _finalize_node(state: AgentState) -> dict:
     )
     messages = [("system", sys), *state["messages"]]
     response = llm.invoke(messages)
-    return {"messages": [response]}
+    return {"messages": [response], "usage": usage_of(response)}
 
 
 def build_agent(conn: duckdb.DuckDBPyConnection):
@@ -227,6 +200,7 @@ def build_agent(conn: duckdb.DuckDBPyConnection):
                 "messages": [HumanMessage(content=question)],
                 "run_ids": [],
                 "tool_rounds": 0,
+                "usage": {},
             }
             return self._app.invoke(initial)
 
