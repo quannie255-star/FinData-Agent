@@ -7,8 +7,9 @@
 
 ## 一、Launch 定义（全部满足才算开始计时）
 
-- [ ] tag `v2.2.0` 推送 → release workflow 出多架构镜像
+- [x] tag `v2.2.0` 推送 → release workflow 出多架构镜像
       `ghcr.io/quannie255-star/findata-agent:2.2.0`（push 前冒烟已有流水线保证）
+      —— 2026-09-17 完成（commit `5154f04`）
 - [ ] README 为 v2.2 增强模块定位（已完成，2026-09-17 重写）
 - [ ] 仓库 description / topics 更新（现成文案见 `docs/launch-kit.md` 第一节）
 - [ ] 提交 MCP 目录登记（官方 registry / awesome-mcp 等公开清单），这是宿主能"找到"findata 的主要渠道——registry 草稿见 `docs/launch-kit.md` 第二节
