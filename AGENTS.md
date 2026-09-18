@@ -112,6 +112,7 @@ uv run ruff check .                            # lint
 # ── 主赛道（Agent 轨迹质检）──
 uv run python scripts/run_trust_filter.py --limit 20000  # **主闭环**：真实语料→质检→过滤
 uv run python scripts/run_agent_trace.py       # 本机 Ollama 真实轨迹采集（48 条）
+uv run python scripts/run_sandbox_probe.py      # 沙箱信号 → 归因验证（真起子进程）
 uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
 uv run python scripts/eval_golden.py --strict  # golden 集严格门禁（含真实回放 9 case）
 uv run python scripts/daily_pipeline.py --skip-ingest  # 只巡检出带徽章日报（调试）

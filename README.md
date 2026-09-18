@@ -56,6 +56,19 @@ Agent 岗的 JD 几乎都会写「Tool Calling / 轨迹数据 / 自动化评测�
 两维必须分开：沙箱超时的轨迹**不算是失败**（环境问题，重跑可能就成），
 当负样本丢掉是浪费数据；而参数写错的才该丢。混成一维，两边都没法单独调。
 
+这条不是纸面主张：`agentops/sandbox.py` **真起子进程**跑到超时被杀，归因器
+拿到的是 `subprocess.TimeoutExpired` 原文——不是在字符串里写个 "timeout"
+然后看它认不认（那是循环论证）。三类真实信号各归各档：
+
+```
+add     → 信号 ok           → ok           → ✓ 正样本
+divide  → 信号 nonzero_exit → param_error  → ✗ 丢弃
+spin    → 信号 timeout      → env_timeout  → ⊘ 不算失败
+```
+
+（**边界**：这是进程级隔离不是安全沙箱，防不住恶意代码；容器级本机做不了，
+拉不到镜像就不假装做了。gRPC 的 `deadline exceeded` 目前也仍识别不了。）
+
 产物是**四份 JSONL + 一份 manifest**，OpenAI `messages` + `tool_calls` 形状，
 落盘即训练、不用再写转换层。判定结论**挂在样本上一起走**（`findata` 字段：
 处置 / 根因 / 证据 / 建议），不另存对照表——分开存就会漂移，而这种错在
@@ -74,7 +87,7 @@ data/filtered/
 
 ```bash
 uv sync
-uv run pytest                                        # 346 例测试
+uv run pytest                                        # 353 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py --limit 20000   # 主闭环（真实语料）

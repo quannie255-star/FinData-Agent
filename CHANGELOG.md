@@ -47,6 +47,25 @@
   `tests/test_xlam_adapter.py`（11 例）+ `test_agentops_export.py`（5 例）；
   全量 + ruff 全绿
 
+### R4.4 沙箱执行环境（进程级，2026-09-18）
+
+`src/findata/agentops/sandbox.py` + `scripts/run_sandbox_probe.py` +
+`tests/test_sandbox.py`（7 例）。真起子进程、真跑到阈值被杀，归因器拿到的
+是 `subprocess.TimeoutExpired` 的**原文**——不是在字符串里写个 "timeout"。
+
+- 三类真实信号 → 归因 → 处置：`add` → ok / ✓ 正样本；
+  `divide` → `param_error` / ✗ 丢弃；`spin` → `env_timeout` / ⊘ 不算失败。
+  **同一类"跑失败"，结论相反**——这条之前只是写在文档里的主张
+- 此前 `env_timeout` 在 held-out 上判对 0/20，因为真实报错写的是
+  "deadline exceeded" 这类文本。沙箱给的是真信号，不是关键词
+- 踩坑：第一版给所有工具统一设 0.5s，`divide` 明明立刻抛异常却被记成
+  timeout——**子进程冷启动就要 ~0.4s**，阈值必须留启动余量
+
+**边界如实写，不吹**：进程级隔离**不是安全沙箱**，防不住恶意代码
+（容器级本机做不了，拉不到 `registry-1.docker.io`）；超时是主动设阈值
+触发的，不代表生产环境超时频率；gRPC 的 `deadline exceeded` **仍然
+识别不了**，是已知局限。
+
 ### ChatBI 增强 · 解析层评测与护栏加固（2026-09-17）
 
 接 Ollama 实跑后新增解析层评测，并加固了两条路径共有的槽位护栏。

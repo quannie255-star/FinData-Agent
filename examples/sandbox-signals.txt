@@ -1,0 +1,34 @@
+沙箱信号验证 · 真实进程（进程级隔离，非容器安全边界）
+超时阈值：正常/报错类 5.0s，死循环 2.0s（子进程冷启动约 0.4s，必须留余量）
+内存限制 **Windows 不支持，未施加**
+
+一、信号 → 归因 → 处置
+  add
+    信号    none
+    报错原文 （无）
+    归因    ok（通顺）
+    处置    ✓ 正样本
+  divide
+    信号    nonzero_exit
+    报错原文 ValueError: invalid argument: divisor must be > 0
+    归因    param_error（工具参数写错）
+    处置    ✗ 丢弃
+  spin
+    信号    timeout
+    报错原文 TimeoutExpired: command timed out after 2.0s
+    归因    env_timeout（沙箱超时（环境问题））
+    处置    ⊘ 不算失败
+
+二、这一步证明了什么
+  · 超时是**真超时**：真的起了子进程、真的跑到阈值、真的被杀，
+    归因器拿到的是 subprocess.TimeoutExpired 的原文，不是我们写的一个词
+  · `env_timeout` 的处置是 ⊘ 不算失败——环境问题不该当负样本，
+    这条之前只是写在文档里的主张，现在有真实信号背书
+
+三、没证明什么（别拿这份报告吹）
+  · 超时是我们主动设 0.5s 触发的，**不代表生产环境超时有多频繁**
+  · gRPC 那套 "deadline exceeded" 现在**识别不了**，归因器只认
+    含 timeout 的文本。这是已知局限，不因为这一个跑通了就算覆盖
+  · 进程级隔离防不住恶意代码；要那个得上容器，本机拉不到镜像就没做
+  · 内存限制在 Windows 上无法施加（`resource` 模块不存在），
+    代码标了 `memory_limit_applied=False`，没有静默降级

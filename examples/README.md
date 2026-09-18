@@ -24,6 +24,7 @@
 | `parser-eval-report.txt` | `scripts/run_parser_eval.py` | 问句解析层评测：主集 + 长尾变体集（含应拒绝题） |
 | `parser-eval-qwen3b.txt` | 同上（换 qwen2.5:3b） | 换模型后同一套评测的对照 |
 | `trustbench-report.txt` | `scripts/run_trustbench.py` | 可信层基准对照 |
+| `sandbox-signals.txt` | `scripts/run_sandbox_probe.py` | **沙箱信号（v3.0 R4.4）**：真起子进程跑到超时被杀，`TimeoutExpired` 原文 → `env_timeout` → ⊘ 不算失败；同一批里参数错误 → `param_error` → ✗ 丢弃。含「没证明什么」一节 |
 
 ### v2.0 – v2.2（可信日报 / 增强模块 / 通用包）
 
