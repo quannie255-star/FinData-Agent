@@ -36,7 +36,15 @@
   问：Can you find all pairs of numbers in the list [3, 4, 6, 1, 2] that sum up to 7
      └ 步骤 2 bacterial_growth 报错：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
 
-六、诚实说明
+六、产出（可直接喂训练，OpenAI messages + tool_calls 形状）
+  train.jsonl          19646 条   ✓ 正样本
+  review.jsonl             0 条   ⚠️ 需人工
+  discard.jsonl          354 条   ✗ 丢弃
+  not_failure.jsonl        0 条   ⊘ 不算失败
+  manifest.json       口径与计数（含 not_failure 不是负样本的提醒）
+  → data\filtered
+
+七、诚实说明
   · 这批是**已清洗过的公开数据集**，脏率只有 1.77%，
     并不代表生产环境的比例——真实 Agent 轨迹会更脏。
   · 本数据集在「工具不存在」这一项上 0 命中：样本里的调用都落在

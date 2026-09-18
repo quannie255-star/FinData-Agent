@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from findata.agentops.adapters import xlam  # noqa: E402
+from findata.agentops.export import VERDICT_FILES, SplitWriter  # noqa: E402
 from findata.agentops.triage import (  # noqa: E402
     V_DISCARD,
     V_NOT_FAILURE,
@@ -34,6 +35,7 @@ from findata.agentops.triage import (  # noqa: E402
 )
 
 ARCHIVE = Path("examples/trust-filter-report.txt")
+DEFAULT_OUT = Path("data/filtered")
 SAMPLE_N = 8
 
 # 从步骤报错里剥出"问题类型"：只取冒号前的短标签，去掉具体参数名。
@@ -45,7 +47,7 @@ def _kind_of(err: str) -> str:
     return (m.group(1).strip() if m else err.strip()) or "unknown"
 
 
-def run(limit: int, path: str | None, archive: Path | None) -> int:
+def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None) -> int:
     raw = Path(path) if path else xlam.fetch()
     print(f"数据源：{xlam.DATASET}")
     print(f"文件：{raw}（{raw.stat().st_size / 1e6:.1f} MB，流式读取）")
@@ -59,27 +61,36 @@ def run(limit: int, path: str | None, archive: Path | None) -> int:
     samples: list[tuple[str, str]] = []
     n_bad = 0
 
-    for idx, rec in xlam.iter_records(limit=limit, path=raw):
-        t = xlam.to_trace(rec, idx)
-        n_samples += 1
-        n_calls += len(t.steps)
+    with SplitWriter(out_dir or DEFAULT_OUT) as w:
+        for idx, rec in xlam.iter_records(limit=limit, path=raw):
+            t = xlam.to_trace(rec, idx)
+            n_samples += 1
+            n_calls += len(t.steps)
 
-        d = diagnose(t)
-        by_cat[d.category] += 1
-        by_verdict[verdict(d)] += 1
-        if not d.failed:
-            continue
+            d = diagnose(t)
+            v = verdict(d)
+            by_cat[d.category] += 1
+            by_verdict[v] += 1
 
-        n_bad += 1
-        for s in t.failed_steps:
-            # 一条步骤可能同时命中多类问题（如缺参数 + 重复调用），逐条记
-            for issue in str(s.error).split(";"):
-                by_kind[_kind_of(issue)] += 1
-        if len(samples) < SAMPLE_N:
-            detail = "；".join(
-                f"步骤 {s.seq} {s.name} 报错：{s.error}" for s in t.failed_steps
-            )
-            samples.append((t.task, detail))
+            # 判定挂在样本上一起落盘：分开存会漂移（样本与结论对不上号）
+            w.write(v, w.attach(xlam.to_training_example(rec, idx), d, v))
+
+            if not d.failed:
+                continue
+
+            n_bad += 1
+            for s in t.failed_steps:
+                # 一条步骤可能同时命中多类问题（如缺参数 + 重复调用），逐条记
+                for issue in str(s.error).split(";"):
+                    by_kind[_kind_of(issue)] += 1
+            if len(samples) < SAMPLE_N:
+                detail = "；".join(
+                    f"步骤 {s.seq} {s.name} 报错：{s.error}" for s in t.failed_steps
+                )
+                samples.append((t.task, detail))
+
+        manifest = w.write_manifest(w.manifest(n_samples, n_calls, xlam.DATASET))
+        counts = dict(w.counts)
 
     out: list[str] = []
     a = out.append
@@ -108,7 +119,13 @@ def run(limit: int, path: str | None, archive: Path | None) -> int:
         a(f"  问：{task[:78]}")
         a(f"     └ {detail[:120]}")
     a("")
-    a("六、诚实说明")
+    a("六、产出（可直接喂训练，OpenAI messages + tool_calls 形状）")
+    for v in (V_POSITIVE, V_REVIEW, V_DISCARD, V_NOT_FAILURE):
+        a(f"  {VERDICT_FILES[v]:<20}{counts[v]:>6} 条   {v}")
+    a("  manifest.json       口径与计数（含 not_failure 不是负样本的提醒）")
+    a(f"  → {manifest.parent}")
+    a("")
+    a("七、诚实说明")
     a("  · 这批是**已清洗过的公开数据集**，脏率只有 "
       f"{n_bad / max(n_samples, 1):.2%}，")
     a("    并不代表生产环境的比例——真实 Agent 轨迹会更脏。")
@@ -134,9 +151,10 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=20000, help="只取前 N 条（默认 20000）")
     ap.add_argument("--path", default=None, help="本地原始数据路径，不给则自动拉取")
     ap.add_argument("--archive", default=str(ARCHIVE), help="报告归档路径；空串则不归档")
+    ap.add_argument("--out-dir", default=str(DEFAULT_OUT), help="样本集落盘目录")
     args = ap.parse_args()
     archive = Path(args.archive) if args.archive else None
-    return run(args.limit, args.path, archive)
+    return run(args.limit, args.path, archive, Path(args.out_dir))
 
 
 if __name__ == "__main__":

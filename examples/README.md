@@ -18,7 +18,7 @@
 
 | 文件 | 怎么来的 | 看什么 |
 | --- | --- | --- |
-| `trust-filter-report.txt` | `scripts/run_trust_filter.py --limit 20000` | **真实数据闭环（主证据）**：Salesforce xlam-60k 真实 tool-calling 语料 20000 条 / 31691 次调用，检出 354 条（1.77%），根因 `schema_contradiction` 349 + `step_error` 5 |
+| `trust-filter-report.txt` | `scripts/run_trust_filter.py --limit 20000` | **真实数据闭环（主证据）**：Salesforce xlam-60k 真实 tool-calling 语料 20000 条 / 31691 次调用，检出 354 条（1.77%），根因 `schema_contradiction` 349 + `step_error` 5；同时落盘 `data/filtered/{train,review,discard,not_failure}.jsonl`（OpenAI 形状，判定挂在样本上） |
 | `agent-trace-report.txt` | `scripts/run_agent_trace.py` | 本机 Ollama 真实轨迹 48 条的探针+归因报告 |
 | `agent-traces.jsonl` | 同上（落盘产物） | 轨迹 JSONL 格式样例（形状对齐 OpenAI `tool_calls`） |
 | `parser-eval-report.txt` | `scripts/run_parser_eval.py` | 问句解析层评测：主集 + 长尾变体集（含应拒绝题） |

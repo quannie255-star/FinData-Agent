@@ -302,6 +302,10 @@ JD9 第 3 条原话：「将『数据合成 → 沙箱运行 → 自动评测 �
       根因 `schema_contradiction` 349 + `step_error` 5
 - [x] 过滤前后样本量如实入账，归档 `examples/trust-filter-report.txt`
       （含「诚实说明」：脏率不代表生产、0 命中的类别不算已验证）
+- [x] **产物落盘**：`agentops/export.py` 按四档处置分文件流式写 JSONL
+      （OpenAI `messages` + `tool_calls` 形状）+ `manifest.json`。
+      判定挂在样本的 `findata` 字段一起走，不另存对照表——分开存会漂移，
+      而这种错在训练跑完之前不会有任何报错
 
 **最锋利的一条发现**：349 条"必填参数没传"经核查**全都不是 agent 漏填**，
 而是工具 schema 的 description 写着"default is 8.854e-12"、schema 里却没

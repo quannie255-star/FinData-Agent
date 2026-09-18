@@ -172,6 +172,39 @@ def iter_records(
             yield i, rec
 
 
+def to_training_example(rec: dict[str, Any], idx: int) -> dict[str, Any]:
+    """一条原始记录 → **可直接喂 SFT 的样本**（OpenAI messages + tool_calls 形状）。
+
+    形状刻意用 OpenAI 那一套而不是自造：落盘即训练，中间不用再写一层转换
+    （每多一层转换，就多一处口径漂移）。注意 `arguments` 在 OpenAI 协议里是
+    **JSON 字符串**不是对象——这个细节错了，下游加载会整批失败。
+    """
+    return {
+        "id": str(rec.get("id") or f"xlam-{idx}"),
+        "source": DATASET,
+        "row": idx,
+        "messages": [
+            {"role": "user", "content": str(rec.get("query", ""))},
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": str(a.get("name", "")),
+                            "arguments": json.dumps(
+                                a.get("arguments") or {}, ensure_ascii=False, sort_keys=True
+                            ),
+                        },
+                    }
+                    for a in _as_list(rec.get("answers"))
+                ],
+            },
+        ],
+        "tools": _as_list(rec.get("tools")),
+    }
+
+
 def fetch(dest: str | Path = DEFAULT_RAW) -> Path:
     """拉原始数据。已存在就直接复用，不重复下载。"""
     d = Path(dest)

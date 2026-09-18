@@ -56,14 +56,29 @@ Agent 岗的 JD 几乎都会写「Tool Calling / 轨迹数据 / 自动化评测�
 两维必须分开：沙箱超时的轨迹**不算是失败**（环境问题，重跑可能就成），
 当负样本丢掉是浪费数据；而参数写错的才该丢。混成一维，两边都没法单独调。
 
+产物是**四份 JSONL + 一份 manifest**，OpenAI `messages` + `tool_calls` 形状，
+落盘即训练、不用再写转换层。判定结论**挂在样本上一起走**（`findata` 字段：
+处置 / 根因 / 证据 / 建议），不另存对照表——分开存就会漂移，而这种错在
+训练跑完之前不会有任何报错。
+
+```
+data/filtered/
+  train.jsonl        19646  ✓ 正样本
+  review.jsonl           0  ⚠️ 需人工
+  discard.jsonl        354  ✗ 丢弃
+  not_failure.jsonl      0  ⊘ 不算失败（环境类，**不是负样本**）
+  manifest.json            计数与口径
+```
+
 ## 快速开始
 
 ```bash
 uv sync
-uv run pytest                                        # 341 例测试
+uv run pytest                                        # 346 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py --limit 20000   # 主闭环（真实语料）
+                                                          # → 报告 + data/filtered/*.jsonl
 uv run python scripts/run_agent_trace.py                  # 本机 Ollama 真实轨迹 48 条
 ```
 

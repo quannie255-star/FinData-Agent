@@ -36,9 +36,16 @@
   - `src/findata/rl/` + `scripts/rl_pipeline.py` + `docs/rl-experiment.md`
     + `tests/test_rl_*.py`：无 GPU 训练，且 10 份 JD 无一条要 RL
   - `eval/rl_runs/`、`examples/rl-baseline.txt`、`examples/synth-*`：上述产物
+- **产物落盘**（补上一个"声明与代码不一致"的洞）
+  `src/findata/agentops/export.py`：此前脚本只打印统计，但 README 写着
+  「吐出哪些能喂训练」——声明与代码不一致，违反本项目铁律。现按四档处置
+  分文件流式写 JSONL（`train/review/discard/not_failure`）+ `manifest.json`，
+  OpenAI `messages` + `tool_calls` 形状（`arguments` 是 **JSON 字符串**，
+  写成对象会让下游整批加载失败）。判定挂在样本的 `findata` 字段一起走，
+  不另存对照表。新增 `tests/test_agentops_export.py`（5 例）
 - **测试 389 → 341**（删掉的是 RL 与合成相关），新增
-  `tests/test_xlam_adapter.py`（11 例，钉住两条误报防线与
-  「schema contradiction 不归责 agent」）；全量 + ruff 全绿
+  `tests/test_xlam_adapter.py`（11 例）+ `test_agentops_export.py`（5 例）；
+  全量 + ruff 全绿
 
 ### ChatBI 增强 · 解析层评测与护栏加固（2026-09-17）
 
