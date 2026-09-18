@@ -22,6 +22,11 @@ from dataclasses import dataclass, field
 
 from findata.agentops.schema import STATUS_ERROR, Trace
 
+# 归因规则版本。**改了判定逻辑就必须动这个号**——过滤结果要能复现，
+# 光有代码 commit 不够：规则常量可能改了但没提交，落盘的样本就与代码
+# 对不上号。manifest 会把它写进产物，方便"这批样本是哪版规则筛的"。
+RULES_VERSION = "2026-09-18.2"
+
 # ── 类别 ──
 CAT_OK = "ok"  # 一路通顺
 CAT_GUARD_FLAGGED = "guard_flagged"  # 门禁拦截（不是失败，是护栏生效）
@@ -121,8 +126,8 @@ def diagnose(t: Trace) -> Diagnosis:
             SEV_LOUD,
             ev,
             "是数据源标注的问题，不是 agent 的：description 承诺了默认值却没"
-            "标 default。作为训练样本仍要剔除（会教会模型省略必填参数），"
-            "但改进方向是修工具 schema，不是换模型。",
+            "标 default。**修 schema 后重跑，这批样本全部可用**——丢样本是最贵"
+            "的解法，而且解决不了根问题（下一个用这个工具的人照样中招）。",
         )
 
     # 2) 硬错误步骤：工具不存在 / 沙箱超时 / 参数写错。看报错原文分类，
@@ -339,15 +344,27 @@ def summarize(traces: list[Trace]) -> dict:
 # 过滤规则就没法单独调——改处置会动到归因逻辑。
 #
 # 四档处置：
-#   ✓ 正样本   路径干净且结果正确
-#   ⚠️ 需人工   结果对但路径可疑，或有疑点
-#   ⊘ 不算失败 环境问题/没产出——**别当负样本**，那是浪费数据
-#   ✗ 丢弃     agent 能力问题，可以当负样本或丢掉
+#   ✓ 正样本    路径干净且结果正确
+#   ⚠️ 需人工    结果对但路径可疑，或有疑点
+#   ⊘ 不算失败  环境问题/没产出——**别当负样本**，那是浪费数据
+#   ✗ 丢弃      agent 能力问题，可以当负样本或丢掉
+#
+# 第五档是后来加的，理由值得记：`schema_contradiction` 原本被判成 ✗ 丢弃，
+# 结果 349 条样本被误杀。查完原始数据才发现 —— **xlam 数据集的 58105 个
+# 工具里，有 `required` 字段的是 0 个**，也就是说"缺参数=漏填必填项"这个
+# 前提我自己造的，数据源从来没声明过。缺的参数描述里写着有默认值，模型
+# 省略它完全合理。
+#
+# 所以问题不在样本，在工具 schema。这类缺陷既不该算到 agent 头上，也不该
+# 让样本作废 —— 它需要的是**第三类处置**，动作是修 schema 后重跑，不是人工
+# 逐条看（349 条逐条看等于没有队列）。
 
 V_POSITIVE = "✓ 正样本"
 V_REVIEW = "⚠️ 需人工"
 V_DISCARD = "✗ 丢弃"
 V_NOT_FAILURE = "⊘ 不算失败"
+# 工具侧缺陷：样本保留，动的是数据源
+V_SCHEMA_DEFECT = "🔧 待修 schema"
 
 _VERDICT = {
     CAT_OK: V_POSITIVE,
@@ -362,10 +379,20 @@ _VERDICT = {
     CAT_TOOL_MISSING: V_NOT_FAILURE,
     CAT_PARAM_ERROR: V_DISCARD,
     CAT_RETRY_LOOP: V_DISCARD,
-    CAT_STEP_ERROR: V_DISCARD,
-    # 数据源的错，但样本照样不能喂：它会教模型省略必填参数。
-    # 丢弃 ≠ 归责 agent——根因与处置本来就是两件事。
-    CAT_SCHEMA_CONTRADICTION: V_DISCARD,
+    # `step_error` 是**兜底类**——它的定义就是「归不到上面几类」，也就是
+    # 「我没认出来」。认不出来 ≠ 样本是坏的，所以交给人工，不沉默地丢。
+    #
+    # 这里和 schema 缺陷那 349 条的处理**看起来矛盾，其实同一条规矩**：
+    # 处置方式取决于「能不能给出一个可执行动作」，而不是「有多可疑」。
+    #   5 条 → 人工队列**是**队列（改判在这里成立）
+    #   349 条 → 人工逐条看等于没有队列，必须做结构性修复（改判在那边成立）
+    # 队列长度本身就是决策依据。第一版把兜底类直接判丢弃，等于把「我的规则
+    # 覆盖不到」这件事，记成了「这批数据有问题」——是同一类错误的第三个变体。
+    CAT_STEP_ERROR: V_REVIEW,
+    # 工具 schema 的缺陷：**不是样本的错，也不该让样本作废**。
+    # 动的是数据源——修 schema（本例只涉及 18 个工具 / 18 个参数）后重跑，
+    # 这批样本全部回来。丢样本是最贵的解法，也解决不了根问题。
+    CAT_SCHEMA_CONTRADICTION: V_SCHEMA_DEFECT,
     CAT_HALLUCINATED: V_DISCARD,
     CAT_MISMATCH: V_DISCARD,
 }

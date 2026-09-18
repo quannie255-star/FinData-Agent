@@ -135,7 +135,7 @@ def test_golden_only_carries_provenance_not_labels():
 
 
 def test_schema_contradiction_triage_and_verdict():
-    """根因判对，且处置是丢弃——但丢弃不等于归责 agent。"""
+    """根因判对，且处置指向**数据源**——动 schema，不动样本。"""
     rec = {
         "query": "electric field of 2C at 3m",
         "tools": [_EF_FIELD],
@@ -146,4 +146,4 @@ def test_schema_contradiction_triage_and_verdict():
     t = to_trace(rec, 1)
     d = diagnose(t)
     assert d.category == CAT_SCHEMA_CONTRADICTION
-    assert verdict(d) == "✗ 丢弃"
+    assert verdict(d) == "🔧 待修 schema"

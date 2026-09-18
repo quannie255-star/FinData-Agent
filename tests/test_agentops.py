@@ -27,6 +27,7 @@ from findata.agentops.triage import (
     CAT_OK,
     CAT_PARAM_ERROR,
     CAT_SCHEMA_CONTRADICTION,
+    CAT_STEP_ERROR,
     CAT_TOOL_MISSING,
     SEV_LOUD,
     SEV_OK,
@@ -35,6 +36,7 @@ from findata.agentops.triage import (
     V_NOT_FAILURE,
     V_POSITIVE,
     V_REVIEW,
+    V_SCHEMA_DEFECT,
     Diagnosis,
     _has_day,
     diagnose,
@@ -205,10 +207,14 @@ def test_same_tool_different_args_is_not_a_retry_loop():
 
 
 def test_schema_contradiction_is_not_blamed_on_the_agent():
-    """同样是"必填参数没传"：description 承诺过默认值时，错的是数据源。
+    """同样是"必填参数没传"：description 承诺过默认值时，错的是工具 schema。
 
     这一条必须排在硬错误分类之前，否则会被笼统归成"参数写错"，
     给出的改进建议（换模型/收紧输出格式）就是朝反方向使劲。
+
+    处置是**第三类**，不是"丢弃"也不是"需人工"：要动的是数据源。
+    第一版判成丢弃，349 条样本被误杀——查原始数据才发现 xlam 的 58105 个
+    工具里带 `required` 字段的是 0 个，"缺参数=漏填必填项"是我自己设的口径。
     """
     t = Trace(task="electric field of 2C at 3m")
     t.step(
@@ -221,8 +227,34 @@ def test_schema_contradiction_is_not_blamed_on_the_agent():
     d = diagnose(t)
     assert d.category == CAT_SCHEMA_CONTRADICTION
     assert "数据源" in d.suggestion
-    # 丢弃是处置（样本不能喂），不等于归责 agent
-    assert verdict(d) == V_DISCARD
+    assert verdict(d) == V_SCHEMA_DEFECT
+    # 动 schema，不动样本：建议里必须给出可执行动作
+    assert "修 schema" in d.suggestion or "修这些参数" in d.suggestion
+
+
+def test_unclassifiable_error_goes_to_human_not_to_trash():
+    """兜底类 `step_error` 的定义是「归不到上面几类」，也就是「我没认出来」。
+
+    第一版把它映射成 `✗ 丢弃`——等于把「我的规则覆盖不到」记成「这批数据
+    有问题」。真实数据上这正好吃掉了 A 类全部 5 条（都是合并进兜底的
+    `duplicate call`），而它们连 agent 能力问题都算不上。
+
+    同一条规矩在两个方向上成立，判据是**队列长度**：
+      5 条 → 人工队列是队列，交人工
+      349 条 → 人工逐条看等于没有队列，必须做结构性修复
+    """
+    t = Trace(task="login status of JaneSmith")
+    t.step(
+        "loginuser",
+        arguments={"username": "JaneSmith"},
+        status=STATUS_ERROR,
+        error="duplicate call",
+    )
+    t.finish()
+    d = diagnose(t)
+    assert d.category == CAT_STEP_ERROR
+    assert verdict(d) == V_REVIEW
+    assert verdict(d) != V_DISCARD
 
 
 def test_retry_storm_threshold():

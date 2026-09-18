@@ -1,9 +1,19 @@
 可信过滤闭环 · 真实数据（Salesforce/xlam-function-calling-60k）
 样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
 
-一、发现率（不需要 ground truth：判定全是确定性查表）
-  有问题 354 / 20000   1.77%
-  干净   19646 / 20000  98.23%
+一、命中率（判定全是确定性查表，不依赖模型；**命中数不等于错误数**）
+  未命中 19646 / 20000  98.23%
+  命中   354 / 20000  1.77%
+
+  命中必须分两类——**这是本项目的全部要点**：
+    A 样本侧（要动样本）                5 条
+    B 工具 schema 侧（要动数据源）      349 条
+    A 要动样本，B 要动 schema。混成一类就会把数据源的错算到 agent 头上，
+    进而丢掉本来能用的样本。
+    A 里面**没有一条被确证为「agent 能力问题」**：全部落进兜底类
+    `step_error`（即「规则没认出来」），因此判 ⚠️ 需人工，不是 ✗ 丢弃。
+    认不出来 ≠ 样本是坏的——把「我的规则覆盖不到」记成「数据有问题」，
+    是同一类归因错误的第三个变体。
 
 二、根因分布
   ok                       19646   98.23%
@@ -12,13 +22,25 @@
 
 三、处置分布（能不能喂训练）
   ✓ 正样本            19646   98.23%
-  ✗ 丢弃               354    1.77%
+  🔧 待修 schema        349    1.75%
+  ⚠️ 需人工               5    0.03%
 
-四、问题类型（确定性事实，逐条可复核）
+四、待修 schema 清单（18 个工具 / 18 个参数）
+  动作：给这些参数补上 default（description 已经承诺过了），重跑即可——
+  **不需要人工逐条看，也不需要丢样本**。
+  calculate_electric_field.permitivity              89 次
+  bacterial_growth.doubling_time            52 次
+  dice_roll_probability.num_faces                44 次
+  cell_density.factor                   38 次
+  trapezoidal_integration.n                        23 次
+  project_investment_growth.inflation_adjusted       23 次
+  … 其余 12 项见 tool_schema_defects.json
+
+五、问题类型（确定性事实，逐条可复核）
   schema contradiction           380
   duplicate call                   8
 
-五、样例（前 8 条，可人工复核）
+六、样例（前 8 条，可人工复核）
   问：What is the electric field intensity at 3 meters from a 2 Coulomb charge, and 
      └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default；步骤 2 calculate_
   问：Calculate the cell density of a sample with an OD of 0.6 and a dilution of 500
@@ -36,21 +58,30 @@
   问：Can you find all pairs of numbers in the list [3, 4, 6, 1, 2] that sum up to 7
      └ 步骤 2 bacterial_growth 报错：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
 
-六、产出（可直接喂训练，OpenAI messages + tool_calls 形状）
-  train.jsonl          19646 条   ✓ 正样本
-  review.jsonl             0 条   ⚠️ 需人工
-  discard.jsonl          354 条   ✗ 丢弃
-  not_failure.jsonl        0 条   ⊘ 不算失败
-  manifest.json       口径与计数（含 not_failure 不是负样本的提醒）
+七、产出（可直接喂训练，OpenAI messages + tool_calls 形状）
+  train.jsonl            19646 条   ✓ 正样本
+  schema_defects.jsonl     349 条   🔧 待修 schema
+  review.jsonl               5 条   ⚠️ 需人工
+  discard.jsonl              0 条   ✗ 丢弃
+  not_failure.jsonl          0 条   ⊘ 不算失败
+  tool_schema_defects.json        工具级待修清单，给数据源方
   → data\filtered
 
-七、诚实说明
-  · 这批是**已清洗过的公开数据集**，脏率只有 1.77%，
+八、诚实说明
+  · **「未命中」不等于「确认正确」**：判定全是查表（工具名在不在注册表、
+    参数与 schema 一致否），未命中只说明这条轨迹通过了我能查的那几项。
+    以 xlam 为例我**拿不到执行反馈**，所以「正样本」的准确含义是
+    「没查出缺陷」，不是「业务结果正确」。
+  · 这批是**已清洗过的公开数据集**，命中率只有 1.77%，
     并不代表生产环境的比例——真实 Agent 轨迹会更脏。
-  · 本数据集在「工具不存在」这一项上 0 命中：样本里的调用都落在
-    给定工具列表内，因此**这一项没被验证到**，不能说它能查幻觉工具名。
-  · 判定全是查表（工具名 ∈ 列表？必填参数有没有？），不依赖模型，
-    所以没有准确率问题；但**查不到的脏**（如参数值语义错误）也照查不出。
-  · 「丢弃」不等于归责 agent：`schema contradiction` 是数据源标注
-    自相矛盾，但要剔除是因为它会教模型省略必填参数——根因与处置
-    是两件事，混成一维就没法分别调。
+  · 「工具不存在」这一项 0 命中：样本里的调用都落在给定工具列表内，
+    因此**这一项没被验证到**，不能说它能查幻觉工具名。
+  · 该数据集 58105 个工具里，**带 `required` 字段的是 0 个**——所以
+    「缺参数 = 漏填必填项」这个前提**不是数据源声明的，是我自己设的口径**。
+    据此判出的 349 条因此从「丢弃」改判为「工具 schema 缺陷」：模型省略
+    一个描述里写着有默认值的参数，是合理行为，不是错。
+  · 查不到的脏（如参数值语义错误）照查不出——这是查表法的天花板。
+  · **已知未解决**：重复调用探针（`probe_retry_storm`）判「同名且同参数」
+    重复，但幂等性是工具属性、我拿不到——`draw_cards` / `get_random_question`
+    这类工具，用同样的参数再调一次是**正常动作**。该探针在本批 0 命中，
+    即**未被真实数据验证过**，所以按拆表法先不动它，留作开放问题。

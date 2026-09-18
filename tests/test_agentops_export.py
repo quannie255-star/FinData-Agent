@@ -9,12 +9,13 @@ from __future__ import annotations
 import json
 
 from findata.agentops.adapters.xlam import to_training_example
-from findata.agentops.export import VERDICT_FILES, SplitWriter, iter_jsonl
+from findata.agentops.export import VERDICT_FILES, SplitWriter, ToolDefectTally, iter_jsonl
 from findata.agentops.triage import (
     V_DISCARD,
     V_NOT_FAILURE,
     V_POSITIVE,
     V_REVIEW,
+    V_SCHEMA_DEFECT,
     Diagnosis,
 )
 
@@ -24,19 +25,40 @@ def _diag(cat: str, sev: str = "loud") -> Diagnosis:
 
 
 def test_four_verdicts_land_in_four_files(tmp_path):
+    buckets = ((V_POSITIVE, 3), (V_REVIEW, 2), (V_DISCARD, 1), (V_NOT_FAILURE, 4))
     with SplitWriter(tmp_path) as w:
-        for v, n in ((V_POSITIVE, 3), (V_REVIEW, 2), (V_DISCARD, 1), (V_NOT_FAILURE, 4)):
+        for v, n in buckets:
             for _ in range(n):
                 w.write(v, {"id": v})
         counts = dict(w.counts)
         m = json.loads(w.write_manifest(w.manifest(10, 20, "test-source")).read_text("utf-8"))
 
-    assert counts == {V_POSITIVE: 3, V_REVIEW: 2, V_DISCARD: 1, V_NOT_FAILURE: 4}
+    assert counts[V_POSITIVE] == 3 and counts[V_SCHEMA_DEFECT] == 0
     for v, name in VERDICT_FILES.items():
         rows = list(iter_jsonl(tmp_path / name))
         assert len(rows) == counts[v], f"{name} 条数不符"
         assert all(r["id"] == v for r in rows), f"{name} 混进了别的处置"
     assert m["n_samples"] == 10
+
+
+def test_tool_defect_tally_gives_an_actionable_list_not_a_sample_list(tmp_path):
+    """同一份事实两种表述：349 条样本 vs 18 个工具。
+
+    前者没人会看（等于没有复核队列），后者是可执行动作。这是"根因与处置
+    分离"的最终落点——根因在数据源，处置就该作用在数据源上。
+    """
+    t = ToolDefectTally()
+    for i in range(5):
+        t.add("calculate_electric_field", "permitivity", "schema contradiction: ...", i)
+    t.add("dice_roll_probability", "num_faces", "schema contradiction: ...", 9)
+    p = t.write(tmp_path, "src")
+    d = json.loads(p.read_text(encoding="utf-8"))
+
+    assert d["n_tools"] == 2 and d["n_params"] == 2
+    assert d["defects"][0]["tool"] == "calculate_electric_field"
+    assert d["defects"][0]["hits"] == 5
+    assert d["defects"][0]["sample_rows"] == [0, 1, 2], "只留几行出处，别把清单撑成第二个数据集"
+    assert "重跑" in d["action"]
 
 
 def test_verdict_is_attached_to_the_sample_not_kept_separately(tmp_path):
@@ -51,13 +73,15 @@ def test_verdict_is_attached_to_the_sample_not_kept_separately(tmp_path):
     assert row["findata"]["suggestion"] == "建议 B"
 
 
-def test_manifest_carries_the_two_easy_to_get_wrong_caveats(tmp_path):
+def test_manifest_carries_the_three_easy_to_get_wrong_caveats(tmp_path):
     """口径说明写进产物本身——半年后回头看，不靠人记忆。"""
     with SplitWriter(tmp_path) as w:
         m = w.write_manifest(w.manifest(0, 0, "src"))
     note = json.loads(m.read_text(encoding="utf-8"))["note"]
     assert "not_failure" in note and "不是负样本" in note
-    assert "schema_contradiction" in note
+    assert "schema_defects" in note and "不该作废" in note
+    # 最容易犯的错：把"没查出问题"说成"确认正确"
+    assert "没查出问题" in note and "确认正确" in note
 
 
 def test_unknown_verdict_is_rejected(tmp_path):

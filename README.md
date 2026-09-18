@@ -13,9 +13,9 @@ uv run python scripts/run_trust_filter.py --limit 20000
 
 ```
 样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
-有问题 354 / 20000   1.77%
-  schema_contradiction  349   ← 参数没传，但工具 description 说它有默认值
-  step_error              5
+命中 354 / 20000   1.77%   ← 命中 ≠ 错误，见下
+  A 样本侧（要动样本）            5 条  ← 且无一条确证为 agent 能力问题
+  B 工具 schema 侧（要动数据源） 349 条  ← 参数没传，但 description 说它有默认值
 ```
 
 **语料全部来自网上真实公开数据集（`Salesforce/xlam-function-calling-60k`），
@@ -69,25 +69,27 @@ spin    → 信号 timeout      → env_timeout  → ⊘ 不算失败
 （**边界**：这是进程级隔离不是安全沙箱，防不住恶意代码；容器级本机做不了，
 拉不到镜像就不假装做了。gRPC 的 `deadline exceeded` 目前也仍识别不了。）
 
-产物是**四份 JSONL + 一份 manifest**，OpenAI `messages` + `tool_calls` 形状，
-落盘即训练、不用再写转换层。判定结论**挂在样本上一起走**（`findata` 字段：
-处置 / 根因 / 证据 / 建议），不另存对照表——分开存就会漂移，而这种错在
-训练跑完之前不会有任何报错。
+产物是**五份 JSONL + 一份工具级待修清单 + 一份 manifest**，OpenAI
+`messages` + `tool_calls` 形状，落盘即训练、不用再写转换层。判定结论
+**挂在样本上一起走**（`findata` 字段：处置 / 根因 / 证据 / 建议），不另存
+对照表——分开存就会漂移，而这种错在训练跑完之前不会有任何报错。
 
 ```
 data/filtered/
-  train.jsonl        19646  ✓ 正样本
-  review.jsonl           0  ⚠️ 需人工
-  discard.jsonl        354  ✗ 丢弃
-  not_failure.jsonl      0  ⊘ 不算失败（环境类，**不是负样本**）
-  manifest.json            计数与口径
+  train.jsonl               19646  ✓ 正样本
+  schema_defects.jsonl        349  🔧 待修 schema（样本留着，去改数据源）
+  review.jsonl                  5  ⚠️ 需人工（兜底类，规则没认出来）
+  discard.jsonl                 0  ✗ 丢弃（**没有一条被确证为 agent 能力问题**）
+  not_failure.jsonl             0  ⊘ 不算失败（环境类，**不是负样本**）
+  tool_schema_defects.json        聚合：18 个工具 / 18 个参数要改
+  manifest.json                   计数 + 口径 + 可复现三元组（code/rules/data）
 ```
 
 ## 快速开始
 
 ```bash
 uv sync
-uv run pytest                                        # 353 例测试
+uv run pytest                                        # 358 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py --limit 20000   # 主闭环（真实语料）
@@ -223,7 +225,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(351, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(358, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）
