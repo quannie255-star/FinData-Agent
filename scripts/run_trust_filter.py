@@ -29,7 +29,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from findata.agentops.adapters import xlam  # noqa: E402
-from findata.agentops.export import VERDICT_FILES, SplitWriter, ToolDefectTally  # noqa: E402
+from findata.agentops.export import (  # noqa: E402
+    DEFECT_MISPLACED,
+    DEFECT_UNDECLARED,
+    VERDICT_FILES,
+    SplitWriter,
+    ToolDefectTally,
+)
 from findata.agentops.triage import (  # noqa: E402
     V_DISCARD,
     V_NOT_FAILURE,
@@ -55,6 +61,10 @@ def _kind_of(err: str) -> str:
 
 
 def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None) -> int:
+    # 0 = 全量。默认跑全量而不是抽前 2 万条：抽样跑出来的比例和全量不是一回事，
+    # 而我所有手工探针都是在全量上核的——两边口径不一致，就等于又造了一个
+    # "同一件事有两个数字"的口子。
+    lim = limit or None
     raw = Path(path) if path else xlam.fetch()
     print(f"数据源：{xlam.DATASET}")
     print(f"文件：{raw}（{raw.stat().st_size / 1e6:.1f} MB，流式读取）")
@@ -64,6 +74,12 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
     n_calls = 0
     n_hit = 0
     n_sample_defect = 0
+    # 顺手数两个数据源自身的事实，免得报告里出现"我上次手测的数字"：
+    # 这些数字直接决定判据站不站得住，必须能被这次复现。
+    n_tool_defs = 0
+    n_with_required = 0
+    n_default_slots = 0
+    n_default_str = 0
     by_cat: collections.Counter[str] = collections.Counter()
     by_verdict: collections.Counter[str] = collections.Counter()
     by_kind: collections.Counter[str] = collections.Counter()
@@ -71,7 +87,16 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
     tally = ToolDefectTally()
 
     with SplitWriter(out_dir or DEFAULT_OUT) as w:
-        for idx, rec in xlam.iter_records(limit=limit, path=raw):
+        for idx, rec in xlam.iter_records(limit=lim, path=raw):
+            for td in xlam._as_list(rec.get("tools")):
+                n_tool_defs += 1
+                if "required" in td:
+                    n_with_required += 1
+                for meta in (td.get("parameters") or {}).values():
+                    if isinstance(meta, dict) and "default" in meta:
+                        n_default_slots += 1
+                        if isinstance(meta["default"], str):
+                            n_default_str += 1
             t = xlam.to_trace(rec, idx)
             n_samples += 1
             n_calls += len(t.steps)
@@ -122,7 +147,11 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
     out: list[str] = []
     a = out.append
     a(f"可信过滤闭环 · 真实数据（{xlam.DATASET}）")
-    a(f"样本 {n_samples} 条，工具调用 {n_calls} 次；数据源 ModelScope 公开数据集，**无标签**")
+    scope = "全量" if lim is None else f"前 {lim} 条（抽样）"
+    a(
+        f"样本 {n_samples} 条（{scope}），工具调用 {n_calls} 次；"
+        "数据源 ModelScope 公开数据集，**无标签**"
+    )
     a("")
     a("一、命中率（判定全是确定性查表，不依赖模型；**命中数不等于错误数**）")
     a(f"  未命中 {n_samples - n_hit} / {n_samples}  {(n_samples - n_hit) / denom:.2%}")
@@ -148,14 +177,26 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
             a(f"  {v:<16}{by_verdict[v]:>6}  {by_verdict[v] / denom:>7.2%}")
     a("")
     a(f"四、待修 schema 清单（{defects['n_tools']} 个工具 / {defects['n_params']} 个参数）")
-    a("  动作：给这些参数补上 default（description 已经承诺过了），重跑即可——")
-    a("  **不需要人工逐条看，也不需要丢样本**。")
+    n_mis = defects["n_by_kind"].get(DEFECT_MISPLACED, 0)
+    n_und = defects["n_by_kind"].get(DEFECT_UNDECLARED, 0)
+    a(f"  两种改法别合并：{DEFECT_UNDECLARED} {n_und} 项（补上 default）／"
+      f"{DEFECT_MISPLACED} {n_mis} 项（把值**移**过去，不是两边都补）")
+    a("  动作：改完这些 schema 重跑即可——**不需要人工逐条看，也不需要丢样本**。")
     for e in defects["defects"][:TOP_DEFECTS]:
-        a(f"  {e['tool']}.{e['param']:<22}{e['hits']:>5} 次")
+        # 缺陷种类放在行尾：工具名是 ASCII 好对齐，中文标签会让整列歪掉
+        a(f"  {e['tool']}.{e['param']:<40}{e['hits']:>5} 次   [{e['defect_kind']}]")
     if len(defects["defects"]) > TOP_DEFECTS:
         a(f"  … 其余 {len(defects['defects']) - TOP_DEFECTS} 项见 {defects_path.name}")
+    if n_mis:
+        a(f"  错位项**全部列出**（共 {n_mis} 项；其余 {n_und} 项是同一条规则的重复）：")
+        for e in defects["defects"]:
+            if e["defect_kind"] == DEFECT_MISPLACED:
+                a(f"    · {e['detail']}")
+                a(f"      命中 {e['hits']} 次，出处行 {e['sample_rows']}")
     a("")
     a("五、问题类型（确定性事实，逐条可复核）")
+    a("  单位是**问题条数**，不是样本条数：一条轨迹可能同时命中多类，")
+    a(f"  所以下面加起来（{sum(by_kind.values())}）会大于第一节的命中样本数（{n_hit}）。")
     for kind, n in by_kind.most_common():
         a(f"  {kind:<28}{n:>6}")
     a("")
@@ -179,12 +220,27 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
     a("    并不代表生产环境的比例——真实 Agent 轨迹会更脏。")
     a("  · 「工具不存在」这一项 0 命中：样本里的调用都落在给定工具列表内，")
     a("    因此**这一项没被验证到**，不能说它能查幻觉工具名。")
-    a("  · 该数据集 58105 个工具里，**带 `required` 字段的是 0 个**——所以")
+    a("  · 该数据集**没有 `required` 字段**：本批扫过的 "
+      f"{n_tool_defs} 份工具定义里，带 `required` 的是 {n_with_required} 份——所以")
     a("    「缺参数 = 漏填必填项」这个前提**不是数据源声明的，是我自己设的口径**。")
-    a("    据此判出的 349 条因此从「丢弃」改判为「工具 schema 缺陷」：模型省略")
-    a("    一个描述里写着有默认值的参数，是合理行为，不是错。")
+    a(f"    据此判出的 {n_hit - n_sample_defect} 条因此从「丢弃」改判为「工具 schema")
+    a("    缺陷」：模型省略一个描述里写着有默认值的参数，是合理行为，不是错。")
     a("  · 查不到的脏（如参数值语义错误）照查不出——这是查表法的天花板。")
-    a("  · **已知未解决**：重复调用探针（`probe_retry_storm`）判「同名且同参数」")
+    a(f"  · 「{DEFECT_MISPLACED}」是**事实 + 一次推断**：值确实落在别的参数上")
+    a("    （事实，可在 schema 里逐字复核）；「作者本意是给 description 声明的那个")
+    a("    参数」是推断。逐项看，`calculate_electric_field` 那一项推断很硬——")
+    a("    8.854e-12 是真空介电常数，不可能是 int 型 charge/distance 的默认值；")
+    a("    `mean_confidence_interval` 那一项的推断弱得多（0.95 作标准差并非")
+    a("    不可能）。报告不替读者决定，把两种强度都摆出来。")
+    a("  · 我试过一个**更硬**的探针查「类型与默认值是否自相矛盾」——不依赖任何")
+    a("    description 措辞，纯机械规则。全量跑出 2162 个命中，我看了一眼就判定")
+    a(f"    它是假的：本批 {n_default_slots} 个带 default 的参数位里，有 "
+      f"{n_default_str} 个")
+    a(f"    （{n_default_str / max(n_default_slots, 1):.1%}）的 default 是**字符串**——")
+    a("    `type: int` + `default: \"10\"` 是这个数据源的表示层约定，不是矛盾。")
+    a("    **探针已删除，没进报告**：留一个抓错东西的探针，不如少一个探针。")
+    a("    （这个 2162 随之不可复现，只作为一次自我否定的记录留着。）")
+    a("  · 已知未解决：重复调用探针（`probe_retry_storm`）判「同名且同参数」")
     a("    重复，但幂等性是工具属性、我拿不到——`draw_cards` / `get_random_question`")
     a("    这类工具，用同样的参数再调一次是**正常动作**。该探针在本批 0 命中，")
     a("    即**未被真实数据验证过**，所以按拆表法先不动它，留作开放问题。")
@@ -200,7 +256,7 @@ def run(limit: int, path: str | None, archive: Path | None, out_dir: Path | None
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="真实 Agent 轨迹质检闭环")
-    ap.add_argument("--limit", type=int, default=20000, help="只取前 N 条（默认 20000）")
+    ap.add_argument("--limit", type=int, default=0, help="只取前 N 条（默认 0 = 全量 6 万条）")
     ap.add_argument("--path", default=None, help="本地原始数据路径，不给则自动拉取")
     ap.add_argument("--archive", default=str(ARCHIVE), help="报告归档路径；空串则不归档")
     ap.add_argument("--out-dir", default=str(DEFAULT_OUT), help="样本集落盘目录")

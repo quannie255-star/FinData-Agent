@@ -8,15 +8,17 @@
 每条判定带证据链。
 
 ```bash
-uv run python scripts/run_trust_filter.py --limit 20000
+uv run python scripts/run_trust_filter.py    # 默认跑全量，约 16 秒
 ```
 
 ```
-样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
-命中 354 / 20000   1.77%   ← 命中 ≠ 错误，见下
-  A 样本侧（要动样本）            5 条  ← 且无一条确证为 agent 能力问题
-  B 工具 schema 侧（要动数据源） 349 条  ← 参数没传，但 description 说它有默认值
+样本 60000 条（全量），工具调用 100011 次；数据源 ModelScope 公开数据集，**无标签**
+命中 1351 / 60000   2.25%   ← 命中 ≠ 错误，见下
+  A 样本侧（要动样本）           65 条  ← 且无一条确证为 agent 能力问题
+  B 工具 schema 侧（要动数据源）1286 条  ← 参数没传，但 description 说它有默认值
 ```
+
+→ 归档全文：`examples/trust-filter-report.txt`
 
 **语料全部来自网上真实公开数据集（`Salesforce/xlam-function-calling-60k`），
 没有一条是我们自己编的。** 这不是洁癖：自己造的失败样本形状必然贴合自己
@@ -39,7 +41,7 @@ Agent 岗的 JD 几乎都会写「Tool Calling / 轨迹数据 / 自动化评测�
 | 轨迹跑挂了 | agent 能力不足 | **沙箱超时**（环境问题，重跑就好，别当负样本） |
 | 结果是对的 | 成功的示范 | **蒙对的**（路径走了兜底，教会模型"猜也能过"） |
 
-**形态一模一样，结论完全相反。** 归错了，改进方向就是反的——上面那 349 条
+**形态一模一样，结论完全相反。** 归错了，改进方向就是反的——B 类那 1286 条
 第一版全被判成了"agent 漏填"，建议是"换更大的模型"，而正确答案是去修
 工具 schema。这是本项目唯一真正的门槛：检测不难，难的是判断该怪谁。
 
@@ -76,12 +78,13 @@ spin    → 信号 timeout      → env_timeout  → ⊘ 不算失败
 
 ```
 data/filtered/
-  train.jsonl               19646  ✓ 正样本
-  schema_defects.jsonl        349  🔧 待修 schema（样本留着，去改数据源）
-  review.jsonl                  5  ⚠️ 需人工（兜底类，规则没认出来）
+  train.jsonl               58649  ✓ 正样本（**含义是"没查出缺陷"，不是"业务结果正确"**）
+  schema_defects.jsonl       1286  🔧 待修 schema（样本留着，去改数据源）
+  review.jsonl                 65  ⚠️ 需人工（兜底类，规则没认出来）
   discard.jsonl                 0  ✗ 丢弃（**没有一条被确证为 agent 能力问题**）
   not_failure.jsonl             0  ⊘ 不算失败（环境类，**不是负样本**）
-  tool_schema_defects.json        聚合：18 个工具 / 18 个参数要改
+  tool_schema_defects.json        聚合：21 个工具 / 21 个参数要改
+                                  其中 19 项是"漏标 default"、2 项是"default 贴错位置"
   manifest.json                   计数 + 口径 + 可复现三元组（code/rules/data）
 ```
 
@@ -89,12 +92,12 @@ data/filtered/
 
 ```bash
 uv sync
-uv run pytest                                        # 358 例测试
+uv run pytest                                        # 364 例测试
 uv run ruff check .
 
-uv run python scripts/run_trust_filter.py --limit 20000   # 主闭环（真实语料）
-                                                          # → 报告 + data/filtered/*.jsonl
-uv run python scripts/run_agent_trace.py                  # 本机 Ollama 真实轨迹 48 条
+uv run python scripts/run_trust_filter.py             # 主闭环（真实语料，默认全量）
+                                                      # → 报告 + data/filtered/*.jsonl
+uv run python scripts/run_agent_trace.py              # 本机 Ollama 真实轨迹 48 条
 ```
 
 不想装环境：[`examples/trust-filter-report.txt`](examples/trust-filter-report.txt)
@@ -225,7 +228,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(358, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(364, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）

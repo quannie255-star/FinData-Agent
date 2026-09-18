@@ -1,13 +1,13 @@
 可信过滤闭环 · 真实数据（Salesforce/xlam-function-calling-60k）
-样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
+样本 60000 条（全量），工具调用 100011 次；数据源 ModelScope 公开数据集，**无标签**
 
 一、命中率（判定全是确定性查表，不依赖模型；**命中数不等于错误数**）
-  未命中 19646 / 20000  98.23%
-  命中   354 / 20000  1.77%
+  未命中 58649 / 60000  97.75%
+  命中   1351 / 60000  2.25%
 
   命中必须分两类——**这是本项目的全部要点**：
-    A 样本侧（要动样本）                5 条
-    B 工具 schema 侧（要动数据源）      349 条
+    A 样本侧（要动样本）               65 条
+    B 工具 schema 侧（要动数据源）     1286 条
     A 要动样本，B 要动 schema。混成一类就会把数据源的错算到 agent 头上，
     进而丢掉本来能用的样本。
     A 里面**没有一条被确证为「agent 能力问题」**：全部落进兜底类
@@ -16,33 +16,41 @@
     是同一类归因错误的第三个变体。
 
 二、根因分布
-  ok                       19646   98.23%
-  schema_contradiction       349    1.75%
-  step_error                   5    0.03%
+  ok                       58649   97.75%
+  schema_contradiction      1286    2.14%
+  step_error                  65    0.11%
 
 三、处置分布（能不能喂训练）
-  ✓ 正样本            19646   98.23%
-  🔧 待修 schema        349    1.75%
-  ⚠️ 需人工               5    0.03%
+  ✓ 正样本            58649   97.75%
+  🔧 待修 schema       1286    2.14%
+  ⚠️ 需人工              65    0.11%
 
-四、待修 schema 清单（18 个工具 / 18 个参数）
-  动作：给这些参数补上 default（description 已经承诺过了），重跑即可——
-  **不需要人工逐条看，也不需要丢样本**。
-  calculate_electric_field.permitivity              89 次
-  bacterial_growth.doubling_time            52 次
-  dice_roll_probability.num_faces                44 次
-  cell_density.factor                   38 次
-  trapezoidal_integration.n                        23 次
-  project_investment_growth.inflation_adjusted       23 次
-  … 其余 12 项见 tool_schema_defects.json
+四、待修 schema 清单（21 个工具 / 21 个参数）
+  两种改法别合并：缺 default 声明 19 项（补上 default）／default 错位 2 项（把值**移**过去，不是两边都补）
+  动作：改完这些 schema 重跑即可——**不需要人工逐条看，也不需要丢样本**。
+  calculate_electric_field.permitivity                               258 次   [default 错位]
+  cell_density.factor                                    130 次   [缺 default 声明]
+  project_investment_growth.inflation_adjusted                        130 次   [缺 default 声明]
+  bacterial_growth.doubling_time                             120 次   [缺 default 声明]
+  dice_roll_probability.num_faces                                 111 次   [缺 default 声明]
+  batting_average.precision                                 103 次   [缺 default 声明]
+  … 其余 15 项见 tool_schema_defects.json
+  错位项**全部列出**（共 2 项；其余 19 项是同一条规则的重复）：
+    · schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 charge / distance 上（permitivity 自己没标 default）
+      命中 258 次，出处行 [65, 218, 279]
+    · schema contradiction: confidence 的 description 称默认值 0.95，但该值被标在 std_dev / sample_size 上（confidence 自己没标 default）
+      命中 83 次，出处行 [569, 1061, 4288]
 
 五、问题类型（确定性事实，逐条可复核）
-  schema contradiction           380
-  duplicate call                   8
+  单位是**问题条数**，不是样本条数：一条轨迹可能同时命中多类，
+  所以下面加起来（1491）会大于第一节的命中样本数（1351）。
+  schema contradiction          1389
+  duplicate call                  59
+  missing required                43
 
 六、样例（前 8 条，可人工复核）
   问：What is the electric field intensity at 3 meters from a 2 Coulomb charge, and 
-     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default；步骤 2 calculate_
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 charge / distance
   问：Calculate the cell density of a sample with an OD of 0.6 and a dilution of 500
      └ 步骤 1 cell_density 报错：schema contradiction: factor 的 description 称有默认值，schema 未标 default
   问：Find pairs in the list [2, 4, 6, 8, 10] that sum to 12, and estimate the bacte
@@ -50,18 +58,18 @@
   问：What is the probability of rolling a sum of 10 with 3 dice?
      └ 步骤 1 dice_roll_probability 报错：schema contradiction: num_faces 的 description 称有默认值，schema 未标 default
   问：Calculate the electric field produced by a charge of 1 Coulomb at a distance o
-     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 charge / distance
   问：Calculate the electric field at 10 meters from a charge of 2 Coulombs.
-     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 charge / distance
   问：What is the electric field at a distance of 1 meter from a charge of 10 coulom
-     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 charge / distance
   问：Can you find all pairs of numbers in the list [3, 4, 6, 1, 2] that sum up to 7
      └ 步骤 2 bacterial_growth 报错：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
 
 七、产出（可直接喂训练，OpenAI messages + tool_calls 形状）
-  train.jsonl            19646 条   ✓ 正样本
-  schema_defects.jsonl     349 条   🔧 待修 schema
-  review.jsonl               5 条   ⚠️ 需人工
+  train.jsonl            58649 条   ✓ 正样本
+  schema_defects.jsonl    1286 条   🔧 待修 schema
+  review.jsonl              65 条   ⚠️ 需人工
   discard.jsonl              0 条   ✗ 丢弃
   not_failure.jsonl          0 条   ⊘ 不算失败
   tool_schema_defects.json        工具级待修清单，给数据源方
@@ -72,16 +80,29 @@
     参数与 schema 一致否），未命中只说明这条轨迹通过了我能查的那几项。
     以 xlam 为例我**拿不到执行反馈**，所以「正样本」的准确含义是
     「没查出缺陷」，不是「业务结果正确」。
-  · 这批是**已清洗过的公开数据集**，命中率只有 1.77%，
+  · 这批是**已清洗过的公开数据集**，命中率只有 2.25%，
     并不代表生产环境的比例——真实 Agent 轨迹会更脏。
   · 「工具不存在」这一项 0 命中：样本里的调用都落在给定工具列表内，
     因此**这一项没被验证到**，不能说它能查幻觉工具名。
-  · 该数据集 58105 个工具里，**带 `required` 字段的是 0 个**——所以
+  · 该数据集**没有 `required` 字段**：本批扫过的 168870 份工具定义里，带 `required` 的是 0 份——所以
     「缺参数 = 漏填必填项」这个前提**不是数据源声明的，是我自己设的口径**。
-    据此判出的 349 条因此从「丢弃」改判为「工具 schema 缺陷」：模型省略
-    一个描述里写着有默认值的参数，是合理行为，不是错。
+    据此判出的 1286 条因此从「丢弃」改判为「工具 schema
+    缺陷」：模型省略一个描述里写着有默认值的参数，是合理行为，不是错。
   · 查不到的脏（如参数值语义错误）照查不出——这是查表法的天花板。
-  · **已知未解决**：重复调用探针（`probe_retry_storm`）判「同名且同参数」
+  · 「default 错位」是**事实 + 一次推断**：值确实落在别的参数上
+    （事实，可在 schema 里逐字复核）；「作者本意是给 description 声明的那个
+    参数」是推断。逐项看，`calculate_electric_field` 那一项推断很硬——
+    8.854e-12 是真空介电常数，不可能是 int 型 charge/distance 的默认值；
+    `mean_confidence_interval` 那一项的推断弱得多（0.95 作标准差并非
+    不可能）。报告不替读者决定，把两种强度都摆出来。
+  · 我试过一个**更硬**的探针查「类型与默认值是否自相矛盾」——不依赖任何
+    description 措辞，纯机械规则。全量跑出 2162 个命中，我看了一眼就判定
+    它是假的：本批 260944 个带 default 的参数位里，有 232552 个
+    （89.1%）的 default 是**字符串**——
+    `type: int` + `default: "10"` 是这个数据源的表示层约定，不是矛盾。
+    **探针已删除，没进报告**：留一个抓错东西的探针，不如少一个探针。
+    （这个 2162 随之不可复现，只作为一次自我否定的记录留着。）
+  · 已知未解决：重复调用探针（`probe_retry_storm`）判「同名且同参数」
     重复，但幂等性是工具属性、我拿不到——`draw_cards` / `get_random_question`
     这类工具，用同样的参数再调一次是**正常动作**。该探针在本批 0 命中，
     即**未被真实数据验证过**，所以按拆表法先不动它，留作开放问题。

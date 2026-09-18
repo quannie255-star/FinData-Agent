@@ -10,7 +10,10 @@ from __future__ import annotations
 from findata.agentops.adapters.xlam import (
     _as_list,
     _description_claims_default,
+    claimed_default,
+    default_claim,
     inspect_call,
+    misplaced_defaults,
     required_params,
     to_trace,
 )
@@ -27,6 +30,26 @@ _EF_FIELD = {
         "distance": {"description": "the distance in meters", "type": "float"},
         "permitivity": {
             "description": "the permitivity of the material (default is 8.854e-12)",
+            "type": "float",
+        },
+    },
+}
+
+# 真实行（xlam-60k row 65）比上面更糟：那个值**不是没写，是贴错了位置**——
+# `charge` / `distance` 双双挂着 `default: 8.854e-12`，而它们的 type 是 int。
+# 8.854e-12 是真空介电常数，不可能是电荷量或距离的默认值。
+_EF_FIELD_MISPLACED = {
+    "name": "calculate_electric_field",
+    "description": "Calculate the electric field of a charge.",
+    "parameters": {
+        "charge": {"description": "Charge in coulombs.", "type": "int", "default": 8.854e-12},
+        "distance": {
+            "description": "Distance from the charge.",
+            "type": "int",
+            "default": 8.854e-12,
+        },
+        "permitivity": {
+            "description": "Permitivity of the space, default is 8.854e-12.",
             "type": "float",
         },
     },
@@ -69,6 +92,79 @@ def test_default_is_not_passed_is_schema_contradiction_not_agent_fault():
         "schema contradiction: permitivity 的 description 称有默认值，schema 未标 default"
     ]
     assert inspect_call(call, [strict]) == ["missing required: permitivity"]
+
+
+def test_claim_strength_is_not_flattened():
+    """"给了默认值"与"只标了可选"必须分开报，不能都写成"称有默认值"。
+
+    混成一句等于我替作者说了他没说过的话——正是我在抓的那类错，只不过这次
+    犯错的是我自己写报告的手。
+    """
+    assert default_claim({"description": "a (default is 3)"}) == "value"
+    assert default_claim({"description": "a (int, optional)"}) == "optional"
+    assert default_claim({"description": "just a parameter"}) == ""
+    # 只有"可选"时，报出来的那句话不能出现"称有默认值"
+    only_opt = {
+        "name": "t",
+        "parameters": {"a": {"description": "a (int, optional)", "type": "int"}},
+    }
+    (issue,) = inspect_call({"name": "t", "arguments": {}}, [only_opt])
+    assert "称有默认值" not in issue and "可选" in issue
+
+
+def test_misplaced_default_is_a_stronger_finding_than_a_missing_one():
+    """值在、但贴在别人身上——比"没写"更硬的证据。
+
+    这不是"作者忘了写默认值"，而是"默认值写到了别的参数上"：
+    `permitivity` 的描述说 8.854e-12，而 8.854e-12 **确实在 schema 里**，
+    挂在 charge / distance 上。有值落在错误的位置，用"疏忽"解释不通。
+    """
+    mis = misplaced_defaults(_EF_FIELD_MISPLACED)
+    assert mis == {"permitivity": ("8.854e-12", ("charge", "distance"))}
+
+    (issue,) = inspect_call(
+        {"name": "calculate_electric_field", "arguments": {"charge": 2, "distance": 3}},
+        [_EF_FIELD_MISPLACED],
+    )
+    assert "被标在 charge / distance 上" in issue
+    # 处置不变：还是数据源的账，还是不动样本
+    assert issue.startswith("schema contradiction")
+
+
+def test_misplacement_probe_does_not_fire_on_symmetric_defaults():
+    """误报防线：**所有**参数都写着 5 也都有 5，这是对称，不是错位。
+
+    第一版探针只查"描述称的值出现在别的参数上"，把 `latest_tweets` 这种
+    三个参数都是 10 的工具全报成错位（全量 1617 条命中，绝大多数是假的）。
+    收紧条件是：**宣称方自己必须没有 default**——有 default 就轮不到"错位"。
+    """
+    symmetric = {
+        "name": "geogrid",
+        "parameters": {
+            "width": {"description": "width (default is 5)", "type": "int", "default": 5},
+            "height": {"description": "height (default is 5)", "type": "int", "default": 5},
+            "grid_size": {"description": "grid (default is 5)", "type": "int", "default": 5},
+        },
+    }
+    assert misplaced_defaults(symmetric) == {}
+    assert inspect_call({"name": "geogrid", "arguments": {}}, [symmetric]) == []
+
+    # 宣称方没有 default，但那个值在 schema 里根本不存在 → 只是"漏标"，不是"错位"
+    undeclared = {
+        "name": "t",
+        "parameters": {
+            "a": {"description": "a (default is 7)", "type": "int"},
+            "b": {"description": "b", "type": "int", "default": 3},
+        },
+    }
+    assert misplaced_defaults(undeclared) == {}
+
+
+def test_claimed_default_only_reads_numbers():
+    """字符串默认值抠不出来——自然语言里的 'all' / 'desc' 满天飞，抠就是噪声。"""
+    assert claimed_default({"description": "genre (default is 'all')"}) is None
+    assert claimed_default({"description": "n (default is 10)"}) == "10"
+    assert claimed_default({"description": "rate (Default is 0.95.)"}) == "0.95"
 
 
 def test_duplicate_tool_name_does_not_false_positive():

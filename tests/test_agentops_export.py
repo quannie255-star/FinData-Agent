@@ -9,7 +9,14 @@ from __future__ import annotations
 import json
 
 from findata.agentops.adapters.xlam import to_training_example
-from findata.agentops.export import VERDICT_FILES, SplitWriter, ToolDefectTally, iter_jsonl
+from findata.agentops.export import (
+    DEFECT_MISPLACED,
+    DEFECT_UNDECLARED,
+    VERDICT_FILES,
+    SplitWriter,
+    ToolDefectTally,
+    iter_jsonl,
+)
 from findata.agentops.triage import (
     V_DISCARD,
     V_NOT_FAILURE,
@@ -42,7 +49,7 @@ def test_four_verdicts_land_in_four_files(tmp_path):
 
 
 def test_tool_defect_tally_gives_an_actionable_list_not_a_sample_list(tmp_path):
-    """同一份事实两种表述：349 条样本 vs 18 个工具。
+    """同一份事实两种表述：几百条样本 vs 十几个工具。
 
     前者没人会看（等于没有复核队列），后者是可执行动作。这是"根因与处置
     分离"的最终落点——根因在数据源，处置就该作用在数据源上。
@@ -58,7 +65,47 @@ def test_tool_defect_tally_gives_an_actionable_list_not_a_sample_list(tmp_path):
     assert d["defects"][0]["tool"] == "calculate_electric_field"
     assert d["defects"][0]["hits"] == 5
     assert d["defects"][0]["sample_rows"] == [0, 1, 2], "只留几行出处，别把清单撑成第二个数据集"
-    assert "重跑" in d["action"]
+    assert "不要丢样本" in d["note"]
+
+
+def test_sample_rows_are_deduplicated(tmp_path):
+    """同一条轨迹调同一工具两次，出处行不能记两遍。
+
+    不去重就会出现 `[65, 65, 218]`——看起来三条出处，其实是两条轨迹。
+    清单是给人照着复核的，出处行说谎比没有出处更糟。
+    """
+    t = ToolDefectTally()
+    for row in (65, 65, 218, 65, 1061):
+        t.add("a", "p", "schema contradiction: ...", row)
+    d = t.to_dict("src")
+    assert d["defects"][0]["sample_rows"] == [65, 218, 1061]
+    assert d["defects"][0]["hits"] == 5, "hits 仍是命中次数，不因去重而少算"
+
+
+def test_two_defect_kinds_get_two_different_actions(tmp_path):
+    """「漏了 default」和「default 放错位置」改法不同，不能合成一句。
+
+    合成一句「补上 default」，数据源方会把 `charge` 和 `permitivity` **同时**
+    标上 8.854e-12——错得更彻底。这两类必须分开报。
+    """
+    t = ToolDefectTally()
+    t.add("a", "p", "schema contradiction: p 的 description 称有默认值，schema 未标 default", 0)
+    t.add(
+        "b",
+        "q",
+        "schema contradiction: q 的 description 称默认值 8.854e-12，"
+        "但该值被标在 r 上（q 自己没标 default）",
+        1,
+    )
+    d = t.to_dict("src")
+
+    assert d["n_by_kind"] == {DEFECT_UNDECLARED: 1, DEFECT_MISPLACED: 1}
+    assert "补上" in d["action"][DEFECT_UNDECLARED]
+    assert "移" in d["action"][DEFECT_MISPLACED]
+    kinds = {e["param"]: e["defect_kind"] for e in d["defects"]}
+    assert kinds == {"p": DEFECT_UNDECLARED, "q": DEFECT_MISPLACED}
+    # 两类都要动数据源、都不丢样本——这是共同点，不能因为分了类就丢掉
+    assert all("丢" not in v for v in d["action"].values())
 
 
 def test_verdict_is_attached_to_the_sample_not_kept_separately(tmp_path):

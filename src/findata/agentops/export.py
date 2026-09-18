@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import collections
 import hashlib
 import json
 import subprocess
@@ -49,6 +50,21 @@ VERDICT_FILES = {
 # 待修 schema 的聚合产物：**工具级**，不是轨迹级。
 # 给数据源方看的是「这 18 个工具的 18 个参数要改」，不是「这 349 条样本不要了」。
 TOOL_DEFECTS_FILE = "tool_schema_defects.json"
+
+# 工具 schema 缺陷的两种改法（见 ToolDefectTally 的注释）：
+# 一个是"漏了"，一个是"放错了位置"。处置都指向数据源，但动作不同。
+DEFECT_UNDECLARED = "缺 default 声明"
+DEFECT_MISPLACED = "default 错位"
+
+
+def defect_kind(detail: str) -> str:
+    """从问题原文判断是哪种 schema 缺陷。
+
+    不新增字段来传这个信息，而是从原文推：问题原文是**唯一**的事实来源，
+    另开一个字段就多了一处会与原文漂移的地方（本项目吃过这个亏：
+    349 条与 353 条的数字在文档里各自为政）。
+    """
+    return DEFECT_MISPLACED if "错位" in detail or "被标在" in detail else DEFECT_UNDECLARED
 
 
 class SplitWriter:
@@ -184,6 +200,17 @@ class ToolDefectTally:
 
     这也是"根因与处置分离"的最终落点：根因是数据源的，处置就该作用在
     数据源上，而不是作用在样本上。
+
+    聚合时按**缺陷种类**再分一层，因为改法不一样：
+
+      `缺 default 声明`  description 说有默认值，schema 里找不到这个值
+                        → 动作是**补上** default
+      `default 错位`     description 说 p 的默认值是 X，X 确实在 schema 里，
+                        但标在 q 上 → 动作是**移动**这个值，不是补一个新的
+
+    两者都要动数据源，但一个是"漏了"、一个是"放错了位置"。混成一句
+    "补上 default"会让数据源方把 `charge` 和 `permitivity` **同时**标上
+    8.854e-12——错得更彻底。
     """
 
     def __init__(self) -> None:
@@ -192,21 +219,38 @@ class ToolDefectTally:
     def add(self, tool: str, param: str, detail: str, row: int) -> None:
         key = (tool, param)
         e = self._by_param.setdefault(
-            key, {"tool": tool, "param": param, "detail": detail, "hits": 0, "sample_rows": []}
+            key,
+            {
+                "tool": tool,
+                "param": param,
+                "detail": detail,
+                "defect_kind": defect_kind(detail),
+                "hits": 0,
+                "sample_rows": [],
+            },
         )
         e["hits"] += 1
-        # 只留几行出处：够人工复核，又不把清单撑成第二个数据集
-        if len(e["sample_rows"]) < 3:
+        # 只留几行出处：够人工复核，又不把清单撑成第二个数据集。
+        # 去重是必须的——同一条轨迹里可能调同一个工具两次，都命中同一个缺陷，
+        # 不去重就会出现 `[65, 65, 218]` 这种"三行出处其实是两条轨迹"的假清单。
+        if row not in e["sample_rows"] and len(e["sample_rows"]) < 3:
             e["sample_rows"].append(row)
 
     def to_dict(self, source: str) -> dict[str, Any]:
         entries = sorted(self._by_param.values(), key=lambda x: -x["hits"])
+        by_kind = collections.Counter(e["defect_kind"] for e in entries)
         return {
             "source": source,
             "n_tools": len({e["tool"] for e in entries}),
             "n_params": len(entries),
-            "action": "修这些参数的 schema（description 承诺了默认值就补上 default），"
-            "重跑即可——受影响样本会全部回到正样本，不需要丢弃。",
+            "n_by_kind": dict(by_kind),
+            "action": {
+                DEFECT_UNDECLARED: "补上 default（description 已经承诺过了）",
+                DEFECT_MISPLACED: "把这个值从 holder 参数**移**到 description 声明的参数上"
+                "（不是两边都补——两边都补等于把错固化）",
+            },
+            "note": "两类都要动数据源、都不要丢样本；但改法不同，别统一成一"
+            "句「补 default」。",
             "defects": entries,
         }
 

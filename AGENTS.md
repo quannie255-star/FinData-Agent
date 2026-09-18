@@ -25,14 +25,23 @@ Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要
 命令跑完「拉公开 tool-calling 语料 → 归一化 → 探针 + 归因 → 过滤出可训练
 样本」。语料是 `Salesforce/xlam-function-calling-60k`（ModelScope，96MB，
 ijson 流式），**没有一条是我们自己编的**——自造样本证明不了自己的规则。
-20000 条样本 / 31691 次调用，**命中** 354 条（1.77%；说命中不说错误——
-无标签数据上"错误率"测不出来），其中 349 条根因是 `schema_contradiction`：
-参数没传，但工具 description 写着"default is 8.854e-12"而 schema 没标
-default——**形态上和"agent 漏填必填参数"一样，结论完全相反，错的是数据源**。
-第一版就是把它全判成了 agent 的能力问题，**误杀 349 条**；现已新增第五档
-处置 `🔧 待修 schema`（样本留着，去改数据源），**丢弃归零**。
-归档见 `examples/trust-filter-report.txt`（含「诚实说明」一节），
-逐条拷问作答见 `docs/interview-qa.md`。
+**全量** 60000 条样本 / 100011 次调用，**命中** 1351 条（2.25%；说命中不说
+错误——无标签数据上"错误率"测不出来），其中 1286 条根因是
+`schema_contradiction`：参数没传，但工具 description 承诺了默认值而 schema
+没标 default——**形态上和"agent 漏填必填参数"一样，结论完全相反，错的是
+数据源**。第一版就是把它全判成了 agent 的能力问题，**误杀 349 条**（那个
+数字是当年 2 万条抽样的口径）；现已新增第五档处置 `🔧 待修 schema`
+（样本留着，去改数据源），**丢弃归零**。
+
+这 1286 条对应 **21 个工具 / 21 个参数**，且分两种改法：19 项"漏标 default"
+（补上）、2 项 **"default 贴错位置"**（`permitivity` 的描述称默认值
+8.854e-12，该值却挂在 int 型的 `charge`/`distance` 上——真空介电常数不可能
+是电荷量的默认值；动作是**移动**，不是两边都补）。聚合产物
+`data/filtered/tool_schema_defects.json` 里两类分开列。
+
+归档见 `examples/trust-filter-report.txt`（含「诚实说明」一节，含一个主动
+删除的探针的自我否定记录），逐条拷问作答见 `docs/interview-qa.md` 与
+`docs/interview-qa-round2.md`。
 
 ## 这个项目是什么（三句话，v2.2 定位，仍成立）
 
@@ -115,7 +124,7 @@ uv run pytest                                  # 全量测试（CI 同款）
 uv run ruff check .                            # lint
 
 # ── 主赛道（Agent 轨迹质检）──
-uv run python scripts/run_trust_filter.py --limit 20000  # **主闭环**：真实语料→质检→过滤
+uv run python scripts/run_trust_filter.py --limit 0   # **主闭环**：真实语料→质检→过滤（0=全量）
 uv run python scripts/run_agent_trace.py       # 本机 Ollama 真实轨迹采集（48 条）
 uv run python scripts/run_sandbox_probe.py      # 沙箱信号 → 归因验证（真起子进程）
 uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
