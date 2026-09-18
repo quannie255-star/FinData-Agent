@@ -12,7 +12,18 @@
 | `eval-llm-triage-real.txt` | `run_eval.py --triage both`（配真实 key） | 规则 vs LLM 归因对比：κ=0.74/0.65，LLM 在该语料上低于规则 |
 | `eval-agent-single-vs-multi.txt` | `scripts/eval_agent.py --arch both`（配真实 key） | **单 vs 多智能体**同题同库对比：正确率持平 100%，token +21% 如实入账（v0.8.0） |
 | `eval-prompt-evolution.txt` | `scripts/evolve_prompt.py`（配真实 key） | **prompt 进化三代对比（v0.9.0）**：进化产物在扩充语料（合法放量 vs 单位变更混淆对）上根因/抑制/精确全 100%，规则抑制率 62.5%；prompt 版本档案 `eval/prompts/` 可回滚 |
-| `rl-baseline.txt` | `scripts/rl_pipeline.py --seeds 3 --extended --archive examples/rl-baseline.txt`（配真实 key） | **RL 管线训练前基线（v0.10.0）**：归因多轮窄 agent + golden 问数在确定性环境里的 reward 分布，与规则基线（同一把奖励尺子）对照；含 eval-gate 回归结果。权重训练待 GPU，步骤见 `docs/rl-experiment.md` |
+| ~~`rl-baseline.txt`~~ | 🗑 v3.0 已删 | RL 管线不服务任何目标 JD，模块与归档一并移除（代码仍可在 git 历史找回） |
+
+### v3.0（Agent 轨迹质检 —— 当前主线）
+
+| 文件 | 怎么来的 | 看什么 |
+| --- | --- | --- |
+| `trust-filter-report.txt` | `scripts/run_trust_filter.py --limit 20000` | **真实数据闭环（主证据）**：Salesforce xlam-60k 真实 tool-calling 语料 20000 条 / 31691 次调用，检出 354 条（1.77%），根因 `schema_contradiction` 349 + `step_error` 5 |
+| `agent-trace-report.txt` | `scripts/run_agent_trace.py` | 本机 Ollama 真实轨迹 48 条的探针+归因报告 |
+| `agent-traces.jsonl` | 同上（落盘产物） | 轨迹 JSONL 格式样例（形状对齐 OpenAI `tool_calls`） |
+| `parser-eval-report.txt` | `scripts/run_parser_eval.py` | 问句解析层评测：主集 + 长尾变体集（含应拒绝题） |
+| `parser-eval-qwen3b.txt` | 同上（换 qwen2.5:3b） | 换模型后同一套评测的对照 |
+| `trustbench-report.txt` | `scripts/run_trustbench.py` | 可信层基准对照 |
 
 ### v2.0 – v2.2（可信日报 / 增强模块 / 通用包）
 

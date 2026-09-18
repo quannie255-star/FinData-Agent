@@ -28,16 +28,9 @@ reports/
 .DS_Store
 Thumbs.db
 
-# 旧版归档与本地笔记不入库
-legacy/
-findata-agent/
-
 # 会话/工具本地状态（AI 助手会话记忆与计划草稿，非项目产物）
 .workbuddy/
 .zcode/
-
-# M14 RL 管线运行产物（report/轨迹/临时 fixture，重新生成即可）
-eval/rl_runs/
 # 每日管线运行产物（调度器写入）
 logs/
 reports/daily/

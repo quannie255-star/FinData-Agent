@@ -8,9 +8,15 @@ from __future__ import annotations
 
 import json
 
-from findata.agentops import synth
 from findata.agentops.probes import probe_retry_storm, probe_ungrounded_slot
-from findata.agentops.schema import STATUS_DEGRADED, Step, Trace, iter_traces, write_traces
+from findata.agentops.schema import (
+    STATUS_DEGRADED,
+    STATUS_ERROR,
+    Step,
+    Trace,
+    iter_traces,
+    write_traces,
+)
 from findata.agentops.triage import (
     CAT_ABORT_AS_OF,
     CAT_DEGRADE_MISSING,
@@ -20,6 +26,7 @@ from findata.agentops.triage import (
     CAT_LUCKY_GUESS,
     CAT_OK,
     CAT_PARAM_ERROR,
+    CAT_SCHEMA_CONTRADICTION,
     CAT_TOOL_MISSING,
     SEV_LOUD,
     SEV_OK,
@@ -181,6 +188,43 @@ def test_hallucinated_date_is_caught_without_golden():
     assert p["suspicious"][0]["slot"] == "as_of"
 
 
+def test_same_tool_different_args_is_not_a_retry_loop():
+    """同一个工具带不同参数并行调用是常态，按名字计数会误判成死循环。
+
+    xlam 上第一版就误报了 53 条（查 beta / 查 loot / 查 game 各一次被当成
+    "绕了三圈"）。判据必须是"同名**且同参数**"。
+    """
+    t = Trace(task="x")
+    t.step("live_giveaways_by_type", arguments={"type": "beta"})
+    t.step("live_giveaways_by_type", arguments={"type": "loot"})
+    t.step("live_giveaways_by_type", arguments={"type": "game"})
+    assert probe_retry_storm(t)["storm"] == {}
+    # 参数完全一样的原样重试才算——它没从上次结果里学到任何东西
+    t.step("live_giveaways_by_type", arguments={"type": "game"})
+    assert probe_retry_storm(t)["storm"] == {"live_giveaways_by_type": 2}
+
+
+def test_schema_contradiction_is_not_blamed_on_the_agent():
+    """同样是"必填参数没传"：description 承诺过默认值时，错的是数据源。
+
+    这一条必须排在硬错误分类之前，否则会被笼统归成"参数写错"，
+    给出的改进建议（换模型/收紧输出格式）就是朝反方向使劲。
+    """
+    t = Trace(task="electric field of 2C at 3m")
+    t.step(
+        "calculate_electric_field",
+        arguments={"charge": 2, "distance": 3},
+        status=STATUS_ERROR,
+        error="schema contradiction: permitivity 的 description 称有默认值，schema 未标 default",
+    )
+    t.finish()
+    d = diagnose(t)
+    assert d.category == CAT_SCHEMA_CONTRADICTION
+    assert "数据源" in d.suggestion
+    # 丢弃是处置（样本不能喂），不等于归责 agent
+    assert verdict(d) == V_DISCARD
+
+
 def test_retry_storm_threshold():
     t = Trace(task="x")
     for _ in range(3):
@@ -189,28 +233,6 @@ def test_retry_storm_threshold():
     assert probe_retry_storm(Trace(task="y"))["max_repeats"] == 0
 
 
-
-
-# ── 合成集与处置 ──
-
-
-def test_generate_is_deterministic():
-    """同 seed 必须同结果，否则评测不可复现。"""
-    a = [t.task for t in synth.generate(3, seed=1)]
-    b = [t.task for t in synth.generate(3, seed=1)]
-    assert a == b
-
-
-def test_root_cause_is_written_into_golden():
-    """根因必须写进 golden——没 ground truth 就谈不上准确率。"""
-    for t in synth.generate(2, seed=7):
-        assert t.golden["root_cause"] in synth.CLASSES
-
-
-def test_heldout_pool_is_disjoint_from_dev_pool():
-    """held-out 一旦被调参污染，那个数字就也是假的。"""
-    for cls in synth._HELD_OUT:
-        assert not set(synth._HELD_OUT[cls]) & set(synth._PARAPHRASE[cls])
 
 
 def test_verdict_separates_env_failure_from_ability_failure():

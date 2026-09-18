@@ -4,6 +4,42 @@
 
 ## [Unreleased]
 
+### v3.0 · 主线切到「Agent 训练数据质检」+ 真实数据闭环 + 清理（2026-09-18）
+
+主赛道由「可信数据增强模块」切到 **Agent 训练数据的质检与过滤**（依据
+`docs/jd-coverage.md`：10 份目标 JD 里 C 类 Agent/LLM 岗占 5 席，而
+「Agent 轨迹 / Tool Calling 失败归因」此前是零）。核心命题不变，仍是
+「形态相同、结论相反」，只是从数据域换到轨迹域。
+
+- **真实数据闭环（主证据）** `scripts/run_trust_filter.py` +
+  `src/findata/agentops/adapters/xlam.py`
+  - 语料 `Salesforce/xlam-function-calling-60k`（ModelScope，96MB），
+    **零自造样本**；`ijson` 流式读取（整份 `json.load` 会撑爆开发环境）
+  - 20000 条 / 31691 次调用 → 检出 354 条（1.77%）；根因
+    `schema_contradiction` 349 + `step_error` 5
+  - **349 条「必填参数没传」经核查全不是 agent 漏填**，而是工具 description
+    写着「default is 8.854e-12」、schema 却没标 default。第一版全判成
+    `param_error`（建议"换更大的模型"）——方向完全反
+  - 新增根因 `CAT_SCHEMA_CONTRADICTION`，**排在硬错误分类之前**
+- **误报防线**（两处，都是真实数据打脸后修的）
+  - `probe_retry_storm`：判据由「同名」改为「同名**且同参数**」，阈值 3→2。
+    同一工具带不同参数并行调用是常态，按名字计数在 xlam 上误报 53 条
+  - `inspect_call`：同名工具在注册表里重复注册且 schema 不同（该数据集
+    确实有 `time_series` / `web_search` 各两份），改为「任一份 schema 能
+    解释这次调用就放行」，否则误报 45 条 `unknown argument`
+- **合成管线作废**：`agentops/synth.py` 与 `scripts/run_synth_eval.py` 删除。
+  合成集 100% → 从未参与调参的 held-out 集 63.6%，证明自造样本测不出
+  泛化；且真实数据无根因标签，准确率无从计算——**R4.1 的「归因准确率 ≥90%」
+  门禁刻意保留红灯**，不偷偷划掉
+- **清理**（依据：不服务主赛道就删；代码全在 git 历史，可 `git show` 找回）
+  - `legacy/`、`findata-agent/`：早期原型与本地笔记
+  - `src/findata/rl/` + `scripts/rl_pipeline.py` + `docs/rl-experiment.md`
+    + `tests/test_rl_*.py`：无 GPU 训练，且 10 份 JD 无一条要 RL
+  - `eval/rl_runs/`、`examples/rl-baseline.txt`、`examples/synth-*`：上述产物
+- **测试 389 → 341**（删掉的是 RL 与合成相关），新增
+  `tests/test_xlam_adapter.py`（11 例，钉住两条误报防线与
+  「schema contradiction 不归责 agent」）；全量 + ruff 全绿
+
 ### ChatBI 增强 · 解析层评测与护栏加固（2026-09-17）
 
 接 Ollama 实跑后新增解析层评测，并加固了两条路径共有的槽位护栏。

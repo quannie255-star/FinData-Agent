@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 
@@ -47,17 +48,27 @@ def probe_abort(t: Trace) -> dict:
     }
 
 
-def probe_retry_storm(t: Trace, threshold: int = 3) -> dict:
-    """同一个工具被调用几次。>= threshold 视为死循环嫌疑。
+def probe_retry_storm(t: Trace, threshold: int = 2) -> dict:
+    """同一个工具**带着同样的参数**被调用几次。>= threshold 视为在原地打转。
 
-    阈值先定 3：正常链路里同一个工具调两次已经少见（重试一次），
-    三次以上基本是在兜圈子。这是个可调参数，不是真理。
+    判据必须是"同名**且同参数**"，不能只看工具名：真实轨迹里同一个工具带
+    不同参数并行调用是常态（查 beta / 查 loot / 查 game 各一次），按名字
+    计数会把正常的并行调用全判成死循环——xlam 上第一版就这么误报了 53 条。
+
+    阈值从 3 降到 2：既然已经要求参数完全一致，一次重复调用就已经是"原样
+    重试"，而原样重试说明它没从上次结果里学到任何东西。
     """
     counts: dict[str, int] = {}
+    identical: dict[str, int] = {}
+    seen: dict[tuple[str, str], int] = {}
     for s in t.steps:
         counts[s.name] = counts.get(s.name, 0) + 1
-    storm = {k: v for k, v in counts.items() if v >= threshold}
-    return {"max_repeats": max(counts.values()) if counts else 0, "storm": storm}
+        key = (s.name, json.dumps(s.arguments, sort_keys=True, ensure_ascii=False, default=str))
+        seen[key] = seen.get(key, 0) + 1
+    for (name, _), n in seen.items():
+        if n >= threshold:
+            identical[name] = max(identical.get(name, 0), n)
+    return {"max_repeats": max(counts.values()) if counts else 0, "storm": identical}
 
 
 def _mentioned(task: str, value: str) -> bool:

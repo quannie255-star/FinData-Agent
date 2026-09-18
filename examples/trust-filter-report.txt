@@ -1,0 +1,48 @@
+可信过滤闭环 · 真实数据（Salesforce/xlam-function-calling-60k）
+样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
+
+一、发现率（不需要 ground truth：判定全是确定性查表）
+  有问题 354 / 20000   1.77%
+  干净   19646 / 20000  98.23%
+
+二、根因分布
+  ok                       19646   98.23%
+  schema_contradiction       349    1.75%
+  step_error                   5    0.03%
+
+三、处置分布（能不能喂训练）
+  ✓ 正样本            19646   98.23%
+  ✗ 丢弃               354    1.77%
+
+四、问题类型（确定性事实，逐条可复核）
+  schema contradiction           380
+  duplicate call                   8
+
+五、样例（前 8 条，可人工复核）
+  问：What is the electric field intensity at 3 meters from a 2 Coulomb charge, and 
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default；步骤 2 calculate_
+  问：Calculate the cell density of a sample with an OD of 0.6 and a dilution of 500
+     └ 步骤 1 cell_density 报错：schema contradiction: factor 的 description 称有默认值，schema 未标 default
+  问：Find pairs in the list [2, 4, 6, 8, 10] that sum to 12, and estimate the bacte
+     └ 步骤 2 bacterial_growth 报错：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
+  问：What is the probability of rolling a sum of 10 with 3 dice?
+     └ 步骤 1 dice_roll_probability 报错：schema contradiction: num_faces 的 description 称有默认值，schema 未标 default
+  问：Calculate the electric field produced by a charge of 1 Coulomb at a distance o
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+  问：Calculate the electric field at 10 meters from a charge of 2 Coulombs.
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+  问：What is the electric field at a distance of 1 meter from a charge of 10 coulom
+     └ 步骤 1 calculate_electric_field 报错：schema contradiction: permitivity 的 description 称有默认值，schema 未标 default
+  问：Can you find all pairs of numbers in the list [3, 4, 6, 1, 2] that sum up to 7
+     └ 步骤 2 bacterial_growth 报错：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
+
+六、诚实说明
+  · 这批是**已清洗过的公开数据集**，脏率只有 1.77%，
+    并不代表生产环境的比例——真实 Agent 轨迹会更脏。
+  · 本数据集在「工具不存在」这一项上 0 命中：样本里的调用都落在
+    给定工具列表内，因此**这一项没被验证到**，不能说它能查幻觉工具名。
+  · 判定全是查表（工具名 ∈ 列表？必填参数有没有？），不依赖模型，
+    所以没有准确率问题；但**查不到的脏**（如参数值语义错误）也照查不出。
+  · 「丢弃」不等于归责 agent：`schema contradiction` 是数据源标注
+    自相矛盾，但要剔除是因为它会教模型省略必填参数——根因与处置
+    是两件事，混成一维就没法分别调。

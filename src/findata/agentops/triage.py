@@ -37,6 +37,7 @@ CAT_ENV_TIMEOUT = "env_timeout"  # 沙箱超时——环境的问题，不是 ag
 CAT_PARAM_ERROR = "param_error"  # 工具参数写错
 CAT_RETRY_LOOP = "retry_loop"  # 同一个工具反复调用（死循环）
 CAT_STEP_ERROR = "step_error"  # 有硬错误但归不到上面几类
+CAT_SCHEMA_CONTRADICTION = "schema_contradiction"  # 数据源自相矛盾，不是 agent 的错
 CAT_LUCKY_GUESS = "lucky_guess"  # 结果对了，但路径是脏的（蒙对）
 
 # ── 严重度 ──
@@ -59,6 +60,7 @@ _CAT_LABEL = {
     CAT_PARAM_ERROR: "工具参数写错",
     CAT_RETRY_LOOP: "重试死循环",
     CAT_STEP_ERROR: "步骤硬错误",
+    CAT_SCHEMA_CONTRADICTION: "数据源自相矛盾（description 称有默认值，schema 未标）",
     CAT_LUCKY_GUESS: "蒙对·结果对但路径脏",
 }
 
@@ -102,6 +104,26 @@ def diagnose(t: Trace) -> Diagnosis:
         else:
             cat, sug = CAT_ABORT_SYMBOL, "股票池里没有这个名字；补别名表或让用户给代码。"
         return Diagnosis(t.run_id, cat, SEV_LOUD, ev, sug)
+
+    # 1.5) 数据源自相矛盾：参数没传，但工具 schema 的 description 明明说
+    #     "default is 8.854e-12"——schema 里却没标 default。
+    #     形态上和"agent 漏填必填参数"一模一样，结论完全相反：这次错的
+    #     是数据源，agent 照着 description 做反而是对的。**这一条必须排在
+    #     硬错误分类之前**，否则会被笼统归成"参数写错"，给出的改进建议
+    #     （换模型/收紧格式）就是朝反方向使劲。
+    #     真实数据上这一类是压倒性多数（xlam-60k 2 万条里 349/354）。
+    contra = [s for s in t.steps if "schema contradiction" in str(s.error)]
+    if contra:
+        ev += [f"步骤 {s.seq} {s.name} 报错：{s.error}" for s in contra]
+        return Diagnosis(
+            t.run_id,
+            CAT_SCHEMA_CONTRADICTION,
+            SEV_LOUD,
+            ev,
+            "是数据源标注的问题，不是 agent 的：description 承诺了默认值却没"
+            "标 default。作为训练样本仍要剔除（会教会模型省略必填参数），"
+            "但改进方向是修工具 schema，不是换模型。",
+        )
 
     # 2) 硬错误步骤：工具不存在 / 沙箱超时 / 参数写错。看报错原文分类，
     #    不看猜测——报错原文就是证据。
@@ -341,6 +363,9 @@ _VERDICT = {
     CAT_PARAM_ERROR: V_DISCARD,
     CAT_RETRY_LOOP: V_DISCARD,
     CAT_STEP_ERROR: V_DISCARD,
+    # 数据源的错，但样本照样不能喂：它会教模型省略必填参数。
+    # 丢弃 ≠ 归责 agent——根因与处置本来就是两件事。
+    CAT_SCHEMA_CONTRADICTION: V_DISCARD,
     CAT_HALLUCINATED: V_DISCARD,
     CAT_MISMATCH: V_DISCARD,
 }

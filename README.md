@@ -1,53 +1,97 @@
-# Findata — 可信数据增强模块
+# Findata — Agent 训练数据的质检与过滤
 
 [![test](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)
 [![release](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-![镜像](https://img.shields.io/badge/ghcr.io-v2.2.0-green)
 
-**一句话**：findata 不做 Agent 基座——它是挂到成熟 Agent 项目上的
-**「可信增强模块」**：宿主负责对话与编排，findata 负责回答
-**「这个数字能不能引用、凭什么」**。每个数字带四档徽章
-（✓ 已核验 / ✓ 基线通过 / ⚠️ 仅借鉴 / ✗ 不可用），徽章可点开看归因证据链。
+**一句话**：丢进去一批 Agent 轨迹，吐出「哪些能喂训练、哪些不能、为什么」，
+每条判定带证据链。
 
-它由三部分组成：
+```bash
+uv run python scripts/run_trust_filter.py --limit 20000
+```
 
-| 组成 | 给谁用 | 一句话 |
-| --- | --- | --- |
-| **可信增强模块**（v2.1） | 任何 Agent 宿主 | MCP / HTTP / Python / 可嵌入徽章芯片四个接入面，引用数字前查一次 `trust_check` |
-| **通用数据可信包**（v2.2） | 任何有数据的人 | `findata-trust-report <csv|xlsx|duckdb|sqlite>`——任意表出带徽章报告 |
-| **A 股领域包**（v0.x–v2.0） | 金融数据团队 | 探针→归因→抑制→徽章日报全链路 + 可信问数多智能体，是"领域包"的参考实现 |
+```
+样本 20000 条，工具调用 31691 次；数据源 ModelScope 公开数据集，**无标签**
+有问题 354 / 20000   1.77%
+  schema_contradiction  349   ← 参数没传，但工具 description 说它有默认值
+  step_error              5
+```
 
-差异化不在检测（那是 Great Expectations / dbt tests 的主场），在**归因证据链**：
-缺 6 行数据是漏采还是停牌、量能 5 倍是故障还是行情——需要交易日历、公司事件、
-截面共动性这些领域知识才能判定。徽章的「✓ 已核验」只能由领域包给出；
-通用包最高「✓ 基线通过」，两者在 `examples/domain-vs-generic-comparison.md`
-的同数据集对比里差出 40 分（60 vs 100）。
+**语料全部来自网上真实公开数据集（`Salesforce/xlam-function-calling-60k`），
+没有一条是我们自己编的。** 这不是洁癖：自己造的失败样本形状必然贴合自己
+写的规则，评测出来的准确率是循环论证（合成集 100% → 从未参与调参的
+held-out 集 63.6%）。要证明规则有用，只能拿别人做的数据来考。
 
 ---
+
+## 为什么这件事值得做
+
+Agent 岗的 JD 几乎都会写「Tool Calling / 轨迹数据 / 自动化评测」，但
+**轨迹脏不脏、脏在哪、这条能不能喂训练**没人管——Langfuse / LangSmith 做的
+是 tracing + 打分 + 改进 agent，不是从海量轨迹里筛训练数据。
+
+难点不在"查出来有问题"，在**归因**：
+
+| 形态 | 结论 A | 结论 B |
+| --- | --- | --- |
+| 必填参数没传 | agent 漏填（能力问题，改进模型） | **工具 schema 自相矛盾**（数据源的错，改 schema） |
+| 轨迹跑挂了 | agent 能力不足 | **沙箱超时**（环境问题，重跑就好，别当负样本） |
+| 结果是对的 | 成功的示范 | **蒙对的**（路径走了兜底，教会模型"猜也能过"） |
+
+**形态一模一样，结论完全相反。** 归错了，改进方向就是反的——上面那 349 条
+第一版全被判成了"agent 漏填"，建议是"换更大的模型"，而正确答案是去修
+工具 schema。这是本项目唯一真正的门槛：检测不难，难的是判断该怪谁。
+
+## 三件事，一条命令
+
+```
+真实语料 → 归一化（adapters/xlam.py）→ 探针（probes.py，只观测）
+        → 归因（triage.py，两维：根因 + 处置）→ 报告 + 过滤后的样本集
+```
+
+- **根因**回答「为什么会这样」：15 类，从 `tool_missing` 到 `schema_contradiction`
+- **处置**回答「能不能喂训练」：✓ 正样本 / ⚠️ 需人工 / ✗ 丢弃 / ⊘ 不算失败
+
+两维必须分开：沙箱超时的轨迹**不算是失败**（环境问题，重跑可能就成），
+当负样本丢掉是浪费数据；而参数写错的才该丢。混成一维，两边都没法单独调。
 
 ## 快速开始
 
 ```bash
 uv sync
-uv run pytest                              # 351 例测试
-uv run python scripts/eval_golden.py --strict   # 评测门禁（语义 golden + 真实回放 9 case）
+uv run pytest                                        # 341 例测试
+uv run ruff check .
 
-# 通用包：任意表出可信报告（无需任何领域配置）
-uv run findata-trust-report your.csv --strict
-
-# A 股领域包：采集 → 带徽章日报一条命令
-uv run python scripts/ingest_finance.py --full --events
-uv run python scripts/daily_pipeline.py --skip-ingest   # 巡检+报告 Agent，出 md+html
-
-# 增强模块：MCP server（挂给 Claude Desktop / Cursor / 任意 MCP host）
-uv run findata-mcp
+uv run python scripts/run_trust_filter.py --limit 20000   # 主闭环（真实语料）
+uv run python scripts/run_agent_trace.py                  # 本机 Ollama 真实轨迹 48 条
 ```
 
-不想装环境：[`examples/`](examples/) 里有全部可复现归档（带徽章日报、对比页、
-外部宿主集成 transcript），任何人 clone 后重跑结果一致。
+不想装环境：[`examples/trust-filter-report.txt`](examples/trust-filter-report.txt)
+是完整输出归档，含「诚实说明」一节（哪些类别 0 命中 = 没被验证到）。
 
-## 一、把 findata 挂到你的 Agent 上（增强模块）
+## 它原本是什么（v0.x–v2.2，已验收，保留）
+
+findata 最早是**可信数据增强模块**：挂到成熟 Agent 项目上，回答「这个数字
+能不能引用」，每个数字带四档徽章（✓ 已核验 / ✓ 基线通过 / ⚠️ 仅借鉴 /
+✗ 不可用）。A 股是第一个领域包——缺 6 行数据是停牌还是漏采，需要交易日历、
+公司事件、截面共动性才能判定。
+
+那套**归因引擎原封不动地用在了轨迹域上**，只是换了个域。A 股降级为领域包 1，
+它是「这套归因不是只会一件事」的证据。
+
+**原本的三个接入面仍然可用**（MCP / HTTP / Python），只是不再是主线：
+
+| 组成 | 给谁用 | 一句话 |
+| --- | --- | --- |
+| **Agent 轨迹质检**（v3.0，主线） | 做 Agent 训练的人 | 丢轨迹进去，吐出能喂训练的样本 + 归因证据链 |
+| **可信增强模块**（v2.1） | 任何 Agent 宿主 | MCP / HTTP / Python 三个接入面，引用数字前查一次 `trust_check` |
+| **通用数据可信包**（v2.2） | 任何有数据的人 | `findata-trust-report <csv|xlsx|duckdb|sqlite>`——任意表出带徽章报告 |
+| **A 股领域包**（v0.x–v2.0） | 金融数据团队 | 探针→归因→抑制→徽章日报全链路，是"领域包"的参考实现 |
+
+---
+
+## 附一、把 findata 挂到你的 Agent 上（v2.1 增强模块，仍可用）
 
 宿主只讲标准协议，零 findata 内部依赖。四个接入面共用同一份 `service` 实现：
 
@@ -82,7 +126,7 @@ curl 'http://localhost:8000/v1/trust?table=stock_daily&metric=close'
 [`examples/mcp-host-integration.txt`](examples/mcp-host-integration.txt)，
 线级协议测试进 CI）。
 
-## 二、通用数据可信包
+## 附二、通用数据可信包（v2.2，仍可用）
 
 ```bash
 uv run findata-trust-report data.csv --schema schema.yaml -o report.md --html report.html
@@ -109,7 +153,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 领域包 100 分 / 8 列 ✓ 已核验 / 2 段停牌缺口归因+公告证据。
 「没查出毛病」和「证明可靠」的差值，就是领域包架构的存在理由。
 
-## 三、A 股领域包：从检测到可信日报
+## 附三、A 股领域包：从检测到可信日报（v0.x–v2.0，已验收）
 
 核心命题：**停牌导致的缺行和采集失败导致的缺行，在数据形态上完全一样**。
 只会检测的工具必然淹没人。链路：7 类探针 → 归因（规则引擎 + 知识层 +

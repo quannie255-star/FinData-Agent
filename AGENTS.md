@@ -21,6 +21,16 @@ Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要
 新代码一律进 `src/findata/agentops/`；A 股降为**领域包 1**（保留，作为
 「这套归因不是只会一件事」的证据），金融侧封存模块继续不动。
 
+**已达成闭环（真实数据，2026-09-18）**：`scripts/run_trust_filter.py` 一条
+命令跑完「拉公开 tool-calling 语料 → 归一化 → 探针 + 归因 → 过滤出可训练
+样本」。语料是 `Salesforce/xlam-function-calling-60k`（ModelScope，96MB，
+ijson 流式），**没有一条是我们自己编的**——自造样本证明不了自己的规则。
+20000 条样本 / 31691 次调用，检出 354 条（1.77%），其中 349 条根因是
+`schema_contradiction`：参数没传，但工具 description 写着"default is
+8.854e-12"而 schema 没标 default——**形态上和"agent 漏填必填参数"一样，
+结论完全相反，错的是数据源**。第一版就是把它全判成了 agent 的能力问题。
+归档见 `examples/trust-filter-report.txt`（含「诚实说明」一节）。
+
 ## 这个项目是什么（三句话，v2.2 定位，仍成立）
 
 1. **Findata 是可信数据基础设施**：接入数据源，产出数据分析报告，
@@ -87,7 +97,6 @@ Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要
 
 | 模块 | 状态 |
 | --- | --- |
-| `src/findata/rl/` · `scripts/rl_pipeline.py` · `docs/rl-experiment.md` | M14 环境封装完成，训练待 GPU |
 | `eval/evolution.py` · `scripts/evolve_prompt.py` · `eval/prompts/` | v0.9 GEPA 进化（已验收） |
 | `dq/memory.py` · `agent/llm_triage.py` · `eval/extended.py` | v0.9 记忆/LLM归因/扩充语料（已验收） |
 
@@ -97,9 +106,13 @@ Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要
 ## 常用命令
 
 ```bash
-uv run pytest                                  # 全量测试（368 例，CI 同款）
+uv run pytest                                  # 全量测试（CI 同款）
 uv run ruff check .                            # lint
-uv run python scripts/run_eval.py              # 合成语料评测（门禁指标）
+
+# ── 主赛道（Agent 轨迹质检）──
+uv run python scripts/run_trust_filter.py --limit 20000  # **主闭环**：真实语料→质检→过滤
+uv run python scripts/run_agent_trace.py       # 本机 Ollama 真实轨迹采集（48 条）
+uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
 uv run python scripts/eval_golden.py --strict  # golden 集严格门禁（含真实回放 9 case）
 uv run python scripts/daily_pipeline.py --skip-ingest  # 只巡检出带徽章日报（调试）
 uv run python scripts/daily_pipeline.py        # 采集→事件→巡检→推送→归档（生产）

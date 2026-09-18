@@ -66,8 +66,6 @@ select = ["E", "F", "I", "UP", "B"]
 # llm_triage 的 prompt 模板须与 eval/prompts/ 版本档案逐字节一致（可回滚可
 # 对比），折行会破坏一致性，因此豁免行宽。
 "src/findata/agent/llm_triage.py" = ["E501"]
-# rl/policy 的窄 agent prompt 模板同理：折行会改变 prompt 本身，豁免行宽。
-"src/findata/rl/policy.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
