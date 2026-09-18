@@ -298,8 +298,8 @@ JD9 第 3 条原话：「将『数据合成 → 沙箱运行 → 自动评测 �
 - [x] 一条命令跑完：`scripts/run_trust_filter.py --limit 20000`
 - [x] 语料来自网上真实公开数据集（`adapters/xlam.py`，ModelScope +
       ijson 流式读 96MB），**零自造样本**
-- [x] 结果：20000 条 / 31691 次调用，检出 354 条（1.77%），
-      根因 `schema_contradiction` 349 + `step_error` 5
+- [x] 结果：20000 条 / 31691 次调用，**命中** 354 条（1.77%，命中≠错误），
+      其中 **A 样本侧 5 条 / B 工具 schema 侧 349 条**（陷阱是混成一类）
 - [x] 过滤前后样本量如实入账，归档 `examples/trust-filter-report.txt`
       （含「诚实说明」：脏率不代表生产、0 命中的类别不算已验证）
 - [x] **产物落盘**：`agentops/export.py` 按五档处置分文件流式写 JSONL

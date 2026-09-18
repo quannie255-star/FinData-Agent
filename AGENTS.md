@@ -25,11 +25,14 @@ Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要
 命令跑完「拉公开 tool-calling 语料 → 归一化 → 探针 + 归因 → 过滤出可训练
 样本」。语料是 `Salesforce/xlam-function-calling-60k`（ModelScope，96MB，
 ijson 流式），**没有一条是我们自己编的**——自造样本证明不了自己的规则。
-20000 条样本 / 31691 次调用，检出 354 条（1.77%），其中 349 条根因是
-`schema_contradiction`：参数没传，但工具 description 写着"default is
-8.854e-12"而 schema 没标 default——**形态上和"agent 漏填必填参数"一样，
-结论完全相反，错的是数据源**。第一版就是把它全判成了 agent 的能力问题。
-归档见 `examples/trust-filter-report.txt`（含「诚实说明」一节）。
+20000 条样本 / 31691 次调用，**命中** 354 条（1.77%；说命中不说错误——
+无标签数据上"错误率"测不出来），其中 349 条根因是 `schema_contradiction`：
+参数没传，但工具 description 写着"default is 8.854e-12"而 schema 没标
+default——**形态上和"agent 漏填必填参数"一样，结论完全相反，错的是数据源**。
+第一版就是把它全判成了 agent 的能力问题，**误杀 349 条**；现已新增第五档
+处置 `🔧 待修 schema`（样本留着，去改数据源），**丢弃归零**。
+归档见 `examples/trust-filter-report.txt`（含「诚实说明」一节），
+逐条拷问作答见 `docs/interview-qa.md`。
 
 ## 这个项目是什么（三句话，v2.2 定位，仍成立）
 
@@ -80,8 +83,10 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 
 1. `docs/ROADMAP.md` —— 主线计划、验收门禁、不做清单
 2. `docs/reviews/2026-09-15-attribution.md` —— 真实告警归因复盘（v2.0 的起点）
-3. `PITCH.md` —— 项目叙事与"能撑住追问的数字"（改数字必须对应 examples/ 归档）
-4. `README.md` —— 架构与已完成里程碑（v2.0 定位重写在 R3，读时注意其口径是 v0.9 时代的）
+3. `docs/interview-qa.md` —— **拷问逐条作答**（五个红旗的正面回应 + 不自证清单）；
+   动主线逻辑前先看它，里面记着「凭想象设口径」是怎么造成误杀的
+4. `PITCH.md` —— 项目叙事与"能撑住追问的数字"（改数字必须对应 examples/ 归档）
+5. `README.md` —— 架构与已完成里程碑（v2.0 定位重写在 R3，读时注意其口径是 v0.9 时代的）
 
 ## 开发铁律（违反任何一条的 PR 不许合入）
 
