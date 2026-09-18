@@ -317,6 +317,7 @@ eval-gate = 语义 golden（5 case 数值钉死）
 | [`docs/badge.md`](docs/badge.md) | 徽章四档与健康分口径 |
 | [`docs/reviews/2026-09-15-attribution.md`](docs/reviews/2026-09-15-attribution.md) | 真实告警归因复盘（v2.0 的起点） |
 | [`PITCH.md`](PITCH.md) | 简历描述 / 电梯演讲 / 高频追问（自用） |
+| [`docs/interview-qa.md`](docs/interview-qa.md) | **拷问逐条作答**：五个红旗的正面回应 + 不自证清单（自用） |
 | [`examples/`](examples/) | 全部可复现归档：日报、对比页、集成 transcript、评测输出 |
 
 ## 许可

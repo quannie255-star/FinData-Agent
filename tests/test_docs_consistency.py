@@ -30,6 +30,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # 只扫"描述当前状态"的文档；历史记录类（CHANGELOG / archive / reviews）
 # 里的数字天然不同，扫它们只会得到假警报。
+#
+# `docs/interview-qa.md` 也**刻意不在**名单里：它为了讲清"口径漂移是怎么被
+# 抓出来的"，必须引用 353 / 351 这些**历史错数字**。扫它等于要求不问历史。
+# 代价是它自己写的当前值不受本门禁保护，只能靠人（改测试数时记得一起改）。
 CURRENT_DOCS = ["README.md", "PITCH.md", "AGENTS.md", "docs/handoff.md", "docs/ROADMAP.md"]
 
 PATTERNS = [
