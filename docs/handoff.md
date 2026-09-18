@@ -13,12 +13,13 @@
 
 ## 我做（不需要你的账号，做完直接归档）
 
-| # | 事项 | 验收标准 |
+| # | 事项 | 状态 |
 | --- | --- | --- |
-| 1 | 长尾问法题集 6 → 24 题 | `run_parser_eval.py` 两组都能跑；24 题的 slot / badge 数字进归档 |
-| 2 | 除权除息事实源接入（第二个"形态相同、结论相反"的场景） | 至少 3 道除权除息题进题集，门禁能区分"价格跌了"与"除权了" |
-| 3 | 收到 JD 后出**关键词覆盖矩阵** | 每个 JD 关键词标：已覆盖 / 有但没写进材料 / 缺 |
-| 4 | 归档你给的集成证据，回填 `docs/distribution.md` 计时起点 | 30 天窗口有明确的 T0 日期 |
+| 1 | 长尾问法题集 | ✅ `eval/golden/parser_variants.yaml`（7 题含 1 道应拒绝题） |
+| 2 | 除权除息事实源接入 | ⏸ **随 A 股降级为领域包 1 而降级**，不再进主线 |
+| 3 | JD 关键词覆盖矩阵 | ✅ `docs/jd-coverage.md`（已按 v3.0 重构后状态刷新） |
+| 4 | 真实语料闭环 + 产物落盘 + 沙箱 | ✅ R4.1–R4.4 全部落地，353 例测试全绿 |
+| 5 | 归档你给的集成证据，回填计时起点 | ⏳ **等你**（见下） |
 
 ---
 
@@ -47,10 +48,12 @@
 
 ### ② 陌生宿主集成证据 → `examples/external-integration-<代号>.md`
 
-**这条是 30 天窗口的唯一指标，我自证不算数**——"陌生"的定义就是不是我。
-你自己跑第二遍也算（换台机器 / 换个接入面），但最好找一个没看过这个项目的人。
+**这条我自证不算数**——"陌生"的定义就是不是我。你自己跑第二遍也算
+（换台机器 / 换个接入面），但最好找一个没看过这个项目的人。
 
-给他这一条命令就够了（不需要 clone 仓库、不需要 Python 环境之外的东西）：
+⚠️ **定位变了，这条的权重也变了**：主线从「可信增强模块」切到「Agent 训练
+数据质检」后，它不再是唯一指标，**降级为加分项**（对应 JD8 的 MCP）。
+真要跑的话，现在是这条命令：
 
 ```bash
 pipx run --spec git+https://github.com/quannie255-star/FinData-Agent.git findata-mcp
@@ -62,7 +65,7 @@ pipx run --spec git+https://github.com/quannie255-star/FinData-Agent.git findata
 > 仓库，会报 `ValueError: 数据仓库不存在：... 或改用 source='synthetic'`。
 > 报错信息本身是可行动的——**观察他能不能自己看懂并改过来**，那正是最值钱的证据。
 > 我刻意没把默认值改成 `synthetic`：那样陌生人会拿到合成数据还以为是真数据，
-> 比报错危险得多。要不要改，等你拿到 2–3 份记录再一起定。
+> 比报错危险得多。
 
 记录这些，越原始越好（**卡住的地方比成功更有价值**）：
 
@@ -84,13 +87,13 @@ pipx run --spec git+https://github.com/quannie255-star/FinData-Agent.git findata
 三步，做完把日期告诉我，我回填计时起点。
 
 1. 仓库 <https://github.com/quannie255-star/FinData-Agent> → ⚙ Settings
-   - **Description**：
+   - **Description**（**已按 v3.0 主线改写**，旧的别用了）：
      ```
-     可信数据增强模块：给任意 ChatBI / 数据 Agent 加一道「这个数字能不能引用」的门禁。MCP / HTTP / Python 三种接入面，输出带徽章与归因证据链。
+     Agent 训练数据的质检与过滤：丢进去一批 Agent 轨迹，吐出哪些能喂训练、哪些不能、为什么，每条判定带归因证据链。真实公开语料闭环 + 沙箱信号采集。
      ```
    - **Topics**（逗号分隔，直接贴）：
      ```
-     data-quality, data-trust, chatbi, text-to-sql, mcp, llm-agent, agent-observability, duckdb, data-observability, llm-eval
+     agent-trajectory, tool-calling, training-data, data-quality, llm-agent, mcp, llm-eval, agent-observability, duckdb, python
      ```
 2. MCP Registry 登记（<https://registry.modelcontextprotocol.io>）——需要账号，可能等审核
 3. 把完成日期发我
