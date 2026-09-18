@@ -3,7 +3,25 @@
 > 给下一个 AI 会话（或新同事）的启动文件。读完这一页 + `docs/ROADMAP.md`
 > 就应该能直接开工，不需要考古聊天记录。
 
-## 这个项目是什么（三句话）
+## 当前主赛道（2026-09-18 起，先读这段）
+
+**Agent 训练数据的质检与过滤。** 一句话：findata 原来回答「这个数字能不能
+引用」，现在也回答**「这条轨迹能不能拿去训练，以及它为什么会这样」**。
+
+为什么切过来：10 份目标 JD 里 JD9 几乎逐条对口，且缺口真实——
+Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要的是
+「从海量轨迹里筛出能喂训练的正负样本」。目标不同，不是同一件事的竞争。
+完整论证与里程碑见 `docs/ROADMAP.md` 顶部重定向节与 Phase R4。
+
+核心命题没变，还是「形态相同、结论相反」：
+- 数据域：停牌缺行 vs 上游漏采
+- **轨迹域：表面成功但路径错误（蒙对）vs 真成功；表面失败但归因于环境
+  （沙箱超时）vs 真能力不足**
+
+新代码一律进 `src/findata/agentops/`；A 股降为**领域包 1**（保留，作为
+「这套归因不是只会一件事」的证据），金融侧封存模块继续不动。
+
+## 这个项目是什么（三句话，v2.2 定位，仍成立）
 
 1. **Findata 是可信数据基础设施**：接入数据源，产出数据分析报告，
    报告上**每个数字带可信徽章**（✓ 已核验 / ✓ 基线通过 / ⚠️ 仅借鉴 /
@@ -79,7 +97,7 @@
 ## 常用命令
 
 ```bash
-uv run pytest                                  # 全量测试（351 例，CI 同款）
+uv run pytest                                  # 全量测试（368 例，CI 同款）
 uv run ruff check .                            # lint
 uv run python scripts/run_eval.py              # 合成语料评测（门禁指标）
 uv run python scripts/eval_golden.py --strict  # golden 集严格门禁（含真实回放 9 case）
@@ -91,6 +109,10 @@ uv run findata-trust-report data.csv --schema schema.yaml --strict  # 通用包�
 uv run python scripts/compare_domain_vs_generic.py  # 通用包 vs 领域包对比页（需真实仓库）
 uv run python scripts/attribute_alerts.py      # 真实告警归因复盘复现
 uv run python scripts/ingest_finance.py --full --events  # 全量+公司事件采集
+uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
+uv run python scripts/run_parser_eval.py          # 解析层评测（规则，离线）
+uv run python scripts/run_parser_eval.py --llm    # + 本机 Ollama（默认 qwen2.5:3b）
+uv run python scripts/chatbi_demo.py --llm --show-cost "..."  # ChatBI 自然语言问答
 ```
 
 ## 目录地图（只列关键路径）

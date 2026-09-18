@@ -1,0 +1,468 @@
+name: trustbench
+version: 0.1.0
+description: 「SQL 正确但答案不该引用」评测集。测的不是 SQL 能不能跑通（naive SQL 全部可执行），而是系统会不会把执行成功当成答案可信。
+source: eval\fixtures\replay_20260915
+generated_by: scripts/build_trustbench.py
+trap_types:
+  stale_price: 查询日落在停牌窗口内，SQL 顺延返回停牌前最后一个交易日的价格，却不说明它是陈旧的
+  suspended_window: 区间跨越停牌，涨跌幅被复牌跳空主导，看起来是连续走势，实际是一次性跳动
+  calendar_mismatch: 聚合/计数类指标的分母与真实交易日数不符——停牌日没有数据行，被静默排除
+  gap_span: 区间端点落在停牌缺口上，实际取到的 start/end 不是用户指定的日期
+  clean: 对照组：该标的该区间没有停牌覆盖，门禁**不该**报警（报警即误报）
+scoring:
+  execution: naive_sql 可执行且返回非空——难度不在这层，基线应接近 100%
+  detection: 是否触发可信警告（提及停牌/陈旧/口径）——裸 ChatBI 应接近 0%
+  correction: 修正答案是否含 expected.must_mention 全部关键事实
+cases:
+- id: tb-001
+  question: 中芯国际 2025 年 9 月 4 日的收盘价是多少？
+  trap: stale_price
+  symbol: '688981'
+  params:
+    as_of: '2025-09-04'
+  naive_sql: SELECT date, close FROM stock_daily WHERE symbol = '688981' AND date <= DATE '2025-09-04'
+    ORDER BY date DESC LIMIT 1
+  naive_result:
+    value: 114.76
+    as_of: '2025-08-29'
+    unit: 元
+  truth:
+    suspended_from: '2025-09-01'
+    suspended_to: '2025-09-08'
+    returned_as_of: '2025-08-29'
+    stale_trading_days: 4
+    reason: 中芯国际：筹划发行股份购买中芯北方 49% 股权，8/29 公告、9/1 起停牌。
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2025-08-29'
+    trusted_answer: 2025-09-04 处于停牌期（2025-09-01–2025-09-08），无当日行情；114.76 元是停牌前最后一个交易日 2025-08-29 的收盘价，已滞后
+      4 个交易日。
+- id: tb-002
+  question: 中芯国际从 2025 年 8 月 29 日到 9 月 12 日涨了多少？
+  trap: suspended_window
+  symbol: '688981'
+  params:
+    start: '2025-08-29'
+    end: '2025-09-12'
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='688981' AND date >= DATE '2025-08-29' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='688981' AND date <= DATE '2025-09-12' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: -5.5246
+    unit: '%'
+  truth:
+    suspended_days:
+    - '2025-09-01'
+    - '2025-09-02'
+    - '2025-09-03'
+    - '2025-09-04'
+    - '2025-09-05'
+    - '2025-09-08'
+    n_suspended: 6
+    resume_date: '2025-09-09'
+    resume_move_pct: -10.2562
+    move_concentration: 1.856
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2025-09-01'
+    trusted_answer: -5.52% 是区间首尾价直接相减，但中间有 6 个停牌日（2025-09-01–2025-09-08）；其中 2025-09-09 复牌当日就变动了 -10.26%，幅度**超过**区间总变动（-5.52%）——中间剧烈跳动后又被回补，首尾相减把这段过程整个抹平了。
+- id: tb-003
+  question: 中国神华 2025 年 8 月 10 日的收盘价是多少？
+  trap: stale_price
+  symbol: '601088'
+  params:
+    as_of: '2025-08-10'
+  naive_sql: SELECT date, close FROM stock_daily WHERE symbol = '601088' AND date <= DATE '2025-08-10'
+    ORDER BY date DESC LIMIT 1
+  naive_result:
+    value: 35.82
+    as_of: '2025-08-01'
+    unit: 元
+  truth:
+    suspended_from: '2025-08-04'
+    suspended_to: '2025-08-15'
+    returned_as_of: '2025-08-01'
+    stale_trading_days: 5
+    reason: 中国神华：1336 亿重大资产重组（收购国家能源集团旗下资产）停牌约两周，8/18 复牌涨停。
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2025-08-01'
+    trusted_answer: 2025-08-10 处于停牌期（2025-08-04–2025-08-15），无当日行情；35.82 元是停牌前最后一个交易日 2025-08-01 的收盘价，已滞后
+      5 个交易日。
+- id: tb-004
+  question: 中国神华 2025 年 8 月 1 日到 8 月 22 日的涨跌幅是多少？
+  trap: suspended_window
+  symbol: '601088'
+  params:
+    start: '2025-08-01'
+    end: '2025-08-22'
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='601088' AND date >= DATE '2025-08-01' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='601088' AND date <= DATE '2025-08-22' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: 2.5126
+    unit: '%'
+  truth:
+    suspended_days:
+    - '2025-08-04'
+    - '2025-08-05'
+    - '2025-08-06'
+    - '2025-08-07'
+    - '2025-08-08'
+    - '2025-08-11'
+    - '2025-08-12'
+    - '2025-08-13'
+    - '2025-08-14'
+    - '2025-08-15'
+    n_suspended: 10
+    resume_date: '2025-08-18'
+    resume_move_pct: 4.4389
+    move_concentration: 1.767
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2025-08-04'
+    trusted_answer: 2.51% 是区间首尾价直接相减，但中间有 10 个停牌日（2025-08-04–2025-08-15）；其中 2025-08-18 复牌当日就变动了 4.44%，幅度**超过**区间总变动（2.51%）——中间剧烈跳动后又被回补，首尾相减把这段过程整个抹平了。
+- id: tb-005
+  question: 中信证券 2022 年 1 月 26 日的收盘价是多少？
+  trap: stale_price
+  symbol: '600030'
+  params:
+    as_of: '2022-01-26'
+  naive_sql: SELECT date, close FROM stock_daily WHERE symbol = '600030' AND date <= DATE '2022-01-26'
+    ORDER BY date DESC LIMIT 1
+  naive_result:
+    value: 21.56
+    as_of: '2022-01-18'
+    unit: 元
+  truth:
+    suspended_from: '2022-01-19'
+    suspended_to: '2022-01-26'
+    returned_as_of: '2022-01-18'
+    stale_trading_days: 6
+    reason: 中信证券 280 亿 A 股配股缴款期停牌（1/19-25）+ 网上清算（1/26），1/27 复牌。
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2022-01-18'
+    trusted_answer: 2022-01-26 处于停牌期（2022-01-19–2022-01-26），无当日行情；21.56 元是停牌前最后一个交易日 2022-01-18 的收盘价，已滞后
+      6 个交易日。
+- id: tb-006
+  question: 中信证券 2022 年 1 月 14 日到 1 月 28 日涨了多少？
+  trap: suspended_window
+  symbol: '600030'
+  params:
+    start: '2022-01-14'
+    end: '2022-01-28'
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600030' AND date >= DATE '2022-01-14' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600030' AND date <= DATE '2022-01-28' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: 4.2381
+    unit: '%'
+  truth:
+    suspended_days:
+    - '2022-01-19'
+    - '2022-01-20'
+    - '2022-01-21'
+    - '2022-01-24'
+    - '2022-01-25'
+    - '2022-01-26'
+    n_suspended: 6
+    resume_date: '2022-01-27'
+    resume_move_pct: -0.3247
+    move_concentration: 0.077
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2022-01-19'
+    trusted_answer: 4.24% 是区间首尾价直接相减，但中间有 6 个停牌日（2022-01-19–2022-01-26）；其中 -0.32% 发生在 2022-01-27 复牌当日（占区间总变动的
+      8%），不是连续走势。
+- id: tb-007
+  question: 长江电力 2022 年 10 月 26 日的收盘价是多少？
+  trap: stale_price
+  symbol: '600900'
+  params:
+    as_of: '2022-10-26'
+  naive_sql: SELECT date, close FROM stock_daily WHERE symbol = '600900' AND date <= DATE '2022-10-26'
+    ORDER BY date DESC LIMIT 1
+  naive_result:
+    value: 19.28
+    as_of: '2022-10-25'
+    unit: 元
+  truth:
+    suspended_from: '2022-10-26'
+    suspended_to: '2022-10-26'
+    returned_as_of: '2022-10-25'
+    stale_trading_days: 1
+    reason: 长江电力：证监会并购重组委当日审核乌东德/白鹤滩资产注入方案，全天停牌。
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2022-10-25'
+    trusted_answer: 2022-10-26 处于停牌期（2022-10-26–2022-10-26），无当日行情；19.28 元是停牌前最后一个交易日 2022-10-25 的收盘价，已滞后
+      1 个交易日。
+- id: tb-008
+  question: 长江电力 2022 年 10 月 25 日到 10 月 27 日跌了多少？
+  trap: suspended_window
+  symbol: '600900'
+  params:
+    start: '2022-10-25'
+    end: '2022-10-27'
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600900' AND date >= DATE '2022-10-25' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600900' AND date <= DATE '2022-10-27' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: -4.6162
+    unit: '%'
+  truth:
+    suspended_days:
+    - '2022-10-26'
+    n_suspended: 1
+    resume_date: '2022-10-27'
+    resume_move_pct: -4.6162
+    move_concentration: 1.0
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2022-10-26'
+    trusted_answer: -4.62% 是区间首尾价直接相减，但中间有 1 个停牌日（2022-10-26–2022-10-26）；其中 -4.62% 发生在 2022-10-27 复牌当日（占区间总变动的
+      100%），不是连续走势。
+- id: tb-009
+  question: 中国神华 2025 年 8 月的日均成交量是多少？
+  trap: calendar_mismatch
+  symbol: '601088'
+  params:
+    start: '2025-08-01'
+    end: '2025-08-31'
+  naive_sql: SELECT count(*) AS days, avg(volume) AS avg_vol FROM stock_daily WHERE symbol = '601088'
+    AND date BETWEEN DATE '2025-08-01' AND DATE '2025-08-31'
+  naive_result:
+    days_with_data: 11
+    avg_volume: 46471667.55
+  truth:
+    calendar_trading_days: 21
+    suspended_days:
+    - '2025-08-04'
+    - '2025-08-05'
+    - '2025-08-06'
+    - '2025-08-07'
+    - '2025-08-08'
+    - '2025-08-11'
+    - '2025-08-12'
+    - '2025-08-13'
+    - '2025-08-14'
+    - '2025-08-15'
+    n_suspended: 10
+    denominator_ambiguity: 『日均』可以按 11 个有成交日算，也可以按 21 个交易日算（停牌日计 0），两者相差 47.6%
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - 口径
+    trusted_answer: 2025-08-01–2025-08-31 交易日历共 21 个交易日，但 601088 只有 11 天有数据行——10 天停牌（2025-08-04–2025-08-15）不产生数据。所以『日均成交量』按有成交日算是
+      46471667.55、按全部交易日算（停牌日计 0）是 24342302.05；『有多少天有成交』答案是 11 天而不是 21 天。口径不写清楚，同一个数字能得出两个结论。
+- id: tb-010
+  question: 中芯国际 2025 年 9 月有多少个交易日有成交？
+  trap: calendar_mismatch
+  symbol: '688981'
+  params:
+    start: '2025-09-01'
+    end: '2025-09-30'
+  naive_sql: SELECT count(*) AS days, avg(volume) AS avg_vol FROM stock_daily WHERE symbol = '688981'
+    AND date BETWEEN DATE '2025-09-01' AND DATE '2025-09-30'
+  naive_result:
+    days_with_data: 16
+    avg_volume: 127577233.12
+  truth:
+    calendar_trading_days: 22
+    suspended_days:
+    - '2025-09-01'
+    - '2025-09-02'
+    - '2025-09-03'
+    - '2025-09-04'
+    - '2025-09-05'
+    - '2025-09-08'
+    n_suspended: 6
+    denominator_ambiguity: 『日均』可以按 16 个有成交日算，也可以按 22 个交易日算（停牌日计 0），两者相差 27.3%
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - 口径
+    trusted_answer: 2025-09-01–2025-09-30 交易日历共 22 个交易日，但 688981 只有 16 天有数据行——6 天停牌（2025-09-01–2025-09-08）不产生数据。所以『日均成交量』按有成交日算是
+      127577233.12、按全部交易日算（停牌日计 0）是 92783442.27；『有多少天有成交』答案是 16 天而不是 22 天。口径不写清楚，同一个数字能得出两个结论。
+- id: tb-011
+  question: 中信证券 2022 年 1 月 19 日到 1 月 27 日涨了多少？
+  trap: gap_span
+  symbol: '600030'
+  params:
+    start: '2022-01-19'
+    end: '2022-01-27'
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600030' AND date >= DATE '2022-01-19' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600030' AND date <= DATE '2022-01-27' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: 0.0
+    unit: '%'
+  truth:
+    asked_window:
+    - '2022-01-19'
+    - '2022-01-27'
+    computed_window:
+    - '2022-01-27'
+    - '2022-01-27'
+    n_points: 1
+    suspended_days:
+    - '2022-01-19'
+    - '2022-01-20'
+    - '2022-01-21'
+    - '2022-01-24'
+    - '2022-01-25'
+    - '2022-01-26'
+    endpoint_shifted: true
+  expected:
+    must_flag: true
+    must_mention:
+    - 停牌
+    - '2022-01-27'
+    trusted_answer: 2022-01-19 起停牌至 2022-01-27 前，600030 在这段区间没有连续行情：SQL 实际只取到 1 个数据点（2022-01-27）。整个区间只剩
+      2022-01-27 一个数据点，涨跌幅必然是 0%——不是没波动，是没数据可比。
+- id: tb-c01
+  question: 贵州茅台 2025 年 9 月 15 日的收盘价是多少？
+  trap: clean
+  symbol: '600519'
+  params:
+    as_of: '2025-09-15'
+  intent: price
+  naive_sql: SELECT date, close FROM stock_daily WHERE symbol = '600519' AND date <= DATE '2025-09-15'
+    ORDER BY date DESC LIMIT 1
+  naive_result:
+    value: 1455.29
+    as_of: '2025-09-15'
+    unit: 元
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: 1455.29 元（2025-09-15）——当日正常交易，可直接引用。
+- id: tb-c02
+  question: 贵州茅台 2025 年 9 月涨了多少？
+  trap: clean
+  symbol: '600519'
+  params:
+    start: '2025-09-01'
+    end: '2025-09-30'
+  intent: change
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600519' AND date >= DATE '2025-09-01' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600519' AND date <= DATE '2025-09-30' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: -2.1752
+    unit: '%'
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: -2.18%——区间 22 个交易日连续无缺口，可直接引用。
+- id: tb-c03
+  question: 中芯国际 2025 年 10 月 9 日到 10 月 20 日涨了多少？
+  trap: clean
+  symbol: '688981'
+  params:
+    start: '2025-10-09'
+    end: '2025-10-20'
+  intent: change
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='688981' AND date >= DATE '2025-10-09' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='688981' AND date <= DATE '2025-10-20' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: -11.7198
+    unit: '%'
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: -11.72%——区间 8 个交易日连续无缺口，可直接引用。
+- id: tb-c04
+  question: 中国神华 2025 年 9 月的日均成交量是多少？
+  trap: clean
+  symbol: '601088'
+  params:
+    start: '2025-09-01'
+    end: '2025-09-30'
+  intent: aggregate
+  naive_sql: SELECT count(*) AS days, avg(volume) AS avg_vol FROM stock_daily WHERE symbol = '601088'
+    AND date BETWEEN DATE '2025-09-01' AND DATE '2025-09-30'
+  naive_result:
+    days_with_data: 22
+    avg_volume: 32930426.18
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: 日均 32930426.18（22 天无缺口），口径唯一，可直接引用。
+- id: tb-c05
+  question: 中信证券 2022 年 3 月 1 日到 3 月 15 日涨了多少？
+  trap: clean
+  symbol: '600030'
+  params:
+    start: '2022-03-01'
+    end: '2022-03-15'
+  intent: change
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600030' AND date >= DATE '2022-03-01' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600030' AND date <= DATE '2022-03-15' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: -16.1058
+    unit: '%'
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: -16.11%——区间 11 个交易日连续无缺口，可直接引用。
+- id: tb-c06
+  question: 长江电力 2022 年 11 月 1 日到 11 月 15 日涨了多少？
+  trap: clean
+  symbol: '600900'
+  params:
+    start: '2022-11-01'
+    end: '2022-11-15'
+  intent: change
+  naive_sql: SELECT (last_close / first_close - 1) * 100 AS pct FROM (SELECT (SELECT close FROM stock_daily
+    WHERE symbol='600900' AND date >= DATE '2022-11-01' ORDER BY date ASC LIMIT 1) AS first_close, (SELECT
+    close FROM stock_daily WHERE symbol='600900' AND date <= DATE '2022-11-15' ORDER BY date DESC LIMIT
+    1) AS last_close)
+  naive_result:
+    value: 3.427
+    unit: '%'
+  truth:
+    note: 该标的该区间无停牌覆盖，数据完整，口径无歧义
+  expected:
+    must_flag: false
+    must_mention: []
+    trusted_answer: 3.43%——区间 11 个交易日连续无缺口，可直接引用。

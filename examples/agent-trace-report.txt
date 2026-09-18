@@ -1,0 +1,65 @@
+Agent 轨迹归因报告（examples\agent-traces.jsonl）
+轨迹 48 条，解析器分布 rule×24、llm×20、llm->rule×4
+
+按严重度（这一刀最重要）
+  静默错         1/48   ← 链路没断但取错口径，门禁发现不了，最危险
+  吵着失败        9/48   ← 中断或降级，系统知道自己不知道，看得见
+  通顺         38/48   
+
+按根因类别
+  guard_flagged              26
+  ok                         12
+  abort_as_of                 6
+  degrade_month_expansion     3
+  hallucinated_date           1
+
+按解析器（静默错 / 吵着失败）
+  rule        n=24  静默 0   吵 5
+  llm         n=20  静默 1   吵 0
+  llm->rule   n=4   静默 0   吵 4
+
+失败轨迹逐条
+  [loud] b33aa04e31b8 llm->rule 降级·问句只给年月，模型不会展开
+      问：中国神华 2025 年 8 月的日均成交量是多少？
+      · 步骤 1 parse_query 降级：区间缺 start/end
+      · 模型原文：{"symbol":"601088","intent":"aggregate","as_of":null,"start":null,"end":"2025-08-01"}
+      → 「整月展开成 [月初, 月末]」是本项目约定，不是常识，模型学不到——该写进提示词，或干脆交给规则解析。
+  [loud] 6d9c75f7ecf2 llm->rule 降级·问句只给年月，模型不会展开
+      问：贵州茅台 2025 年 9 月涨了多少？
+      · 步骤 1 parse_query 降级：区间缺 start/end
+      · 模型原文：{"symbol":"600519","intent":"change","as_of":"2025-09-04","start":null,"end":null}
+      → 「整月展开成 [月初, 月末]」是本项目约定，不是常识，模型学不到——该写进提示词，或干脆交给规则解析。
+  [loud] a4abf2d19ed0 llm->rule 降级·问句只给年月，模型不会展开
+      问：中国神华 2025 年 9 月的日均成交量是多少？
+      · 步骤 1 parse_query 降级：区间缺 start/end
+      · 模型原文：{"symbol":"601088","intent":"aggregate","as_of":"2025-09-04","start":null,"end":null}
+      → 「整月展开成 [月初, 月末]」是本项目约定，不是常识，模型学不到——该写进提示词，或干脆交给规则解析。
+  [loud] 3a0c8e7d0486 rule 中断·缺日期槽
+      问：中芯国际 2025 年 8 月 29 日到 9 月 12 日的表现如何？
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [loud] 56a4ab11b059 rule 中断·缺日期槽
+      问：中国神华 2025 年 8 月单日成交均值是多少？
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [loud] 3bb2cd910501 llm->rule 中断·缺日期槽
+      问：中国神华 2025 年 8 月单日成交均值是多少？
+      · 步骤 1 parse_query 降级：区间缺 start/end
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [loud] b569516d1ab2 rule 中断·缺日期槽
+      问：二〇二五年九月四日中芯国际的收盘价是多少？
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [loud] 5a7c73db2276 rule 中断·缺日期槽
+      问：中芯国际 2025 年 9 月 4 号收盘多少？
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [loud] febd85772cc9 rule 中断·缺日期槽
+      问：贵州茅台 2025 年 9 月的收盘价是多少？
+      · 中断：aborted:slot_incomplete:as_of
+      → 问句里没给出可用的年月日；规则解析不猜年份。
+  [silent] e2eeb024a82a llm 静默错·编造前提照常出数
+      问：贵州茅台 2025 年 9 月的收盘价是多少？
+      · 槽位 as_of=2025-09-04 在问句里找不到出处
+      → 模型补了一个用户没给的值，槽位完整所以完整性校验放行。完整性检查挡不住幻觉——要查的是「这个值有没有出处」，而这条探针不需要任何 golden 标签，生产环境也能跑。

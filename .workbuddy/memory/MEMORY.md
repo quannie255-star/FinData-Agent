@@ -4,6 +4,26 @@
 
 面向实习求职的 AI Agent 项目。核心诉求：**体现业务思考与架构能力，不是炫技 demo**。
 
+### 最终目标与基座策略（2026-09-17 用户澄清）
+
+用户的长期目标不是 findata 本身，而是**对话式 BI / 自动报告 Agent（WrenAI 型）
+或数据清洗预处理 Agent（ai-data-science-team 型）**。findata 的「数据可信」是
+**切入点与差异化**，最终要挂到通用基座上（接现成 or 自写）。这与 v2.1 已定的
+「增强模块、不做基座」一致——不是转向，是要补基座的可见性。
+
+外部事实（2026-09-17 核实）：
+- **WrenAI**：已重构为「GenBI engine + open context layer」，Apache-2.0，
+  16.1k stars，22+ 数据源；提供 MCP server / Agent SDK（LangChain·Pydantic AI）/
+  `npx skills add` 三种集成路径。其 Context Layer 五层 = 结构·语义·业务·运营·
+  行为，**没有「数据现在健不健康」这一层** → findata 的精确缺口位
+- **ai-data-science-team**（business-science，MIT，4.6k stars，pre-0.1.0 Beta）：
+  LangGraph 多智能体 + Streamlit Pipeline Studio，主打 lineage 与代码可复现；
+  Data Cleaning Agent 会自动 fillna / 处理异常值 → findata 可作**清洗前可信
+  门禁**（防止把停牌这类合法缺失清洗成假数据）
+
+判断：基座只做**演示载体**不做主线（补完 WrenAI 需数月且必被比下去）；主角永远
+是增强包。接宿主属于**分发动作**，与 30 天窗口期「不加新功能」不冲突。
+
 ### 主线：查询时数据可信（Query-Time Data Trust）
 
 数据分析 Agent 价值链分三段，前两段已是红海：
