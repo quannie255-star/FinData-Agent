@@ -113,7 +113,11 @@
       `gen_ai.tool.call` + `tool.name` / `call_id` / `args_hash`（sha256，**不记原文**）
       / `result_code` / `retry_count` / `duration_ms`；**token 用量入 span**
       （自有量走 `findata.context.*`，不污染标准命名空间）
-- [ ] 跑 30–50 个任务，trace 落盘可复现（`examples/` 归档）**← 32 任务 × 2 臂正在跑**
+- [x] 跑 30–50 个任务，trace 落盘可复现（`examples/` 归档）
+      —— **2 臂 × 32 任务**已归档。**结果**：27 工具 → 4 工具，
+      prompt token **降 53.4%**（符号检验 p=2.5e-07），
+      关键词命中 7/32 → **13/32**（McNemar p=0.031）。详见
+      `docs/r5.0-acceptance.md` §3.4（含敏感性检验与两个反例）。
 
 > **R5.0 实施偏差记录（三个，都不改文档去迁就实现）**
 >
@@ -141,6 +145,11 @@
       从未被引用但每次都在传的字段集
 - [ ] 产出「上下文账单」：钱花在哪——按 Uber 那份清单分类
       （context resend / loop sprawl / model mismatch / tool dumping / agent chatter）
+      > **其中两类 R5.0 已经有了实测数字，不用从零开始**：
+      > `tool dumping`（定义侧）= **prompt token 的 83.9%**（27 工具臂，分母是本批
+      > 短任务）→ 裁到 4 个后降 **53.4%**；另发现**非 ok 结果码占 51.9%**
+      > （`get_signature` 65% 是 not_found = 模型猜路径），这是一个**独立的**
+      > 浪费来源，**不许与"定义太长"合并成一个数字**。见验收记录 §3.4。
 
 > **R5.1 已经拿到第一条实测证据：`model mismatch` 这一类的代价是双向的。**
 > R5.0 的 3B vs 7B 对照（同 harness、同任务、同工具清单）：3B 关键词命中

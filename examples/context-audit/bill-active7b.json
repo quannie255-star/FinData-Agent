@@ -1,0 +1,64 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:latest",
+    "n_tools_in_list": 4,
+    "n_silent_tools": 0,
+    "tools_chars_per_call": 2524,
+    "semconv": "gen-ai-stable-2026"
+  },
+  "measured": {
+    "n_answered": 31,
+    "n_errored": 1,
+    "keyword_hits": 13,
+    "total_turns": 85,
+    "total_tool_calls": 55,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 104079,
+    "completion_tokens": 11482,
+    "tool_payload_chars": 172885,
+    "tools_def_chars_carried": 214540
+  },
+  "per_tool": [
+    {
+      "tool": "get_signature",
+      "calls": 18,
+      "payload_chars": 2993,
+      "avg_chars": 166.3,
+      "codes": {
+        "not_found": 9,
+        "ok": 9
+      }
+    },
+    {
+      "tool": "search_code",
+      "calls": 18,
+      "payload_chars": 106491,
+      "avg_chars": 5916.2,
+      "codes": {
+        "ok": 10,
+        "not_found": 5,
+        "error": 3
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 14,
+      "payload_chars": 13031,
+      "avg_chars": 930.8,
+      "codes": {
+        "ok": 9,
+        "not_found": 5
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 5,
+      "payload_chars": 50370,
+      "avg_chars": 10074.0,
+      "codes": {
+        "ok": 5
+      }
+    }
+  ]
+}
