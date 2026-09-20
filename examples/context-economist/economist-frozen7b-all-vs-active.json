@@ -1,0 +1,204 @@
+{
+  "label": "frozen7b-all-vs-active",
+  "inputs": {
+    "runs": "examples/context-audit/runs-all7b-fz.jsonl",
+    "spans": "examples/context-audit/spans-all7b-fz.jsonl",
+    "n_tasks": 32,
+    "n_tool_calls": 52,
+    "n_tool_spans": 52,
+    "n_distinct_trace_ids": 52,
+    "models": [
+      "qwen2.5:latest"
+    ],
+    "semconv": "gen-ai-stable-2026",
+    "gaps": [
+      "span 之间**没有 run 级父 span**（52 个工具 span 对应 52 个不同 trace_id）⇒ 只用 span 无法把调用归到具体任务。这是**被观测系统**的打点缺口，不是读法问题；本工具需要 `gen_ai.invoke_agent`（或等价）级父 span 才能做逐任务归因",
+      "trace 里不含**系统提示**与模型的中间推理文本 ⇒ 重建的 `before` 缺系统提示（可能把「本就在系统提示里」的值误判成新信息），`after` 只含最终答复与后续调用参数（**会漏判**引用，方向单一）"
+    ],
+    "tool_list_match": "tools_chars 完全匹配（11559 字符）⇒ 本批带的是「all」清单"
+  },
+  "reconstruct": {
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen",
+    "n_calls": 52,
+    "n_reconstructed_ok": 52,
+    "n_mismatch": 0,
+    "n_skipped_no_corpus_root": 0,
+    "n_skipped_unparsable_args": 0,
+    "coverage": 1.0,
+    "note": "重建 = 用 trace 里记录的参数重放工具，再把结果的字符数与记录的 payload_chars 对照。**对照通过的调用才进入字段级归因**；不一致或无参数的一律退出统计，不计分子也不计分母。",
+    "mismatch_examples": []
+  },
+  "chars_to_tokens": {
+    "n_turns": 83,
+    "total_prompt_tokens": 224051,
+    "total_chars": 1225991,
+    "tokens_per_char": 0.1828,
+    "median_tokens_per_char": 0.1936,
+    "p10": 0.1661,
+    "p90": 0.1959,
+    "note": "分子是 provider usage 的 prompt_tokens（实测），分母是 messages_chars + tools_chars（本项目数的，确定性）。比值含 chat 模板与特殊 token 的开销，且随文本语言/代码占比变化，**用它换算出来的 token 是估算值，不许与实测 token 混用**。"
+  },
+  "tools": [
+    {
+      "tool": "search_code",
+      "calls": 25,
+      "payload_chars": 139716,
+      "codes": {
+        "ok": 11,
+        "not_found": 11,
+        "error": 3
+      },
+      "n_segments": 64,
+      "seg_chars": 138779,
+      "n_referenced": 27,
+      "n_not_referenced": 37,
+      "n_unverifiable": 0,
+      "n_calls_with_segments": 11,
+      "n_calls_no_shape": 14
+    },
+    {
+      "tool": "read_file",
+      "calls": 4,
+      "payload_chars": 43935,
+      "codes": {
+        "ok": 4
+      },
+      "n_segments": 74,
+      "seg_chars": 42943,
+      "n_referenced": 39,
+      "n_not_referenced": 31,
+      "n_unverifiable": 4,
+      "n_calls_with_segments": 4,
+      "n_calls_no_shape": 0
+    },
+    {
+      "tool": "list_files",
+      "calls": 6,
+      "payload_chars": 3402,
+      "codes": {
+        "ok": 5,
+        "not_found": 1
+      },
+      "n_segments": 135,
+      "seg_chars": 3273,
+      "n_referenced": 42,
+      "n_not_referenced": 93,
+      "n_unverifiable": 0,
+      "n_calls_with_segments": 6,
+      "n_calls_no_shape": 0
+    },
+    {
+      "tool": "get_signature",
+      "calls": 17,
+      "payload_chars": 1964,
+      "codes": {
+        "not_found": 10,
+        "ok": 7
+      },
+      "n_segments": 51,
+      "seg_chars": 1582,
+      "n_referenced": 16,
+      "n_not_referenced": 28,
+      "n_unverifiable": 7,
+      "n_calls_with_segments": 7,
+      "n_calls_no_shape": 10
+    }
+  ],
+  "flows": [
+    {
+      "from": "get_signature",
+      "to": "search_code",
+      "n_token_hits": 1,
+      "n_segments": 1,
+      "samples": [
+        "defect_kind"
+      ]
+    },
+    {
+      "from": "get_signature",
+      "to": "read_file",
+      "n_token_hits": 1,
+      "n_segments": 1,
+      "samples": [
+        "pyproject.toml"
+      ]
+    },
+    {
+      "from": "list_files",
+      "to": "get_signature",
+      "n_token_hits": 1,
+      "n_segments": 1,
+      "samples": [
+        "tests/test_docs_consistency.py"
+      ]
+    }
+  ],
+  "proposals": [
+    {
+      "lever": "定义侧·裁撤未调用工具",
+      "target": "23 个工具：git_log, git_blame, git_diff, create_branch, open_pull_request, review_pull_request…",
+      "action": "从下发给模型的工具清单里移除，保留实现（随时可加回）",
+      "evidence": "本批 32 个任务、83 轮里这 23 个工具被调用 0 次；每个定义每轮都要重发，故代价 = 各定义字符之和 × 轮数",
+      "evidence_strength": "中（「本批没用到」是这一批的观测，不是通用事实）",
+      "reversible": true,
+      "affected_calls": 0,
+      "saving_chars": 746087,
+      "saving_tokens_est": 136348
+    },
+    {
+      "lever": "返回侧·大段改分层加载",
+      "target": "read_file 的 section 段（19 段 ≥200 字符）",
+      "action": "改成「先返回段索引（名字 + 字符数），命中后再取该段全文」——**不是删除**：这些段仍可取到，只是不再常驻上下文",
+      "evidence": "74 段里这 19 段在本次运行中**未观测到任何引用**；合计 12,486 字符，各乘其剩余轮数",
+      "evidence_strength": "弱（`after` 不含模型中间推理文本 ⇒ 会漏判引用；处置取可逆动作）",
+      "reversible": true,
+      "affected_calls": 3,
+      "saving_chars": 12486,
+      "saving_tokens_est": 2282
+    },
+    {
+      "lever": "返回侧·大段改分层加载",
+      "target": "search_code 的 hit 段（26 段 ≥200 字符）",
+      "action": "改成「先返回段索引（名字 + 字符数），命中后再取该段全文」——**不是删除**：这些段仍可取到，只是不再常驻上下文",
+      "evidence": "53 段里这 26 段在本次运行中**未观测到任何引用**；合计 50,754 字符，各乘其剩余轮数",
+      "evidence_strength": "弱（`after` 不含模型中间推理文本 ⇒ 会漏判引用；处置取可逆动作）",
+      "reversible": true,
+      "affected_calls": 8,
+      "saving_chars": 50754,
+      "saving_tokens_est": 9275
+    }
+  ],
+  "saving_chars_upper_bound": 809327,
+  "saving_tokens_est": 147905,
+  "usd_per_mtok": 0.4,
+  "usd_est": 0.059162,
+  "verification": {
+    "grader": "keyword",
+    "n_paired": 32,
+    "n_unpaired_before": 0,
+    "n_unpaired_after": 0,
+    "before_prompt_tokens": 224051,
+    "after_prompt_tokens": 100843,
+    "delta_prompt_tokens": -123208,
+    "before_tool_calls": 52,
+    "after_tool_calls": 53,
+    "before_payload_chars": 189017,
+    "after_payload_chars": 174200,
+    "n_cheaper": 29,
+    "n_dearer": 3,
+    "n_equal": 0,
+    "sign_test_p": 3e-06,
+    "n_graded": 32,
+    "before_hits": 8,
+    "after_hits": 12,
+    "only_before": 0,
+    "only_after": 4,
+    "mcnemar_exact_p": 0.125,
+    "notes": []
+  },
+  "unobserved": [
+    "改后重跑的成功率（除非 §7 给出了对照）",
+    "重试造成的浪费（本 loop 不重试，`retry_count` 恒为 0 ⇒ 未观测）",
+    "span 之间的任务归属（被观测系统缺 run 级父 span，见 §1.1）"
+  ]
+}

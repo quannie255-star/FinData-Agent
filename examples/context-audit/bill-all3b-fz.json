@@ -1,0 +1,95 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:3b",
+    "n_tools_in_list": 27,
+    "n_silent_tools": 23,
+    "tools_chars_per_call": 11559,
+    "semconv": "gen-ai-stable-2026"
+  },
+  "measured": {
+    "n_answered": 31,
+    "n_errored": 1,
+    "keyword_hits": 3,
+    "total_turns": 71,
+    "total_tool_calls": 43,
+    "silent_tool_calls": 2,
+    "prompt_tokens": 177112,
+    "completion_tokens": 4602,
+    "tool_payload_chars": 42158,
+    "tools_def_chars_carried": 820689
+  },
+  "per_tool": [
+    {
+      "tool": "get_signature",
+      "calls": 21,
+      "payload_chars": 1933,
+      "avg_chars": 92.0,
+      "codes": {
+        "not_found": 17,
+        "ok": 4
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 13,
+      "payload_chars": 27769,
+      "avg_chars": 2136.1,
+      "codes": {
+        "error": 6,
+        "not_found": 2,
+        "ok": 5
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 5,
+      "payload_chars": 1895,
+      "avg_chars": 379.0,
+      "codes": {
+        "not_found": 4,
+        "ok": 1
+      }
+    },
+    {
+      "tool": "search_code",
+      "calls": 2,
+      "payload_chars": 10365,
+      "avg_chars": 5182.5,
+      "codes": {
+        "ok": 2
+      }
+    },
+    {
+      "tool": "get_coverage_report",
+      "calls": 1,
+      "payload_chars": 102,
+      "avg_chars": 102.0,
+      "codes": {
+        "not_implemented": 1
+      }
+    },
+    {
+      "tool": "list_issues",
+      "calls": 1,
+      "payload_chars": 94,
+      "avg_chars": 94.0,
+      "codes": {
+        "not_implemented": 1
+      }
+    }
+  ],
+  "reproducibility": {
+    "code_commit": "baf64201b85cbb19342630288d080545266b7290",
+    "code_dirty": false,
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen",
+    "corpus": {
+      "sha256": "00a95aea86927097344de03bbf3f76a6",
+      "n_files": 214,
+      "chars": 1253145
+    },
+    "tools_list_sha256": "b8ea011834b4d6a0c302b1d897377163",
+    "n_tools_in_list": 27,
+    "note": "code_commit/code_dirty 取自**语料根**（不是调用方工作区）：实验读的是语料根，提交号也必须是它的。corpus.sha256 是「相对路径:内容sha256」归并后的指纹，只记聚合值不记原文。"
+  }
+}

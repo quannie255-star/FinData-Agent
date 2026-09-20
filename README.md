@@ -92,7 +92,7 @@ data/filtered/
 
 ```bash
 uv sync
-uv run pytest                                        # 427 例测试
+uv run pytest                                        # 458 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py             # 主闭环（真实语料，默认全量）
@@ -102,6 +102,43 @@ uv run python scripts/run_agent_trace.py              # 本机 Ollama 真实轨�
 
 不想装环境：[`examples/trust-filter-report.txt`](examples/trust-filter-report.txt)
 是完整输出归档，含「诚实说明」一节（哪些类别 0 命中 = 没被验证到）。
+
+## v4.0：上下文经济学 —— 读 trace，报三组数字
+
+`findata-context-economist` 读一个 agent 的**真实 trace**（OTel `gen_ai.*` span，
+可选叠加跑批记录），输出**经过验证的**上下文/工具策略改动，并给出三组数字：
+**省下的 token / 折算成本 / 成功率变化**。
+
+```bash
+uv run python scripts/context_economist.py \
+    --trace examples/context-audit --tag all7b-fz \
+    --after  examples/context-audit --after-tag active7b-fz \
+    --corpus-root <冻结快照>          # 用来重建工具返回；不给就只有工具级读数
+    --usd-per-mtok 0.4 --out-dir examples/context-economist
+# 等价命令：findata-context-economist（已注册为 console script）
+```
+
+产物：[`report-frozen7b-all-vs-active.md`](examples/context-economist/report-frozen7b-all-vs-active.md)
++ 同名 `.json`。同一批 32 个任务、同一份冻结语料上的读数：
+
+| 量 | 改前（27 个工具定义） | 改后（4 个活跃工具） | 差 |
+| --- | ---: | ---: | ---: |
+| prompt tokens（实测） | 224,051 | 100,843 | **−123,208（−55.0%）** |
+| 工具调用次数 | 52 | 53 | +1 |
+| 关键词命中（弱判据） | 8 | 12 | +4，McNemar p=0.1250 |
+
+四件让这份报告可被核对的事：
+
+- **重建要对账**：工具返回的原文不在 trace 里，靠记录的参数重放一次——
+  重放字符数与记录值**完全相等**才允许进入字段级统计（本批 52/52 通过）。
+  没有这道闸门，字段级结论就是基于一份"当时并不存在的内容"得出的。
+- **估算与实测分开报**：字符口径估算 136,348 tokens vs 实测 123,208 ⇒
+  **1.11×**。这个倍数就是"字符换 token"的误差量级；估算用来给提案排序，不替代重跑。
+- **不合成单一"节省百分比"**：段级"未观测到引用"是弱证据（`after` 缺模型的中间
+  推理文本 ⇒ 只会漏判），分档 + 分项才是可被反驳的形态。也**刻意不给默认单价**——
+  默认单价会让报告凭空长出一个美元数字。
+- **不可迁移的部分原样写出**：token 侧结论可迁移（token 数由上下文结构决定），
+  成功率侧只在本地小模型口径下成立。
 
 ## 它原本是什么（v0.x–v2.2，已验收，保留）
 
@@ -228,7 +265,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(427, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(458, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）

@@ -1,0 +1,41 @@
+{
+  "arms": [
+    {
+      "tag": "all7b-fz",
+      "n": 32,
+      "hit": 8,
+      "process_ok": 31,
+      "verified_hit": 8,
+      "suspicious_hit": 0,
+      "zero_tool_calls": 1,
+      "tool_calls_total": 52,
+      "tool_codes_bad": 25,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "zero_call_task_ids": [
+        "t10"
+      ]
+    },
+    {
+      "tag": "active7b-fz",
+      "n": 32,
+      "hit": 12,
+      "process_ok": 31,
+      "verified_hit": 12,
+      "suspicious_hit": 0,
+      "zero_tool_calls": 0,
+      "tool_calls_total": 53,
+      "tool_codes_bad": 22,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "zero_call_task_ids": []
+    }
+  ],
+  "judge_definition": {
+    "hit": "tasks.is_hit（关键词命中，弱）",
+    "process_ok": "n_tool_calls>0 且 stopped_reason=='answered'",
+    "verified_hit": "hit AND process_ok（可对外说）",
+    "suspicious_hit": "hit AND NOT process_ok（可能蒙对，单独计数）"
+  },
+  "note": "事后重判，未重跑；两臂可比性不受影响"
+}

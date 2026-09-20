@@ -54,6 +54,7 @@ findata-api = "findata.api.app:main"
 findata-mcp = "findata.mcp.server:main"
 findata-serve = "findata.cli.serve:main"
 findata-trust-report = "findata.cli.trust_report:main"
+findata-context-economist = "findata.economist.cli:main"
 
 [tool.ruff]
 line-length = 100
