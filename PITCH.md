@@ -54,7 +54,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 | held-out 63.6% vs 合成集 100% | `docs/ROADMAP.md` R4.1 | 循环论证的量化代价，**刻意保留红灯** |
 | 误报 53 条 → 0（retry_storm） | `tests/test_agentops.py` | 判据由「同名」改为「同名且同参数」 |
 | 误报 45 条 → 0（unknown argument） | `tests/test_xlam_adapter.py` | 同名工具重复注册，任一份 schema 能解释就放行 |
-| 423 例测试 / ruff 全绿 | CI | 数字以 CI 为准，全仓库口径必须一致 |
+| 424 例测试 / ruff 全绿 | CI | 数字以 CI 为准，全仓库口径必须一致 |
 
 ---
 
@@ -75,7 +75,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 > · 可信日报 Agent：多智能体（分析→可视化→可信审校）逐数字带徽章，LLM 解读经
 >   纯规则审校拦截无徽章引用，实测审校 0 拦截；外部 MCP 宿主零依赖接入已验证
 > · 自建评测门禁：合成语料告警精确率 **100%**（朴素基线 61.5%）+ 真实回放
->   golden + 423 例测试全进 GitHub Actions，归因变差即挂红
+>   golden + 424 例测试全进 GitHub Actions，归因变差即挂红
 > · 服务化：同一 service 层暴露 FastAPI / MCP stdio / Python 三接口，
 >   OpenTelemetry 埋点；镜像发布 ghcr.io（amd64/arm64），push 前容器冒烟
 
@@ -95,7 +95,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 | **84 → 92 分，告警 4 → 2** | `examples/inspection-warehouse-2026-09-07.md` | 真实数据上实测。不是跑通了，是**跑出了误报然后修掉** |
 | **真实告警抑制 0/9 → 8/9，健康分 72 → 95.8** | `examples/replay-badge-report.txt`（回放 golden：`eval/golden/replay.yaml` 9/9） | v2.0 R1：2026-09-15 真实考试 7/7 误报（抑制 0/9）后，知识层种子 + 截面共动归因一次修到位。**系统知道自己什么时候在裸奔、并且知道怎么穿上** |
 | **日报每个数字带徽章，无徽章数字强制拦截** | `examples/daily-badge-report-2026-09-15.md` + `tests/test_report_agent.py` | v2.0 R1 报告 Agent：LLM 解读逐数字带徽章（实测 710/472 字符、审校 0 拦截），审校纯规则、可全分支单测——「无徽章不得引用」不是口号是闸门 |
-| **423 个测试 + CI 门禁（含 eval-gate + 真实回放）** | GitHub Actions | 评测指标进 CI，归因变差就红（当前 423 例 + 语义 golden + 真实回放 9 case）。这是"承诺"和"承诺被执行"的区别 |
+| **424 个测试 + CI 门禁（含 eval-gate + 真实回放）** | GitHub Actions | 评测指标进 CI，归因变差就红（当前 424 例 + 语义 golden + 真实回放 9 case）。这是"承诺"和"承诺被执行"的区别 |
 | **多智能体 token +21%，正确率持平** | `examples/eval-agent-single-vs-multi.txt` | v0.8.0 单 vs 多智能体同题同库对比。多智能体不是免费的——但deep 路径换来 DQ 运行时背书，简单题走快路径不多花一枚 token。**成本如实入账**本身就是可信叙事的一部分 |
 | **进化后抑制 62.5% → 100%，分开了规则分不开的形态** | `examples/eval-prompt-evolution.txt` | v0.9.0 难例靶子实测：合法放量（探针比值 5.17–7.43x）与单位变更故障（5.31x）比值区间重叠，任何阈值规则必然牺牲一边；GEPA 式反思进化出的 prompt 凭量额一致性 + 市场共振证据做到根因/抑制/精确全 100%。**进化产物过了与代码相同的 eval-gate 才合入**（v1→v1.1→v2 版本档案可回滚），全程约 170 次 LLM 调用（几分钱）如实入账 |
 | **同一数据集：通用包 60 分 vs 领域包 100 分** | `examples/domain-vs-generic-comparison.md` | v2.2.0 对比页实测：同一份 A 股数据，通用基线包 11 个信号无法归因、8 列仅借鉴；领域包把 2 段停牌缺口核验成 ✓ 已核验。「没查出毛病」和「证明可靠」的差值，就是领域包架构的存在理由——这是产品含金量的直接展示 |
@@ -287,7 +287,7 @@ README 是给"点进仓库看的人"的，这份是给"写简历/准备面试的
 - [ ] **README 第一屏是 v3.0 主线**（Agent 训练数据质检），不是旧的"可信增强模块"
 - [ ] GitHub Description / Topics 已按 `docs/handoff.md` 的新文案改
       （旧的写的是"可信数据增强模块"，**必须换**）
-- [ ] `uv run pytest` 423 例全绿 + CI badge 正常显示
+- [ ] `uv run pytest` 424 例全绿 + CI badge 正常显示
 - [ ] `examples/` 三份主证据能打开：`trust-filter-report.txt`（真实语料闭环）、
       `sandbox-signals.txt`（沙箱真实信号）、`agent-trace-report.txt`（本机轨迹）
 - [ ] **能一句话讲清 349 条 schema_contradiction 为什么不是 agent 的错**——

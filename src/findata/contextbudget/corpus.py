@@ -82,12 +82,39 @@ def iter_corpus_files(root: Path, prefix: str = "") -> list[Path]:
 
 
 def _file_digest(path: Path) -> str:
-    """单文件内容 sha256 的**前 16 位**（够用且短；不是安全性用途）。"""
-    hasher = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()[:16]
+    """单文件指纹，按**工具读到的文本**算 sha256 前 16 位（不是安全性用途）。
+
+    ⚠️ **这里踩过一次坑，值得写死**：第一版直接 `read_bytes()` 哈希原始字节。
+    结果同一次提交在"主工作区"和"git worktree 快照"上算出**不同的指纹** ——
+    因为 worktree 的 checkout 按 `core.autocrlf` 把 LF 写成了 CRLF，
+    53 个文件被误报成"内容变了"。而工具的 `read_file` 用的是
+    `Path.read_text()`（**universal newlines**：`\\r\\n` → `\\n`），
+    两个根下工具读到的**文本逐字相同**（实测 7,239 字符对 7,239 字符）。
+
+    所以字节口径错在哪很清楚：**它测的不是工具读到的东西**。
+    而这份指纹的全部意义就是描述"工具读到什么"。换行符是**表示层**差异，
+    和 v3.0 那条「89.1% 的 default 本来就是字符串，是方言不是矛盾」同一类教训。
+
+    非文本内容退回字节哈希：确定性仍然成立，只是口径不同（极少发生，
+    因为语料后缀都是文本）。
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def _file_chars(path: Path) -> int:
+    """工具会读到的**字符数**（与 `payload_chars` 同一口径）。
+
+    刻意不用 `stat().st_size`（字节数）：CRLF 会让字节数虚高，
+    而工具根本看不到多出来的那个 `\\r`。
+    """
+    try:
+        return len(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return path.stat().st_size
 
 
 def _rel(root: Path, path: Path) -> str:
@@ -98,22 +125,23 @@ def corpus_manifest(root: Path) -> dict[str, Any]:
     """语料指纹。返回**聚合值**：
 
     - `sha256`：把 `"<相对路径>:<内容 sha256>"` 按路径排序后拼起来再哈希
-    - `n_files` / `bytes`：规模；两者都变才说明内容真变了，只看一个会误判
-      （改名不改内容 → `n_files`/`bytes` 不变但 `sha256` 变）
+    - `n_files` / `chars`：规模。`n_files` 与 `chars` 都不变而 `sha256` 变，
+      说明**只改了名字**——所以两个规模量都不能单独当"没变"的证据。
+    - `chars` 是**字符数**（工具口径），不是磁盘字节数
 
     语料为空时 `sha256` 是空串的哈希，不是 `None` —— **"空"和"没测"必须能区分**。
     """
     files = iter_corpus_files(root)
     lines: list[str] = []
-    total_bytes = 0
+    total_chars = 0
     for path in files:
-        total_bytes += path.stat().st_size
+        total_chars += _file_chars(path)
         lines.append(f"{_rel(root, path)}:{_file_digest(path)}")
     payload = "\n".join(sorted(lines)).encode("utf-8")
     return {
         "sha256": hashlib.sha256(payload).hexdigest()[:32],
         "n_files": len(files),
-        "bytes": total_bytes,
+        "chars": total_chars,
     }
 
 

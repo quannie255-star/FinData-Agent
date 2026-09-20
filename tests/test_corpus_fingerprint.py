@@ -45,16 +45,21 @@ def _load_drift_script() -> Any:
 
 @pytest.fixture
 def snapshot(tmp_path: Path) -> Path:
-    """一个小而完整的"语料快照"，形状与真实语料一致。"""
+    """一个小而完整的"语料快照"，形状与真实语料一致。
+
+    文本一律用 `write_bytes` 写 **LF**：`Path.write_text` 在 Windows 上会把
+    `\\n` 翻译成 `\\r\\n`，那样"这个文件是 LF 还是 CRLF"就随操作系统变了，
+    而换行符正是本文件里一个用例的观测对象。
+    """
     root = tmp_path / "snap"
     (root / "pkg").mkdir(parents=True)
     (root / "docs").mkdir()
-    (root / "pkg" / "a.py").write_text("def alpha():\n    return 1\n", encoding="utf-8")
-    (root / "docs" / "n.md").write_text("# note\n", encoding="utf-8")
+    root.joinpath("pkg", "a.py").write_bytes(b"def alpha():\n    return 1\n")
+    root.joinpath("docs", "n.md").write_bytes(b"# note\n")
     # 这些**不该**进语料：后缀不符 / 在排除目录里
-    (root / "pkg" / "blob.bin").write_bytes(b"\x00\x01")
+    root.joinpath("pkg", "blob.bin").write_bytes(b"\x00\x01")
     (root / ".git").mkdir()
-    (root / ".git" / "trap.py").write_text("should not be seen\n", encoding="utf-8")
+    root.joinpath(".git", "trap.py").write_bytes(b"should not be seen\n")
     return root
 
 
@@ -77,12 +82,43 @@ def test_content_change_moves_the_fingerprint(snapshot: Path) -> None:
 
 
 def test_rename_without_content_change_moves_the_fingerprint(snapshot: Path) -> None:
-    """只改名不改内容：文件数与字节数都不变，**只有指纹能发现**。"""
+    """只改名不改内容：文件数与字符数都不变，**只有指纹能发现**。"""
     before = corpus_manifest(snapshot)
     (snapshot / "pkg" / "a.py").rename(snapshot / "pkg" / "b.py")
     after = corpus_manifest(snapshot)
-    assert (before["n_files"], before["bytes"]) == (after["n_files"], after["bytes"])
+    assert (before["n_files"], before["chars"]) == (after["n_files"], after["chars"])
     assert before["sha256"] != after["sha256"]
+
+
+def test_line_endings_do_not_move_the_fingerprint(snapshot: Path) -> None:
+    """**这条是一次真实误报换来的。**
+
+    同一个提交 checkout 成 LF 的树和 CRLF 的树，磁盘字节数不同、字节哈希不同，
+    但工具的 `read_text()`（universal newlines）读到**逐字相同**的文本。
+    指纹必须描述"工具读到什么"，所以换行符不能影响它 ——
+    否则 `git worktree` 出来的冻结快照会被误判成"另一个语料"
+    （实测：53 个文件被误报，而这正是我要用快照做的事）。
+
+    注意这里必须用 `write_bytes` 定式写 CRLF：`Path.write_text` 在 Windows 上
+    会把 `\\n` 翻译成 `\\r\\n`，而 `str.replace("\\n", "\\r\\n")` 又会把已有的
+    `\\r\\n` 变成 `\\r\\r\\n` —— 两个翻译叠起来，测的就不是换行符了。
+    """
+    path = snapshot / "pkg" / "a.py"
+    before = corpus_manifest(snapshot)
+    before_bytes = path.read_bytes()
+    text = path.read_text(encoding="utf-8")
+
+    path.write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+    after_bytes = path.read_bytes()
+
+    # 先证明"磁盘上真的变了"：否则这个测试可能什么都没测
+    assert b"\r\n" in after_bytes
+    assert after_bytes != before_bytes
+    assert len(after_bytes) > len(before_bytes)
+    # 再证明"工具读到的没变"
+    assert path.read_text(encoding="utf-8") == text
+
+    assert corpus_manifest(snapshot) == before
 
 
 def test_mtime_is_not_part_of_the_fingerprint(snapshot: Path) -> None:
