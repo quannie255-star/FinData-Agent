@@ -1,0 +1,66 @@
+前提敏感度实验 · 真实数据（Salesforce/xlam-function-calling-60k）
+样本 60000 条（全量），两遍跑的是同一份数据、同一套探针，**只翻转一个前提**
+
+被翻转的前提（这条是我设的，不是数据源声明的）：
+  P1 我的口径：description 承诺了默认值 ⇒ 模型省略该参数是合理的
+               ⇒ 根因在数据源，处置「🔧 待修 schema」
+  P2 严格口径：任何在 schema 里声明过的参数，模型都该显式传
+               ⇒ 这条样本确实不完美，处置「⚠️ 需人工」
+  依据：该数据集**带 `required` 字段的工具定义是 0 份**，所以「哪些参数必填」
+  没有任何一条 schema 说过——用「有没有 default」代指必填，是我设的口径。
+
+一、同一份数据在两种前提下的处置分布
+  处置                     P1 我的口径       P2 严格口径        差值
+  ✓ 正样本                    58649         58649        +0
+  🔧 待修 schema               1286             0     -1286
+  ⚠️ 需人工                      65          1351     +1286
+  ✗ 丢弃                         0             0        +0
+  ⊘ 不算失败                       0             0        +0
+
+二、结论：翻转前提，**丢弃数不变**
+  P1 丢弃 0 条 ／ P2 丢弃 0 条
+  这是本实验要回答的唯一问题。答案是：**无论押哪个前提，这批样本一条
+  都不会被丢**——P2 下它们从「待修 schema」搬到「需人工」，仍然留着。
+  所以「这批样本不会被误杀」这个结论**不依赖我押对了哪个前提**。
+
+三、但两个前提的**产出不一样**（这部分我不掩饰）
+  · P1 产出可执行动作：21 个工具 / 21 个参数要改（去改数据源，一次做完）
+  · P2 产出 1351 条人工队列：要看 1351 条样本
+    —— 按「队列长度」判据，1351 条已经不构成队列了
+    （同一份事实的两种表述，一个没用一个有行动）
+
+四、命中量的变化
+  P1 命中 1351 / 60000  2.25%
+  P2 命中 1351 / 60000  2.25%
+  差额 0 条 = 被 P1 的豁免放过的那些（P1 把它们算成数据源的账，本身就是命中）
+
+五、根因分布对照
+  根因                              P1        P2
+  ok                           58649     58649
+  schema_contradiction          1286         0
+  step_error                      65      1351
+
+六、同一批样本在两种前提下的原文（前 5 条，可人工复核）
+  问：What is the electric field intensity at 3 meters from a 2 Coulomb char
+    P1 └ 步骤 1 calculate_electric_field：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 char
+    P2 └ 步骤 1 calculate_electric_field：missing required: permitivity；步骤 2 calculate_electric_field：missing requir
+  问：Calculate the cell density of a sample with an OD of 0.6 and a dilutio
+    P1 └ 步骤 1 cell_density：schema contradiction: factor 的 description 称有默认值，schema 未标 default
+    P2 └ 步骤 1 cell_density：missing required: factor
+  问：Find pairs in the list [2, 4, 6, 8, 10] that sum to 12, and estimate t
+    P1 └ 步骤 2 bacterial_growth：schema contradiction: doubling_time 的 description 称有默认值，schema 未标 default
+    P2 └ 步骤 2 bacterial_growth：missing required: doubling_time
+  问：What is the probability of rolling a sum of 10 with 3 dice?
+    P1 └ 步骤 1 dice_roll_probability：schema contradiction: num_faces 的 description 称有默认值，schema 未标 default
+    P2 └ 步骤 1 dice_roll_probability：missing required: num_faces
+  问：Calculate the electric field produced by a charge of 1 Coulomb at a di
+    P1 └ 步骤 1 calculate_electric_field：schema contradiction: permitivity 的 description 称默认值 8.854e-12，但该值被标在 char
+    P2 └ 步骤 1 calculate_electric_field：missing required: permitivity
+
+七、诚实说明
+  · 这个实验**没有**回答「哪个前提是对的」——它回答的是「押错了会怎样」。
+    我至今认为 P1 更合理（description 自己承诺了默认值），但**我不需要
+    靠这个信念去兜住误杀风险**——因为两个读法下动作都落在可逆的那一侧。
+  · P2 的实现是**临时替换判定函数**跑一遍，不是复制一套规则集——复制的规则集一定会跟主规则漂移，漂移出来的对照比没有对照更糟。
+  · 这个实验仍然建立在**无标签**数据上：它证明的是「处置不会因前提翻转而变得不可逆」，**不是**「处置是对的」。
+  · 本实验同样没解决：内容安全（PII/越权/注入）零覆盖、模型侧收益未测。
