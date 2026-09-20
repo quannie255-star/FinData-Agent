@@ -1,7 +1,7 @@
 # 上下文经济学报告 · frozen3b-all-vs-active
 
 > 本报告由 findata-context-economist 从 trace 自动生成。文中「实测」指 trace 里原样记录的 provider usage 或本项目数的确定性字符数；「换算」指由实测比值推出的估算值；「未测得」指本次输入不具备测它的条件。
-> 生成时间：2026-09-20 20:55:40
+> 生成时间：2026-09-20 21:27:33
 
 ## 1. 本报告读的是什么
 
@@ -38,7 +38,7 @@
 ### 2.2 省下的 token
 
 - **实测**（配对任务 32 个，见 §7）：177,112 → 87,055 prompt tokens，**-90,057（-50.8%）**
-- **换算（上界式估算，用于排序提案）**：各提案字符口径节省合计 581,632 字符 ⇒ 约 113,459 prompt tokens（按 2.1 的 0.1951 token/字符）
+- **换算（上界式估算，用于排序提案）**：各提案字符口径节省合计 607,562 字符 ⇒ 约 118,517 prompt tokens（按 2.1 的 0.1951 token/字符）
 
 **实测与估算不是一回事**：估算只覆盖 §6 里那几条提案，而实测差是两臂之间**全部**差异的结果。两者放在一起看的意义是标定「字符换算 token」这个做法的误差量级——见 §7.1。
 
@@ -53,7 +53,7 @@
 ### 2.3 折算成本
 
 - 单价：**$0.4 / 百万 prompt token**（由调用方提供，本工具不猜）
-- 换算：113,459 tokens × $0.4/M = **$0.0454 / 这 32 个任务**
+- 换算：118,517 tokens × $0.4/M = **$0.0474 / 这 32 个任务**
 - 该金额继承 2.2 的全部偏差，只作量级参考
 
 ### 2.4 成功率变化
@@ -115,6 +115,16 @@
 - **影响调用数**：0
 - **代价（字符口径，实测）**：581,632 字符 ⇒ 约 113,459 tokens（换算）
 
+### 6.2 返回侧·小段聚合改返回 shape
+
+- **对象**：list_files 的 path 段（950 个小段，合计 25,960 字符）
+- **动作**：改返回 shape 而不是逐个裁：加**必填的收窄参数**（前缀/分页/上限），或只回索引摘要（名字 + 字符数），需要哪条再取哪条。**不是删字段**：内容仍可取到
+- **证据**：950 个小段（每段 <200 字符）合计 25,960 字符，其中 25,930 字符在本次运行中**未观测到任何引用**（949 段）
+- **证据强度**：弱（`after` 缺模型中间推理文本 ⇒ 会漏判引用；且收窄参数会改变模型行为）
+- **可逆**：是
+- **影响调用数**：5
+- **代价（字符口径，实测）**：25,930 字符 ⇒ 约 5,058 tokens（换算）
+
 **处置纪律**：所有提案都是**可逆**的（保留实现、内容仍可取回），没有一条是删除信息。依据是项目一贯的判据——证据弱时选可逆的动作，别让一个「我没观测到」的判断去执行有代价且不可逆的操作。
 
 ## 7. 改前/改后对照（验证环节）
@@ -164,7 +174,7 @@
 ## 9. 复现
 
 ```bash
-findata-context-economist --trace examples/context-audit --tag all3b-fz --after examples/context-audit --after-tag active3b-fz --corpus-root C:/Users/10393/WorkBuddy/Worktrees/FinData-Agent/ctxbench-frozen --grader keyword --usd-per-mtok 0.4 --out-dir examples/context-economist
+findata-context-economist --trace examples/context-audit --tag all3b-fz --label frozen3b-all-vs-active --after examples/context-audit --after-tag active3b-fz --corpus-root C:/Users/10393/WorkBuddy/Worktrees/FinData-Agent/ctxbench-frozen --grader keyword --usd-per-mtok 0.4 --out-dir examples/context-economist
 ```
 
 本工具的输出是**确定性**的（除时间戳）：输入 trace 不变，报告的每个数字都不变。唯一的不确定性来自 `--usd-per-mtok`（调用方给）与 2.1 的换算系数（本批实测）。

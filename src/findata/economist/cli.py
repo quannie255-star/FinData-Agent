@@ -92,6 +92,25 @@ def default_system_prompt() -> str:
     return SYSTEM_PROMPT
 
 
+def _sh_arg(value: object) -> str:
+    """把一个参数写成**可以直接复制粘贴执行**的形式。
+
+    两个实测坑，都是"复现命令复现不了自己"：
+
+    ① Windows 路径里的反斜杠在 POSIX shell 下会被当成转义符吃掉
+       （`shlex.split(r'--trace C:\\\\a\\\\b')` 得到 `C:ab`）。统一换成正斜杠——
+       Windows 也认正斜杠，两边都能跑。
+    ② 含空格的路径不加引号会被拆成两个参数。
+
+    判据：**复现段是给外部核对用的入口，它印出来的东西必须真的能跑**，
+    而不是"看起来像一条命令"。
+    """
+    text = str(value).replace("\\", "/")
+    if any(ch in text for ch in ' \t"\'()&;'):
+        text = '"' + text.replace('"', '\\"') + '"'
+    return text
+
+
 def print_summary(analysis: Analysis, verification, usd_per_mtok: float) -> None:
     a = analysis
     print("=" * 74)
@@ -204,15 +223,22 @@ def main(argv: list[str] | None = None) -> int:
     json_path = out_dir / f"economist-{slug}.json"
 
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # **`--label` 必须写进复现命令**：输出文件名（`slug`）和报告标题都由 label 决定。
+    # 少了它，照抄这条命令会写出**另一组文件名** —— 实测踩到：跑完得到
+    # `report-examples_context-audit.md`，而报告自己叫 `report-frozen7b-all-vs-active.md`。
+    # **一条不能复现自己的复现命令，等于没有复现段。** `--tools-file` 同理：
+    # 不记下来，"下发了哪些工具"可能重建得不一样 ⇒ 定义侧提案会跟着变。
     reproduce = (
-        f"findata-context-economist --trace {args.trace}"
-        + (f" --tag {args.tag}" if args.tag else "")
-        + (f" --after {args.after}" if args.after else "")
-        + (f" --after-tag {args.after_tag}" if args.after_tag else "")
-        + (f" --corpus-root {args.corpus_root}" if args.corpus_root else "")
+        f"findata-context-economist --trace {_sh_arg(args.trace)}"
+        + (f" --tag {_sh_arg(args.tag)}" if args.tag else "")
+        + f" --label {_sh_arg(analysis.label)}"
+        + (f" --after {_sh_arg(args.after)}" if args.after else "")
+        + (f" --after-tag {_sh_arg(args.after_tag)}" if args.after_tag else "")
+        + (f" --corpus-root {_sh_arg(args.corpus_root)}" if args.corpus_root else "")
         + f" --grader {args.grader}"
+        + (f" --tools-file {_sh_arg(args.tools_file)}" if args.tools_file else "")
         + (f" --usd-per-mtok {args.usd_per_mtok}" if args.usd_per_mtok else "")
-        + f" --out-dir {args.out_dir}"
+        + f" --out-dir {_sh_arg(args.out_dir)}"
     )
 
     report_path.write_text(

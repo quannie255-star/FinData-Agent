@@ -166,12 +166,23 @@
       "affected_calls": 8,
       "saving_chars": 50754,
       "saving_tokens_est": 9275
+    },
+    {
+      "lever": "返回侧·小段聚合改返回 shape",
+      "target": "list_files 的 path 段（134 个小段，合计 3,243 字符）",
+      "action": "改返回 shape 而不是逐个裁：加**必填的收窄参数**（前缀/分页/上限），或只回索引摘要（名字 + 字符数），需要哪条再取哪条。**不是删字段**：内容仍可取到",
+      "evidence": "134 个小段（每段 <200 字符）合计 3,243 字符，其中 2,303 字符在本次运行中**未观测到任何引用**（93 段）",
+      "evidence_strength": "弱（`after` 缺模型中间推理文本 ⇒ 会漏判引用；且收窄参数会改变模型行为）",
+      "reversible": true,
+      "affected_calls": 4,
+      "saving_chars": 3183,
+      "saving_tokens_est": 582
     }
   ],
-  "saving_chars_upper_bound": 809327,
-  "saving_tokens_est": 147905,
+  "saving_chars_upper_bound": 812510,
+  "saving_tokens_est": 148487,
   "usd_per_mtok": 0.4,
-  "usd_est": 0.059162,
+  "usd_est": 0.059394800000000005,
   "verification": {
     "grader": "keyword",
     "n_paired": 32,

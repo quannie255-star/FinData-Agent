@@ -718,11 +718,15 @@ def test_tiny_p_value_is_not_printed_as_zero(tmp_path) -> None:
 def test_many_small_segments_produce_an_aggregate_shape_proposal(tmp_path) -> None:
     """单条看都不值得提的小段，加起来是最大的一笔 ⇒ 必须有一条聚合提案。
 
-    实测撞出来的（3B 臂）：`list_files` 返回 950 个路径段（合计 27,769 字符，
-    **0 个被引用**），却因为每段都短于 200 字符而**一条提案都没产出** ——
-    那正是这个臂里最大的一笔返回侧浪费，被自己的"单段门槛"漏掉了。
+    实测撞出来的（3B 臂）：`list_files` 的 5 次**成功**调用返回 **950 个路径段
+    （段字符合计 25,960，其中 949 段未被引用）**，却因为每段都短于 200 字符而
+    **一条提案都没产出** —— 那正是这个臂里最大的一笔返回侧浪费，被自己的"单段门槛"漏掉了。
     处置判据来自项目一贯的做法：**队列长度**。900 多个小项逐条看等于没有队列，
     必须结构性修复（改返回 shape），而不是逐条裁。
+
+    数字口径（**我在这里先报错过一次**）：`25,960` 是**段字符之和**，只有它才谈得上
+    "裁掉"；该工具 13 次调用的 `payload` 合计 `27,769` 是**容器总量**，还含段间换行
+    与 8 次非成功调用的返回。把容器总量当成"段之和"会虚报 7%。
     """
     from findata.contextbudget.tools import call_tool, set_corpus_root
 
@@ -813,9 +817,14 @@ def test_chars_to_tokens_dict_pins_the_denominator() -> None:
 def test_error_returns_are_not_segmented(tmp_path) -> None:
     """报错/未找到的返回**没有结构**，不许切段。
 
-    实测撞出来的（3B 臂）：`list_files` 的 `No files under 'path: '.` 被当成
-    "每个非空行是一个路径"，产出 958 个假段，还伪造出一条 `list_files → list_files`
-    的信息流（样例值 `path:`）。判据：报了错的结果不猜结构。
+    实测撞出来的（3B 臂）：`list_files` 的 `No files under 'src/contextbudget/'.`
+    这类**一句话**被当成"每个非空行是一个路径"，于是这句话本身成了一个"路径值"，
+    还伪造出一条 `list_files → list_files` 的信息流（样例值 `path:`）。
+    判据：报了错的结果不猜结构。
+
+    **规模别报错（我自己先报错过）**：那一臂 13 次 `list_files` 里 8 次非成功，
+    旧规则下**各**切出 1 个假段 ⇒ 共 **8 个假段 / 864 字符**；
+    `958` 是"950 个真段 + 8 个假段"的**总数**，把总数说成假段数会把收益夸大两个数量级。
     """
     err = "No files under 'path: '."
     assert segment_payload("list_files", err) != []
@@ -880,3 +889,52 @@ def test_candidates_that_are_never_resent_are_excluded_and_counted(tmp_path) -> 
     assert lever.saving_chars == expected > 0
     assert "产生于末轮" in lever.evidence
     assert lever.affected_calls == 2  # 只有第 1、2 轮的那两次调用
+
+
+def test_reproduce_command_reproduces_its_own_filenames(tmp_path) -> None:
+    """§9 里印出来的命令必须能复现**同一个文件名**。
+
+    实测踩到：输出文件名由 `--label` 决定（`report-{label}.md`），而 §9 记录的
+    复现命令**不含 `--label`** ⇒ 照抄它跑出来是 `report-examples_context-audit.md`，
+    与报告自己的文件名 `report-frozen7b-all-vs-active.md` **不是同一个**。
+    一条不能复现自己的复现命令，等于没有复现段——而它恰恰是"这份报告的数字
+    可被外部核对"的唯一入口。
+
+    这里跑的是**往返**：先真跑一次，再从报告 §9 里把命令抠出来原样再跑一次，
+    断言输出文件集合没变。只断言"字符串里有 --label"太弱——它和"真的能复现"
+    不是一回事。
+    """
+    import shlex
+
+    from findata.economist.cli import main
+
+    trace_dir = tmp_path / "trace"
+    trace_dir.mkdir()
+    run = make_run(
+        "列出所有文件",
+        turns=[make_turn(1, [make_call("list_files", {}, payload_chars=300)]), make_turn(2, [])],
+        final_answer="完成",
+    )
+    (trace_dir / "runs-batch.jsonl").write_bytes(
+        (json.dumps(run, ensure_ascii=False) + "\n").encode("utf-8")
+    )
+    out_dir = tmp_path / "out"
+
+    argv = [
+        "--trace", str(trace_dir),
+        "--tag", "batch",
+        "--label", "my-batch",
+        "--out-dir", str(out_dir),
+    ]
+    assert main(argv) == 0
+    first = {p.name for p in out_dir.iterdir()}
+    assert first == {"report-my-batch.md", "economist-my-batch.json"}, first
+
+    text = (out_dir / "report-my-batch.md").read_text(encoding="utf-8")
+    section = text[text.index("## 9. 复现"):]
+    cmd_line = section.split("```bash")[1].split("```")[0].strip()
+    assert "--label my-batch" in cmd_line, f"§9 里没记 --label，照抄它会写出别的文件名：{cmd_line}"
+
+    # 把 §9 里那条命令原样喂回去（去掉程序名），必须**只**覆盖同一组文件
+    assert main(shlex.split(cmd_line)[1:]) == 0
+    assert {p.name for p in out_dir.iterdir()} == first
