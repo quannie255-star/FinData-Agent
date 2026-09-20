@@ -51,6 +51,13 @@ CallKey = tuple[str, int, int]
 # 段级"跨工具信息流"扫描的上限：一段里抽出几千个标识符时，全扫对结论没有增益
 _MAX_FLOW_TOKENS = 400
 
+# 下面两个数**只决定"值不值得把这条提案列出来"**，不决定任何判定结果。
+# 写死在这里是为了让它们可被质疑、可被修改；报告里一律同时给出原始数字
+# （段数 / 总字符 / 未被引用字符），读的人可以自己判断该不该做这条改动。
+# 200 字符 = 单段够大才单独成条；2,000 字符 = 一组小段加起来够大才值得改 shape。
+_SMALL_SEGMENT_MAX_CHARS = 200
+_SMALL_SEGMENT_GROUP_MIN_CHARS = 2000
+
 _FENCE_RE = re.compile(r"```[a-zA-Z]*\n(.*)\n```\Z", re.DOTALL)
 _HEADING_RE = re.compile(r"^#{1,4} ", re.MULTILINE)
 
@@ -60,8 +67,14 @@ _HEADING_RE = re.compile(r"^#{1,4} ", re.MULTILINE)
 # --------------------------------------------------------------------------
 
 
-def segment_payload(tool: str, payload: str) -> list[FieldValue]:
+def segment_payload(tool: str, payload: str, *, result_code: str = "ok") -> list[FieldValue]:
     """把一次工具返回切成有意义的段。
+
+    **非成功返回一律不切段。** 这条规则是实测撞出来的：错误/`not_found` 的返回是
+    `No files under 'path: '.` 这类一句话，按"每个非空行是一个路径"去切，
+    会把整句话切成"段"，再被值级归因当成真值 —— 3B 臂上因此产出过 958 个
+    假 `path` 段，还伪造出一条 `list_files → list_files` 的信息流（样例值 `path:`）。
+    判据很简单：**报了错的结果没有"结构"可言，不猜。**
 
     **为什么不按 JSON 字段切**：本项目这批工具的返回是 Markdown 文本块，
     不是结构化 JSON。硬按"字段"切会切出没有语义的碎块，基于它的归因也就
@@ -71,7 +84,7 @@ def segment_payload(tool: str, payload: str) -> list[FieldValue]:
     **未知结构一律返回空表，不猜。** 空表在统计里读作"结构未观测"，
     绝不读作"没有内容所以可以删"——后者会让报告提议裁掉一个它根本没看懂的返回。
     """
-    if not payload:
+    if not payload or result_code != "ok":
         return []
 
     if tool == "list_files":
@@ -206,6 +219,9 @@ def reconstruct_calls(
     if corpus_root is None:
         report.n_calls = bundle.n_tool_calls
         report.n_skipped_no_root = report.n_calls
+        # 复位：`set_corpus_root` 是进程级的，不复位会让上一次分析用的语料
+        # **泄漏到下一次**（尤其在长驻进程里）。既然说"没有语料根"，就真的一个都别读。
+        set_corpus_root(None)
         return contents, report
 
     set_corpus_root(corpus_root)
@@ -457,7 +473,7 @@ def _attribute_run(
             if content is None:
                 continue
             result.n_calls_attributed += 1
-            segments = segment_payload(call.name, content)
+            segments = segment_payload(call.name, content, result_code=call.result_code)
             if not segments:
                 continue
             remaining_turns = max(0, total_turns - turn.turn)
@@ -665,6 +681,18 @@ def _identify_offered_tools(
     )
 
 
+def _remaining_turns(
+    runs: dict[str, RunObs], verdict: SegmentVerdict, fallback: int
+) -> int:
+    """这个段还能被重发多少次 = 所在任务的轮数 − 它产生的轮次。
+
+    这是节省量的乘数。写成 1 会把节省量少报一个数量级；不减去产生轮次
+    则会把末轮的段也算成可省（它其实一次都不会再被重发）。
+    """
+    n_turns = runs[verdict.task].n_turns if verdict.task in runs else fallback
+    return max(0, n_turns - verdict.turn)
+
+
 def _propose(result: Analysis) -> list[Proposal]:
     proposals: list[Proposal] = []
     runs = result.bundle.runs
@@ -703,27 +731,41 @@ def _propose(result: Analysis) -> list[Proposal]:
         by_group[(v.tool, v.kind)].append(v)
 
     for (tool, kind), group in sorted(by_group.items()):
-        unused = [
-            v for v in group if v.status == attribution.STATUS_NOT_REFERENCED and v.chars >= 200
+        candidates = [
+            v
+            for v in group
+            if v.status == attribution.STATUS_NOT_REFERENCED
+            and v.chars >= _SMALL_SEGMENT_MAX_CHARS
         ]
+        # 末轮产生的段**不会被重发** ⇒ 去掉它省不到任何东西（乘数 = 剩余轮数 = 0）。
+        # 这类候选必须剔掉，否则会产出"省 0 字符"的提案——它不是一条可执行的建议。
+        # 剔掉的数量要报出来，让读的人知道这不是漏看。
+        unused = [v for v in candidates if _remaining_turns(runs, v, total_turns) > 0]
+        zero_turn = len(candidates) - len(unused)
         if not unused:
             continue
         saving = sum(
-            v.chars * max(0, (runs[v.task].n_turns if v.task in runs else total_turns) - v.turn)
+            v.chars * _remaining_turns(runs, v, total_turns)
             for v in unused
         )
+        evidence = (
+            f"{len(group)} 段里这 {len(unused)} 段在本次运行中**未观测到任何引用**；"
+            f"合计 {sum(v.chars for v in unused):,} 字符，各乘其剩余轮数"
+        )
+        if zero_turn:
+            evidence += (
+                f"；另有 {zero_turn} 段同样未被引用但**产生于末轮**"
+                "（不会再被重发，去掉它省不到东西），已排除"
+            )
         proposals.append(
             Proposal(
                 lever="返回侧·大段改分层加载",
-                target=f"{tool} 的 {kind} 段（{len(unused)} 段 ≥200 字符）",
+                target=f"{tool} 的 {kind} 段（{len(unused)} 段 ≥{_SMALL_SEGMENT_MAX_CHARS} 字符）",
                 action=(
                     "改成「先返回段索引（名字 + 字符数），命中后再取该段全文」——"
                     "**不是删除**：这些段仍可取到，只是不再常驻上下文"
                 ),
-                evidence=(
-                    f"{len(group)} 段里这 {len(unused)} 段在本次运行中**未观测到任何引用**；"
-                    f"合计 {sum(v.chars for v in unused):,} 字符，各乘其剩余轮数"
-                ),
+                evidence=evidence,
                 strength="弱（`after` 不含模型中间推理文本 ⇒ 会漏判引用；处置取可逆动作）",
                 reversible=True,
                 affected_calls=len({(v.task, v.turn) for v in unused}),
@@ -731,7 +773,46 @@ def _propose(result: Analysis) -> list[Proposal]:
             )
         )
 
-    # --- 杠杆 C：同一参数重复取同一结果（确定性判据，证据最硬）---
+    # --- 杠杆 C：**小而多**的段——单条看不值得提，加起来是最大的一笔 ---
+    # 阈值只决定「值不值得列出来」，不决定任何判定。原始数字（段数/总字符/未被引用字符）
+    # 一律写进证据里，读的人可以自己判断这条该不该做。
+    for (tool, kind), group in sorted(by_group.items()):
+        small = [v for v in group if 0 < v.chars < _SMALL_SEGMENT_MAX_CHARS]
+        if len(small) < 2:
+            continue
+        unreferenced = [
+            v
+            for v in small
+            if v.status == attribution.STATUS_NOT_REFERENCED
+            and _remaining_turns(runs, v, total_turns) > 0
+        ]
+        total_chars = sum(v.chars for v in small)
+        unused_chars = sum(v.chars for v in unreferenced)
+        if unused_chars < _SMALL_SEGMENT_GROUP_MIN_CHARS:
+            continue
+        saving = sum(v.chars * _remaining_turns(runs, v, total_turns) for v in unreferenced)
+        proposals.append(
+            Proposal(
+                lever="返回侧·小段聚合改返回 shape",
+                target=f"{tool} 的 {kind} 段（{len(small)} 个小段，合计 {total_chars:,} 字符）",
+                action=(
+                    "改返回 shape 而不是逐个裁：加**必填的收窄参数**（前缀/分页/上限），"
+                    "或只回索引摘要（名字 + 字符数），需要哪条再取哪条。"
+                    "**不是删字段**：内容仍可取到"
+                ),
+                evidence=(
+                    f"{len(small)} 个小段（每段 <{_SMALL_SEGMENT_MAX_CHARS} 字符）"
+                    f"合计 {total_chars:,} 字符，其中 {unused_chars:,} 字符"
+                    f"在本次运行中**未观测到任何引用**（{len(unreferenced)} 段）"
+                ),
+                strength="弱（`after` 缺模型中间推理文本 ⇒ 会漏判引用；且收窄参数会改变模型行为）",
+                reversible=True,
+                affected_calls=len({(v.task, v.turn) for v in unreferenced}),
+                saving_chars=saving,
+            )
+        )
+
+    # --- 杠杆 D：同一参数重复取同一结果（确定性判据，证据最硬）---
     dup_saving = 0
     dup_calls = 0
     dup_tools: Counter = Counter()

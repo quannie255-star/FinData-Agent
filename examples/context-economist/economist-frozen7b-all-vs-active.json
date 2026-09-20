@@ -79,13 +79,13 @@
         "ok": 5,
         "not_found": 1
       },
-      "n_segments": 135,
-      "seg_chars": 3273,
-      "n_referenced": 42,
+      "n_segments": 134,
+      "seg_chars": 3243,
+      "n_referenced": 41,
       "n_not_referenced": 93,
       "n_unverifiable": 0,
-      "n_calls_with_segments": 6,
-      "n_calls_no_shape": 0
+      "n_calls_with_segments": 5,
+      "n_calls_no_shape": 1
     },
     {
       "tool": "get_signature",

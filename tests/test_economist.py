@@ -715,6 +715,92 @@ def test_tiny_p_value_is_not_printed_as_zero(tmp_path) -> None:
     assert "e-06" in text or "e-07" in text
 
 
+def test_many_small_segments_produce_an_aggregate_shape_proposal(tmp_path) -> None:
+    """单条看都不值得提的小段，加起来是最大的一笔 ⇒ 必须有一条聚合提案。
+
+    实测撞出来的（3B 臂）：`list_files` 返回 950 个路径段（合计 27,769 字符，
+    **0 个被引用**），却因为每段都短于 200 字符而**一条提案都没产出** ——
+    那正是这个臂里最大的一笔返回侧浪费，被自己的"单段门槛"漏掉了。
+    处置判据来自项目一贯的做法：**队列长度**。900 多个小项逐条看等于没有队列，
+    必须结构性修复（改返回 shape），而不是逐条裁。
+    """
+    from findata.contextbudget.tools import call_tool, set_corpus_root
+
+    corpus = tmp_path / "corpus"
+    (corpus / "src").mkdir(parents=True)
+    for i in range(60):
+        (corpus / "src" / f"module_with_a_fairly_long_name_{i:03d}.py").write_bytes(b"x = 1\n")
+
+    # 用工具自己算一遍，拿到**真实的** payload 字符数（不猜返回顺序）
+    set_corpus_root(corpus)
+    try:
+        expected = call_tool("list_files", {})
+    finally:
+        set_corpus_root(None)
+    assert expected.payload_chars > 2000
+
+    bundle = write_trace(
+        tmp_path,
+        "smallsegs",
+        [
+            make_run(
+                "列出所有文件",
+                turns=[
+                    make_turn(
+                        1, [make_call("list_files", {}, payload_chars=expected.payload_chars)]
+                    ),
+                    make_turn(2, []),
+                ],
+                final_answer="完成",
+            )
+        ],
+    )
+    analysis = analyze(bundle, corpus_root=corpus)
+    lever = next(p for p in analysis.proposals if "小段聚合" in p.lever)
+    # 第 1 轮产生、共 2 轮 ⇒ 每段乘 1。
+    # **不能**拿 `expected.payload_chars` 当预期：省的是**段的字符**，
+    # 而 payload 还含各段之间的 `"\n"` 分隔符（它不属于任何一段，也就无从"裁掉"）。
+    # 两者必须分开算——先把差额断言出来，免得将来有人把这两个数字混成一个。
+    expected_seg_chars = sum(
+        v.chars * (2 - v.turn)
+        for v in analysis.verdicts
+        if v.tool == "list_files"
+        and v.status == "not_referenced_this_run"
+        and v.chars < 200
+    )
+    assert lever.saving_chars == expected_seg_chars > 0
+    n_sep = len([v for v in analysis.verdicts if v.tool == "list_files"])
+    assert expected.payload_chars - expected_seg_chars == n_sep - 1, (
+        "段字符与 payload 字符的差额应当正好是段间的换行分隔符数"
+    )
+    assert "900" not in lever.evidence  # 不要把别的批次的数字带进来
+    assert "未观测到任何引用" in lever.evidence
+
+
+def test_corpus_root_does_not_leak_between_analyses(tmp_path) -> None:
+    """一次分析用过的语料根不许泄漏到下一次（`set_corpus_root` 是进程级的）。"""
+    from findata.contextbudget.tools import get_corpus_root
+
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "a.py").write_bytes(b"def alpha():\n    pass\n")
+
+    bundle = write_trace(
+        tmp_path,
+        "leak",
+        [
+            make_run(
+                "任务",
+                turns=[make_turn(1, [make_call("read_file", {"path": "a.py"}, payload_chars=1)])],
+            )
+        ],
+    )
+    analyze(bundle, corpus_root=corpus)
+    before = get_corpus_root()
+    analyze(bundle, corpus_root=None)
+    assert get_corpus_root() != before, "传 None 之后语料根必须复位"
+
+
 def test_chars_to_tokens_dict_pins_the_denominator() -> None:
     measured = CharsToTokens(
         n_turns=2, total_prompt_tokens=200, total_chars=1000, per_turn=[0.2, 0.2]
@@ -722,3 +808,75 @@ def test_chars_to_tokens_dict_pins_the_denominator() -> None:
     payload = measured.to_dict()
     assert payload["tokens_per_char"] == pytest.approx(0.2)
     assert "messages_chars + tools_chars" in str(payload["note"])
+
+
+def test_error_returns_are_not_segmented(tmp_path) -> None:
+    """报错/未找到的返回**没有结构**，不许切段。
+
+    实测撞出来的（3B 臂）：`list_files` 的 `No files under 'path: '.` 被当成
+    "每个非空行是一个路径"，产出 958 个假段，还伪造出一条 `list_files → list_files`
+    的信息流（样例值 `path:`）。判据：报了错的结果不猜结构。
+    """
+    err = "No files under 'path: '."
+    assert segment_payload("list_files", err) != []
+    assert segment_payload("list_files", err, result_code="not_found") == []
+    assert segment_payload("read_file", "x", result_code="error") == []
+    assert segment_payload("search_code", "### a :: b\nbody", result_code="error") == []
+
+
+def test_candidates_that_are_never_resent_are_excluded_and_counted(tmp_path) -> None:
+    """末轮产生的段不会被重发 ⇒ 去掉它省不到东西，不许产出"省 0 字符"的提案。
+
+    3B 臂上真的产出过一条 `省 0 字符 ≈ 0 tokens` 的提案 —— 一条不可执行的建议
+    混在可执行的建议里，会让整张提案表都不可信。
+
+    注意必须用**三个不同的文件**：同一文件读两次时，第二次的值在调用前已在
+    上下文里（归因规则②），会被判成"不可判"而不是"未观测到引用"，
+    于是根本到不了这条判据——第一版测试就是这么写错的。
+    """
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+
+    def body_of(prefix: str) -> str:
+        return "".join(
+            f"def {prefix}_{i}():\n"
+            + "".join(f"    {prefix}_var_{j} = {j}\n" for j in range(24))
+            + "\n"
+            for i in range(5)
+        )
+
+    names = ["alpha", "bravo", "charlie"]
+    for name in names:
+        (corpus / f"{name}.py").write_bytes(body_of(name).encode("utf-8"))
+    payloads = {name: read_file_payload(body_of(name)) for name in names}
+
+    def read_call(idx: int) -> dict:
+        name = names[idx - 1]
+        return make_call(
+            "read_file", {"path": f"{name}.py"}, payload_chars=len(payloads[name]), turn=idx
+        )
+
+    runs = [
+        make_run(
+            "三轮各读一个大文件，最后一次在末轮",
+            turns=[
+                make_turn(1, [read_call(1)], chars=100),
+                make_turn(2, [read_call(2)], chars=100),
+                make_turn(3, [read_call(3)], chars=100),  # 末轮：不会再被重发
+            ],
+            final_answer="完成",
+        )
+    ]
+    bundle = write_trace(tmp_path, "lastturn", runs)
+    analysis = analyze(bundle, corpus_root=corpus)
+
+    lever = next(p for p in analysis.proposals if p.lever.startswith("返回侧"))
+    # 第 1 轮产生 ⇒ 剩 2 轮；第 2 轮产生 ⇒ 剩 1 轮；第 3 轮（末轮）⇒ 排除
+    expected = sum(
+        v.chars * (3 - v.turn)
+        for v in analysis.verdicts
+        if v.tool == "read_file" and v.status == "not_referenced_this_run" and v.chars >= 200
+    )
+    assert lever.saving_chars == expected > 0
+    assert "产生于末轮" in lever.evidence
+    assert lever.affected_calls == 2  # 只有第 1、2 轮的那两次调用

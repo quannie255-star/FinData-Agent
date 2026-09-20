@@ -92,7 +92,7 @@ data/filtered/
 
 ```bash
 uv sync
-uv run pytest                                        # 458 例测试
+uv run pytest                                        # 462 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py             # 主闭环（真实语料，默认全量）
@@ -265,7 +265,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(458, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(462, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）
