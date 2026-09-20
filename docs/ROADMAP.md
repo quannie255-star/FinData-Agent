@@ -106,13 +106,29 @@
 
 ## 三、Phase R5 验收门禁（先写后做，逐条核对）
 
-**R5.0 实验台**（前置）
-- [ ] 本机 Ollama（qwen2.5:7b，已有）+ 一个最小 demo agent（**3–5 个工具**，
-      其中至少 1 个返回大 payload、1 个工具定义冗长）
-- [ ] 用 OTel 记 trace，span 名与属性对齐**已 stable 的 GenAI 语义约定**：
+**R5.0 实验台**（前置）→ 验收记录见 `docs/r5.0-acceptance.md`
+- [x] 本机 Ollama（`qwen2.5:latest`，7B）+ 一个最小 demo agent
+      （实现：4 个真实工具 + 23 个只有定义的「沉默工具」= 27 个清单）
+- [x] 用 OTel 记 trace，span 名与属性对齐**已 stable 的 GenAI 语义约定**：
       `gen_ai.tool.call` + `tool.name` / `call_id` / `args_hash`（sha256，**不记原文**）
       / `result_code` / `retry_count` / `duration_ms`；**token 用量入 span**
-- [ ] 跑 30–50 个任务，trace 落盘可复现（`examples/` 归档）
+      （自有量走 `findata.context.*`，不污染标准命名空间）
+- [ ] 跑 30–50 个任务，trace 落盘可复现（`examples/` 归档）**← 32 任务 × 2 臂正在跑**
+
+> **R5.0 实施偏差记录（三个，都不改文档去迁就实现）**
+>
+> 1. **工具数 3–5 → 27。** 原计划按「1 个工具返回大 payload」设计；实施时改成
+>    **工具清单长度**作为自变量（27 vs 4 两臂）。理由：需求侧证据说的是
+>    **清单长度**的代价（50 工具 84–95% → 200 工具 41–83% → 740 工具接近 0），
+>    不是单个工具的大小。两者是不同的杠杆，长度这条更有外部数字背书。
+>    「大 payload」这条也没丢：`search_code` 返回完整函数体，实测单次
+>    15–17k 字符。
+> 2. **ROADMAP 写的 qwen2.5:7b，实际 tag 是 `qwen2.5:latest`。** 记在这里以免
+>    复现时按名字找不到模型。3B（`qwen2.5:3b`）留作对照，见验收记录 §2.2。
+> 3. **新增了一个 ROADMAP 没写的测量**：`scripts/measure_tools_token_cost.py`
+>    直接实测工具定义的 prompt token 成本（同 payload 切换 `tools` 求差），
+>    替代原先的字符数换算。原计划的字符口径仍在，但降级为「确定性回归量」，
+>    不再承担对外报数。
 
 **R5.1 观测层**
 - [ ] 逐工具统计：返回 payload 的 token 占比、**被后续引用的字段集**、

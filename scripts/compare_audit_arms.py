@@ -139,17 +139,28 @@ def main() -> int:
         )
 
     # --- 质量是否受损（这是全部的关键：省了钱有没有付出代价）---
+    n_tasks_a = bill_a["scope"]["n_tasks"]
+    n_tasks_b = bill_b["scope"]["n_tasks"]
     hits_a = bill_a["measured"]["keyword_hits"]
     hits_b = bill_b["measured"]["keyword_hits"]
     calls_a = bill_a["measured"]["total_tool_calls"]
     calls_b = bill_b["measured"]["total_tool_calls"]
     ans_a = bill_a["measured"]["n_answered"]
     ans_b = bill_b["measured"]["n_answered"]
+    err_a = bill_a["measured"]["n_errored"]
+    err_b = bill_b["measured"]["n_errored"]
 
     print("\n--- 质量侧对照（关键词命中是弱判据）---")
-    print(f"  关键词命中 : A={hits_a}/32   B={hits_b}/32   差={hits_b - hits_a:+d}")
+    print(f"  关键词命中 : A={hits_a}/{n_tasks_a}  B={hits_b}/{n_tasks_b}  差={hits_b - hits_a:+d}")
     print(f"  工具调用数 : A={calls_a}      B={calls_b}      差={calls_b - calls_a:+d}")
-    print(f"  完成数     : A={ans_a}      B={ans_b}")
+    print(f"  完成数     : A={ans_a}/{n_tasks_a}      B={ans_b}/{n_tasks_b}")
+    # 错误数必须一起报：超时/异常是环境噪声，不是模型能力。
+    # 只报对自己有利的那一臂等于筛选证据。
+    print(f"  错误数     : A={err_a}      B={err_b}      （超时等环境失败，须同口径处理）")
+
+    # 两臂任务集必须一致，否则"配对"是假的
+    if n_tasks_a != n_tasks_b:
+        print(f"  ⚠️ 两臂任务数不同（{n_tasks_a} vs {n_tasks_b}）—— 配对的效力下降，须在报告里说明")
 
     # McNemar 式配对：只在"两臂结论不同"的任务上比较
     both = only_a = only_b = neither = 0

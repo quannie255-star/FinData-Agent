@@ -1,0 +1,49 @@
+{
+  "model": "qwen2.5:latest",
+  "base_url": "http://127.0.0.1:11434/v1",
+  "probe_message": "请用一个词回答：Python 这门语言的创造者是谁？",
+  "repeats": 3,
+  "measured": {
+    "无工具": {
+      "n_tools": 0,
+      "repeats": [
+        45,
+        45,
+        45
+      ],
+      "prompt_tokens": 45,
+      "repeat_identical": true
+    },
+    "活跃 4 个": {
+      "n_tools": 4,
+      "repeats": [
+        613,
+        613,
+        613
+      ],
+      "prompt_tokens": 613,
+      "repeat_identical": true,
+      "delta_vs_no_tools": 568,
+      "share_of_prompt_pct": 92.66,
+      "delta_per_tool": 142.0
+    },
+    "全量 27 个": {
+      "n_tools": 27,
+      "repeats": [
+        2277,
+        2277,
+        2277
+      ],
+      "prompt_tokens": 2277,
+      "repeat_identical": true,
+      "delta_vs_no_tools": 2232,
+      "share_of_prompt_pct": 98.02,
+      "delta_per_tool": 82.7
+    }
+  },
+  "quantities": {
+    "portable": "工具定义固定吃掉的 prompt token 绝对增量（每轮重发、与任务无关）—— 由上下文结构决定，与模型无关",
+    "scenario_specific": "占比 —— 分母是本次 prompt 总长；本脚本探测消息只有一句话，占比因此接近 100%，是短 prompt 的产物，不可当一般结论引用"
+  },
+  "note": "实测口径：读上游 usage.prompt_tokens，非字符数换算。引用时给绝对增量；要谈占比必须同时给出对话其余部分有多大，否则等于没给分母。本次探测基线（无工具）仅 45 token。"
+}
