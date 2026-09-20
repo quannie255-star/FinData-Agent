@@ -1,0 +1,43 @@
+{
+  "scope": {
+    "n_tasks": 6,
+    "model": "qwen2.5:latest",
+    "n_tools_in_list": 27,
+    "n_silent_tools": 23,
+    "tools_chars_per_call": 11559,
+    "semconv": "gen-ai-stable-2026"
+  },
+  "measured": {
+    "n_answered": 6,
+    "n_errored": 0,
+    "keyword_hits": 4,
+    "total_turns": 12,
+    "total_tool_calls": 6,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 28516,
+    "completion_tokens": 773,
+    "tool_payload_chars": 2209,
+    "tools_def_chars_carried": 138708
+  },
+  "per_tool": [
+    {
+      "tool": "list_files",
+      "calls": 5,
+      "payload_chars": 2189,
+      "avg_chars": 437.8,
+      "codes": {
+        "ok": 4,
+        "not_found": 1
+      }
+    },
+    {
+      "tool": "get_signature",
+      "calls": 1,
+      "payload_chars": 20,
+      "avg_chars": 20.0,
+      "codes": {
+        "not_found": 1
+      }
+    }
+  ]
+}
