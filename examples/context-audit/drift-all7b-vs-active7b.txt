@@ -1,0 +1,44 @@
+==============================================================================
+trace 级语料漂移核验（判据：同一调用的 payload_chars 必须相同）
+==============================================================================
+臂 A = all7b   臂 B = active7b
+  A 的不同调用组合 = 52
+  B 的不同调用组合 = 55
+  两臂共有         = 20
+  覆盖率           = 20 / 107 个组合可核 （18.7%）
+
+  ❌ 共有组合里 payload_chars 不一致 = 4 —— **语料在运行期间变过**
+    docs 目录下有哪些 markdown 文档？逐…  list_files     {"prefix": "docs/"}                                        A=287      B=311
+    docs/ROADMAP.md 顶部最新的一节是哪…  read_file      {"path": "docs/ROADMAP.md"}                                A=21662    B=22061
+    scripts 目录下有哪些脚本？           list_files     {"prefix": "scripts/"}                                     A=801      B=865
+    tests 目录下有哪些测试文件？           list_files     {"prefix": "tests/"}                                       A=833      B=916
+    漂移字符规模 = 570 字符（|A−B| 求和，符号相反时不互相抵消）
+
+  仅 A 有 = 32   仅 B 有 = 35（模型行为差异，**不计入漂移**）
+    仅A AGENTS.md 里记录的当前主赛道是什么？     read_file      {"path": "AGENTS.md"}
+    仅A README 里描述的当前主线是什么？它和早期的 …  get_signature  {"path": "README.md"}
+    仅A agentops 的 RULES_VERSION …  search_code    {"max_results": 5, "query": "RULES_VERSION"}
+    仅A agentops 的 export.py 里，缺陷…  get_signature  {"path": "src/findata/agentops/export.py"}
+    仅A agentops 的 export.py 里，缺陷…  search_code    {"max_results": 5, "query": "defect_kind"}
+    仅A agentops 的 probes.py 里 un…  search_code    {"max_results": 5, "query": "ungrounded_slot probes.py age
+    仅A agentops 里一共有哪几档处置？把每一档的符…  search_code    {"max_results": 5, "query": "disposition"}
+    仅A agentops/triage.py 和 dq/t…  get_signature  {"path": "src/agentops/triage.py"}
+    仅A agentops/triage.py 和 dq/t…  get_signature  {"path": "src/dq/triage.py"}
+    仅A contextbudget 子包里有哪些模块？     get_signature  {"path": "contextbudget"}
+    仅B AGENTS.md 里记录的当前主赛道是什么？     search_code    {"max_results": 5, "query": "current main track"}
+    仅B AGENTS.md 里记录的当前主赛道是什么？     search_code    {"path": "AGENTS.md", "query": "current main track"}
+    仅B README 里描述的当前主线是什么？它和早期的 …  search_code    {"max_results": 5, "query": "mainline A-share direction"}
+    仅B agentops 的 RULES_VERSION …  search_code    {"max_results": 1, "query": "RULES_VERSION"}
+    仅B agentops 的 export.py 里，缺陷…  get_signature  {"path": "src/agentops/export.py"}
+    仅B agentops 的 export.py 里，缺陷…  search_code    {"max_results": 5, "query": "缺陷种类"}
+    仅B agentops 的 probes.py 里 un…  get_signature  {"path": "src/findata/agentops/probes.py"}
+    仅B agentops 的 probes.py 里 un…  read_file      {"path": "src/findata/agentops/probes.py"}
+    仅B agentops 里一共有哪几档处置？把每一档的符…  get_signature  {"path": "src/findata/agentops/triage.py"}
+    仅B agentops/triage.py 和 dq/t…  get_signature  {"path": "src/findata/agentops/triage.py"}
+
+--- 诚实说明 ---
+  · 只核两臂**都做过**的调用；各自独有的调用**无法核对**——这是方法的盲区，
+    不是'无漂移'的证据。独有数多时，本核验的效力就低。
+  · 判据用的是确定性量（字符数），不需要归档工具返回原文
+  · 这个核验**不能**替代语料指纹：它证明的是'跑的时候没变'，
+    指纹证明的是'两个根是同一份'。两者都要。

@@ -10,21 +10,40 @@
     # 对照臂（只给 4 个活跃工具）
     uv run python scripts/run_context_audit.py --tools active --out-dir examples/context-audit
 
+    # **推荐做法**：把语料冻结成快照，所有臂都读快照（见下）
+    git worktree add --detach /tmp/ctxbench-snap <冻结提交>
+    uv run python scripts/run_context_audit.py --tools all --corpus-root /tmp/ctxbench-snap \
+        --tag all7b-fz
+
 **两臂为什么必须分开跑**：这个实验要回答的是"工具清单里有 22 个用不到的定义，
 代价是多少"。唯一可靠的量法是**差分**——同样 32 个任务，一臂带全量定义，
 一臂只带活跃定义，其余全部不变，`prompt_tokens` 的差就是答案。
 不是估算出来的比例，是实测出来的差。
 
+**为什么默认读工作区是个陷阱**（2026-09-20 实测）：工具读的是**活的**本地仓库，
+所以在跑臂的同时往仓库里提交文件，会让**同一臂的不同任务**读到不同的目录状态
+（实测：`list_files` 三次调用分别对应三个不同的提交）。这样跑出来的"唯一变量"
+是句空话，而且**当时的产物里没有任何东西能证伪它**。两条硬规矩：
+
+1. **跑对照实验期间，工作区冻结**——不提交、不改文件；
+2. 更好的做法是 `--corpus-root` 指向**冻结快照**，让"冻结"由路径保证而不是靠自律。
+
+账单里的 `reproducibility` 段就是这件事的产物：它记录语料指纹，
+`compare_audit_arms.py` 会**核对两臂指纹是否相同**，而不是打印一句声明。
+
 **账单里哪些是实测、哪些是换算，必须分开写**：
   实测 = prompt_tokens / completion_tokens（provider 的 usage）
   实测 = 工具返回字符数、工具定义字符数（本项目自己数的）
+  实测 = 语料指纹（内容 sha256，确定性）
   换算 = 字符 → token 的任何比例（报告里出现时必须标注）
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
 import time
 from collections import Counter, defaultdict
@@ -33,10 +52,12 @@ from pathlib import Path
 from typing import Any
 
 from findata.contextbudget.agent import AgentRun, run_agent
+from findata.contextbudget.corpus import corpus_manifest
 from findata.contextbudget.llm import DEFAULT_BASE_URL, DEFAULT_MODEL, ChatClient
 from findata.contextbudget.schemas import ACTIVE_TOOLS, ALL_TOOLS
 from findata.contextbudget.tasks import TASKS, Task, is_hit
 from findata.contextbudget.telemetry import SEMCONV, spans_to_records
+from findata.contextbudget.tools import get_corpus_root, set_corpus_root
 from findata.observability.tracing import (
     get_in_memory_exporter,
     get_tracer,
@@ -58,7 +79,63 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-turns", type=int, default=8)
     parser.add_argument("--out-dir", default="examples/context-audit")
     parser.add_argument("--tag", default="", help="输出文件名后缀，便于区分臂")
+    parser.add_argument(
+        "--corpus-root",
+        default="",
+        help=(
+            "工具要读的语料根。默认 = 本仓库工作区。"
+            "**做对照实验时应指向一份冻结快照**：读工作区时，边跑边提交会让"
+            "同一臂的不同任务读到不同目录状态（2026-09-20 实测踩过，见 corpus.py）"
+        ),
+    )
     return parser.parse_args()
+
+
+def _git(root: Path, *args: str) -> str:
+    """在语料根里跑一条 git 命令；失败返回 "unknown"。
+
+    **失败不抛异常是刻意的**：快照目录可能根本不是 git 仓库（例如
+    `git archive` 解出来的纯净树）。那种情况下指纹仍然有效，只是拿不到提交号
+    —— 不该因为拿不到提交号就让整批实验跑不起来。
+    """
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    return out.stdout.strip() if out.returncode == 0 else "unknown"
+
+
+def build_reproducibility(tools: list[dict[str, Any]]) -> dict[str, Any]:
+    """可复现三元组的**实验台版本**：代码（提交 + 是否脏）+ 口径 + 数据指纹。
+
+    与 v3.0 的 `manifest.reproducibility` 同构，但"数据"这一项在这里是
+    **语料指纹**——因为本实验的数据就是本地仓库的源码与文档，它会被作者
+    （也就是我）随时修订。**没有指纹就复现不了**，而且更糟：**看不出两臂
+    是不是同一个数据**（这正是本模块诞生的原因）。
+    """
+    root = get_corpus_root()
+    manifest = corpus_manifest(root)
+    tools_blob = json.dumps(tools, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return {
+        "code_commit": _git(root, "rev-parse", "HEAD"),
+        "code_dirty": _git(root, "status", "--porcelain") not in {"", "unknown"},
+        "corpus_root": str(root),
+        "corpus": manifest,
+        "tools_list_sha256": hashlib.sha256(tools_blob).hexdigest()[:32],
+        "n_tools_in_list": len(tools),
+        "note": (
+            "code_commit/code_dirty 取自**语料根**（不是调用方工作区）："
+            "实验读的是语料根，提交号也必须是它的。"
+            "corpus.sha256 是「相对路径:内容sha256」归并后的指纹，"
+            "只记聚合值不记原文。"
+        ),
+    }
 
 
 def select_tasks(limit: int) -> tuple[Task, ...]:
@@ -181,6 +258,7 @@ def build_bill(
 def print_report(bill: dict[str, Any], tools_arg: str, elapsed: float) -> None:
     scope = bill["scope"]
     m = bill["measured"]
+    rep = bill.get("reproducibility") or {}
     print("\n" + "=" * 78)
     print("R5.0 / R5.1 上下文账单")
     print("=" * 78)
@@ -190,6 +268,16 @@ def print_report(bill: dict[str, Any], tools_arg: str, elapsed: float) -> None:
         f"任务={scope['n_tasks']}  耗时={elapsed:.1f}s"
     )
     print(f"语义约定={scope['semconv']}  工具定义字符/次={scope['tools_chars_per_call']}")
+
+    print("\n--- 可复现三元组（本批的「身份证」）---")
+    print(f"  语料根        : {rep.get('corpus_root', '未记录')}")
+    print(
+        f"  语料指纹      : {rep.get('corpus', {}).get('sha256', '未记录')}"
+        f"  （{rep.get('corpus', {}).get('n_files', '?')} 个文件，"
+        f"{rep.get('corpus', {}).get('bytes', '?')} 字节）"
+    )
+    print(f"  语料提交      : {rep.get('code_commit', '未记录')}  脏={rep.get('code_dirty', '?')}")
+    print(f"  工具清单指纹  : {rep.get('tools_list_sha256', '未记录')}")
 
     print("\n--- 实测总量 ---")
     print(f"  完成（模型给出最终答复）  : {m['n_answered']}")
@@ -235,6 +323,10 @@ def main() -> int:
     tasks = select_tasks(args.limit)
     tools = ALL_TOOLS if args.tools == "all" else ACTIVE_TOOLS
 
+    if args.corpus_root:
+        set_corpus_root(args.corpus_root)
+    root = get_corpus_root()
+
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = f"-{args.tag}" if args.tag else f"-{args.tools}"
@@ -243,6 +335,7 @@ def main() -> int:
     exporter = get_in_memory_exporter()
 
     print(f"模型={args.model}  端点={args.base_url}")
+    print(f"语料根={root}")
     print(
         f"臂={args.tools}  工具={len(tools)} 个  "
         f"任务={len(tasks)} 个  max_turns={args.max_turns}"
@@ -253,6 +346,7 @@ def main() -> int:
     elapsed = time.perf_counter() - started
 
     bill = build_bill(runs, tasks, tools, args.model)
+    bill["reproducibility"] = build_reproducibility(tools)
 
     spans = exporter.get_finished_spans() if exporter else []
     span_records = spans_to_records(list(spans))

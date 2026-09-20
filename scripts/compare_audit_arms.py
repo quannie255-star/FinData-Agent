@@ -21,9 +21,19 @@ import argparse
 import json
 import statistics
 import sys
-from math import comb
 from pathlib import Path
 from typing import Any
+
+from findata.contextbudget.corpus import manifests_agree
+from findata.contextbudget.stats import (
+    load_runs,
+    mcnemar_exact_p,
+    prompt_tokens,
+    sign_test_p,
+    tool_calls,
+)
+
+__all__ = ["load_runs", "main", "prompt_tokens", "sign_test_p", "tool_calls"]
 
 DEFAULT_DIR = Path("examples/context-audit")
 
@@ -32,45 +42,57 @@ DEFAULT_DIR = Path("examples/context-audit")
 EXAMPLE_USD_PER_MTOK = 2.50
 
 
-def load_runs(path: Path) -> dict[str, dict[str, Any]]:
-    """按任务文本索引。同一任务文本在两臂里是同一个 key。"""
-    runs: dict[str, dict[str, Any]] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        run = json.loads(line)
-        runs[run["task"]] = run
-    return runs
-
-
-def prompt_tokens(run: dict[str, Any]) -> int:
-    return sum(t["prompt_tokens"] for t in run["turns"])
-
-
-def tool_calls(run: dict[str, Any]) -> int:
-    return sum(len(t["tool_calls"]) for t in run["turns"])
-
-
-def sign_test_p(n_pos: int, n_neg: int) -> float:
-    """双侧符号检验 p 值。n_pos = active 更省的任务数。"""
-    n = n_pos + n_neg
-    if n == 0:
-        return 1.0
-    k = min(n_pos, n_neg)
-    tail = sum(comb(n, i) for i in range(k + 1)) / (2**n)
-    return min(1.0, 2 * tail)
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="两臂对照（配对差分）")
     parser.add_argument("--dir", default=str(DEFAULT_DIR))
     parser.add_argument("--arm-a", default="all7b", help="长清单臂（默认 all7b）")
     parser.add_argument("--arm-b", default="active7b", help="短清单臂（默认 active7b）")
     parser.add_argument("--usd-per-mtok", type=float, default=EXAMPLE_USD_PER_MTOK)
+    parser.add_argument(
+        "--require-same-corpus",
+        action="store_true",
+        help="两臂语料指纹缺失或不一致时以非 0 退出（CI / 对外报数时用）",
+    )
     return parser.parse_args()
 
 
-def main() -> int:
+def report_corpus(arm_a: str, bill_a: dict[str, Any], arm_b: str, bill_b: dict[str, Any]) -> bool:
+    """核对「唯一变量」这句话。返回**这句话是否已被验证**。
+
+    ⚠️ 这个函数的存在本身是个教训：在这之前，脚本把
+    「唯一变量是工具清单长度」**硬编码**在诚实说明里 —— 而 2026-09-20 实测发现
+    那一批两臂的语料其实不同（我边跑边提交，4 处调用读到了不同目录状态）。
+    一句打印出来的声明，如果没有任何产物能证伪它，那它就不是诚实说明，是口号。
+    """
+    rep_a = (bill_a or {}).get("reproducibility") or {}
+    rep_b = (bill_b or {}).get("reproducibility") or {}
+    if not rep_a and not rep_b:
+        print("  语料核对        : 两臂**都没有**指纹（老归档，记录于补丁之前）")
+        print("                    → 「唯一变量」这句话**无法核对**；")
+        print("                      用 scripts/check_corpus_drift.py 做 trace 级交叉核验")
+        return False
+    if not rep_a or not rep_b:
+        print(f"  语料核对        : 只有一侧有指纹（A={bool(rep_a)} B={bool(rep_b)}）→ 无法核对")
+        return False
+
+    agreed = manifests_agree([rep_a.get("corpus", {}), rep_b.get("corpus", {})])
+    print(
+        f"  语料核对        : A={rep_a.get('corpus', {}).get('sha256', '?')[:16]} "
+        f"({rep_a.get('corpus', {}).get('n_files', '?')} 文件)  "
+        f"B={rep_b.get('corpus', {}).get('sha256', '?')[:16]} "
+        f"({rep_b.get('corpus', {}).get('n_files', '?')} 文件)"
+    )
+    if agreed:
+        print("                    ✅ 两臂同一语料 —— 「唯一变量」这句话**已核对**")
+        return True
+    if agreed is False:
+        print("                    ❌ 两臂语料**不同** —— 差值里混着语料差异，须先消除")
+        return False
+    print("                    ⚠️ 指纹不完整，无法判断")
+    return False
+
+
+def main() -> int:  # noqa: C901 — 一段顺读的报告，不拆
     args = parse_args()
     base = Path(args.dir)
 
@@ -97,6 +119,10 @@ def main() -> int:
         f"定义 {bill_b['scope']['tools_chars_per_call']:,} 字符/次）"
     )
     print(f"可配对任务 = {len(shared)} / A={len(runs_a)}，B={len(runs_b)}")
+    corpus_verified = report_corpus(args.arm_a, bill_a, args.arm_b, bill_b)
+    if args.require_same_corpus and not corpus_verified:
+        print("\n--require-same-corpus 已指定且核对未通过 → 退出码 2")
+        return 2
 
     # --- 配对差分 ---
     diffs: list[int] = []
@@ -177,7 +203,7 @@ def main() -> int:
             neither += 1
     print(f"  配对明细   : 都命中={both}  仅A={only_a}  仅B={only_b}  都不中={neither}")
     if only_a + only_b:
-        print(f"  McNemar 精确检验 p = {sign_test_p(only_b, only_a):.4g}")
+        print(f"  McNemar 精确检验 p = {mcnemar_exact_p(only_a, only_b):.4g}")
     else:
         print("  McNemar：两臂结论没有分歧，无法检验（这是'不显著'的一种，不是'等效'）")
 
@@ -188,7 +214,14 @@ def main() -> int:
         print(f"  {label:<34} {ta:>8,} {tb:>8,} {diff:>+8,}")
 
     print("\n--- 诚实说明 ---")
-    print("  · 唯一变量是工具清单长度；模型、任务、prompt、max_turns 两臂一致")
+    if corpus_verified:
+        print("  · 唯一变量是工具清单长度（**已用两臂语料指纹核对**）；模型、任务、")
+        print("    prompt、max_turns 两臂一致")
+    else:
+        print("  ⚠️ 唯一变量**未被核对**：语料指纹缺失或不一致（见上方「语料核对」）。")
+        print("     模型、任务、prompt、max_turns 两臂一致，但**工具读到的磁盘内容**")
+        print("     可能不同 —— 引用差值时必须同时说明这一点，或用 check_corpus_drift.py")
+        print("     做 trace 级核验并报出漂移规模。")
     print("  · 差值是实测，不是估算；token 数全部来自 provider usage")
     print("  · 符号检验不假设正态；token 差值长尾，t 检验会高估显著性")
     print("  · 关键词命中是弱判据（脚本里已注明局限），不能当准确率引用")

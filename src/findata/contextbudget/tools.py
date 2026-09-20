@@ -12,6 +12,12 @@
 后者的存在是必需的：它证明「同样的信息需求可以用小 payload 满足」。
 没有它，"裁掉大 payload" 就会被质疑成"你把功能砍了"。有了它，
 同一个问题可以走两条路，代价差多少是**可测的**。
+
+**语料根是可切换的，而且必须可切换**：默认读本仓库工作区，但
+`set_corpus_root()` 能把它指向一份**冻结快照**。这不是为了灵活——2026-09-20
+实测证明，在跑对照臂的同时往工作区提交文件，会让同一臂的不同任务读到不同的
+目录状态（细节见 `corpus.py` 模块头）。**读本地仓库的实验必须在快照上跑**，
+否则"唯一变量"这句话是没法核对的。
 """
 
 from __future__ import annotations
@@ -22,16 +28,36 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from findata.contextbudget import corpus
+
 # src/findata/contextbudget/tools.py → parents[3] = 仓库根
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# 当前语料根。用函数读写而不是到处引用常量，是为了让"这次实验读的是哪份语料"
+# 只有一个可追踪的入口。
+_corpus_root: Path = REPO_ROOT
 
 _MAX_SEARCH_BLOCKS = 20
 _MAX_FILE_BYTES = 200_000
 
-_CODE_SUFFIXES = (".py", ".md", ".toml", ".yaml", ".yml")
-
 # top-level 定义的起始行
 _TOP_LEVEL_RE = re.compile(r"^(?:async\s+def|def|class)\s+(\w+)")
+
+
+def get_corpus_root() -> Path:
+    """当前语料根。工具读的就是它下面的文件。"""
+    return _corpus_root
+
+
+def set_corpus_root(path: str | Path | None) -> Path:
+    """把语料根指向别处（通常是冻结快照）。传 `None` 复位到本仓库工作区。
+
+    **调用方有责任让这个根在整批实验期间不变**：本函数据此只做一次绝对化，
+    不做任何锁定。
+    """
+    global _corpus_root
+    _corpus_root = REPO_ROOT if path is None else Path(path).resolve()
+    return _corpus_root
 
 
 @dataclass
@@ -54,41 +80,29 @@ class ToolResult:
 
 
 def _resolve(rel_path: str) -> Path | None:
-    """把仓库相对路径解析成绝对路径，并挡住目录穿越。"""
-    candidate = (REPO_ROOT / rel_path).resolve()
+    """把语料根相对路径解析成绝对路径，并挡住目录穿越。"""
+    root = get_corpus_root()
+    candidate = (root / rel_path).resolve()
     try:
-        candidate.relative_to(REPO_ROOT)
+        candidate.relative_to(root)
     except ValueError:
         return None
     return candidate
 
 
 def _iter_source_files(prefix: str = "") -> list[Path]:
-    base = _resolve(prefix) if prefix else REPO_ROOT
-    if base is None:
+    """语料内的源文件。**边界定义只有一处**：`corpus.iter_corpus_files`。
+
+    如果这里另写一份 glob，"指纹算到的语料"和"工具读到的语料"就会分家，
+    而这份指纹的全部意义就是描述后者。
+    """
+    if prefix and _resolve(prefix) is None:
         return []
-    roots = [base] if base.is_file() else [base]
-    found: list[Path] = []
-    for root in roots:
-        if not root.exists():
-            continue
-        if root.is_file():
-            if root.suffix in _CODE_SUFFIXES:
-                found.append(root)
-            continue
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            if path.suffix not in _CODE_SUFFIXES:
-                continue
-            if any(part in {".venv", ".git", "__pycache__", "node_modules"} for part in path.parts):
-                continue
-            found.append(path)
-    return sorted(found)
+    return corpus.iter_corpus_files(get_corpus_root(), prefix)
 
 
 def _rel(path: Path) -> str:
-    return path.relative_to(REPO_ROOT).as_posix()
+    return path.resolve().relative_to(get_corpus_root()).as_posix()
 
 
 def extract_blocks(source: str) -> list[tuple[str, int, int, str]]:
