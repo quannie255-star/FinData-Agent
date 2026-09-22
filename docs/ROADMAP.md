@@ -106,10 +106,11 @@
 
 `src/findata/economist/`（`trace.py` 读输入 / `analyze.py` 判定+提议+验证 /
 `report.py` 渲染）+ `scripts/context_economist.py` + console script
-`findata-context-economist`。新增 **29 个用例**（`tests/test_economist.py`）。
+`findata-context-economist`。v0.1 新增 **29 个用例**，随后的自查修复又补到
+**36 个**（`tests/test_economist.py`）。
 
 > 措辞说明：这里写"29 个用例"而不是"N 例测试"，是为了**不被文档一致性门禁**的
-> 正则当成"全仓库测试数"的另一个声明——那一条要求全仓库只有一个数（当前 458）。
+> 正则当成"全仓库测试数"的另一个声明——那一条要求全仓库只有一个数（当前 463）。
 > 模块级计数用"个用例"，别改回去。
 
 五步都跑通了，**关键是第 4 步有真数字**（同一批 32 任务、同一份冻结语料）：
