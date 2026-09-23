@@ -141,7 +141,9 @@ prompt_tokens 222,401 → 106,843（**−52.0%**，符号检验 **p=2.46e-07**�
 都会低估泄漏面**；判据 3 **重放**（工具确定性 ⇒ 差异不含采样噪声；`summarize_replay` 单测钉住
 **变小的查询不能拿来抵账**）。
 
-**泄漏的量化后果（`[实测]`，无别处落盘）**：两快照 `ctxbench-frozen`（**214**/`00a95aea86927097`）vs
+**泄漏的量化后果（`[实测]` 输出已归档 `examples/context-audit/leak-replay-frozen.txt` /
+`leak-replay-noleak.txt`，含完整命令与退出码，2026-09-23 重新逐字复现）**：
+两快照 `ctxbench-frozen`（**214**/`00a95aea86927097`）vs
 `ctxbench-frozen-noleak`（**210**/`e4deb476c30c93e4`）差集**正是那 4 个答案文件**
 （`docs/r5.0-acceptance.md`、`tasks.py`、`contextbudget/__init__.py`、`tests/test_contextbudget.py`）；
 mtime 09-20 19:54 < `-fz` 批 09-20 20:17 ⇒ **那批跑时答案卡确实在**。
