@@ -144,6 +144,32 @@ def _render_inputs(a: Analysis) -> list[str]:
             "本报告只有工具级读数（调用次数、返回字符、结果码）。"
         )
     out.append("")
+
+    # --- 字段级归因走的是哪条路（R5.1）。这个数字必须出现在报告里 ---
+    # 理由：两条路**能力不同**。原生记录对第三方 MCP 工具也成立（不用重放），
+    # 重放只对"只读、确定性、能拿到语料"的工具成立。混成一个数就把能力说大了。
+    n_native, n_replayed = a.n_calls_native, a.n_calls_replayed
+    out.append("### 1.3 字段级归因走的是哪条路（决定这套方法能给谁用）")
+    out.append("")
+    if n_native == 0 and n_replayed == 0:
+        out.append("本批**没有任何调用拿到字段级判定**。")
+    else:
+        out.append(
+            f"原生记录（调用发生时记下字段，**不需要重放**）：{_n(n_native)} 次调用；"
+            f"事后重放：{_n(n_replayed)} 次调用。"
+            + (
+                f"另跳过 {_n(r.n_skipped_native)} 次**已带原生记录**的调用（不重放）。"
+                if getattr(r, "n_skipped_native", 0)
+                else ""
+            )
+        )
+        out.append("")
+        out.append(
+            "**这两条路不能混报**：原生记录对第三方 MCP server 的工具同样成立"
+            "（它们可能有副作用、非确定性、要鉴权，重放跑不起来）；"
+            "重放只对本项目的确定性本地只读成立。只有原生那条路能给别人用。"
+        )
+    out.append("")
     return out
 
 

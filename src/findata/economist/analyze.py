@@ -41,8 +41,8 @@ from pathlib import Path
 from statistics import median
 
 from findata.contextbudget import attribution
-from findata.contextbudget.attribution import FieldValue
-from findata.contextbudget.tools import extract_blocks
+from findata.contextbudget.attribution import FieldRecord, FieldValue, judge_record
+from findata.contextbudget.fields import segment_kind, segment_payload
 from findata.economist.trace import RunObs, ToolCallObs, TraceBundle
 
 # 重建一次调用所得内容的索引键
@@ -67,113 +67,6 @@ _HEADING_RE = re.compile(r"^#{1,4} ", re.MULTILINE)
 # --------------------------------------------------------------------------
 
 
-def segment_payload(tool: str, payload: str, *, result_code: str = "ok") -> list[FieldValue]:
-    """把一次工具返回切成有意义的段。
-
-    **非成功返回一律不切段。** 这条规则是实测撞出来的：错误/`not_found` 的返回是
-    `No files under 'src/contextbudget/'.` 或
-    `bad_arguments: unknown parameter(s) ['path: ']...` 这类**一句话**，
-    按"每个非空行是一个路径"去切，会把这句话本身当成一个"路径值"，
-    再被值级归因当真值用 —— 3B 臂上因此伪造出一条 `list_files → list_files`
-    的信息流（样例值就是 `path:` 这个碎片）。
-    判据很简单：**报了错的结果没有"结构"可言，不猜。**
-
-    规模要如实说（**这里我自己先报错过一次**）：那一臂 `list_files` 共 13 次调用，
-    5 次成功切出 **950 个真段 / 25,960 字符**，8 次非成功在旧规则下各切出 **1 个假段**
-    （合计 8 段 / 864 字符）。所以 `958` 是"真段 + 假段"的**总数**，**不是**假段数——
-    我一度把它写成了 958 个假段，等于把总量当成本次修复的收益，夸大了两个数量级。
-    **教训：报"修掉了多少"之前，先确认这个数是"被修掉的部分"还是"总数"。**
-    修掉假段的真实收益很小（8 段），这条规则的价值在于**它伪造的证据链**：
-    一个不存在的 `list_files → list_files` 信息流会作为"最硬证据"被写进报告。
-
-    **为什么不按 JSON 字段切**：本项目这批工具的返回是 Markdown 文本块，
-    不是结构化 JSON。硬按"字段"切会切出没有语义的碎块，基于它的归因也就
-    没有意义。真正有语义的边界是：`read_file` 的 top-level def/class 块、
-    `search_code` 的每个命中块、`list_files` 的每个路径。
-
-    **未知结构一律返回空表，不猜。** 空表在统计里读作"结构未观测"，
-    绝不读作"没有内容所以可以删"——后者会让报告提议裁掉一个它根本没看懂的返回。
-    """
-    if not payload or result_code != "ok":
-        return []
-
-    if tool == "list_files":
-        return [
-            FieldValue(f"path:{line.strip()}", line.strip())
-            for line in payload.splitlines()
-            if line.strip()
-        ]
-
-    if tool == "read_file":
-        body = _strip_fence(payload)
-        if body is None:
-            return []  # 非成功返回（"File not found" 之类）没有块结构
-        blocks = extract_blocks(body)
-        if blocks:
-            return [FieldValue(f"block:{name}", text) for name, _s, _e, text in blocks]
-        return _heading_segments(body)
-
-    if tool == "search_code":
-        return _search_segments(payload)
-
-    if tool == "get_signature":
-        lines = [ln for ln in payload.splitlines() if ln.strip()]
-        if not lines or not lines[0].startswith("# "):
-            return []
-        head = lines[0]
-        out = [FieldValue(f"header:{head[:40]}", head)]
-        out += [FieldValue(f"sig:{ln.strip()[:60]}", ln) for ln in lines[1:]]
-        return out
-
-    return []
-
-
-def _strip_fence(payload: str) -> str | None:
-    match = _FENCE_RE.fullmatch(payload)
-    return match.group(1) if match else None
-
-
-def _heading_segments(body: str) -> list[FieldValue]:
-    """没有代码块的文件（如 .md）：按标题切；连标题都没有就整篇一段。"""
-    parts = _HEADING_RE.split(body)
-    headings = _HEADING_RE.findall(body)
-    if not headings or len(parts) < 2:
-        head = body.strip().splitlines()[0] if body.strip() else ""
-        return [FieldValue(f"whole:{head[:40]}", body)] if body.strip() else []
-    out: list[FieldValue] = []
-    for idx, part in enumerate(parts[1:], start=1):
-        title = part.splitlines()[0].strip() if part.strip() else f"section{idx}"
-        out.append(FieldValue(f"section:{title[:40]}", part))
-    return out
-
-
-def _search_segments(payload: str) -> list[FieldValue]:
-    lines = payload.splitlines()
-    header: list[str] = []
-    groups: list[tuple[str, list[str]]] = []
-    current: list[str] | None = None
-    for line in lines:
-        if line.startswith("### "):
-            current = [line]
-            groups.append((line[4:].strip(), current))
-        elif current is None:
-            header.append(line)
-        else:
-            current.append(line)
-    if not groups:
-        return []
-    out: list[FieldValue] = []
-    if header and "".join(header).strip():
-        out.append(FieldValue(f"header:{''.join(header).strip()[:40]}", "\n".join(header)))
-    out += [FieldValue(f"hit:{name[:60]}", "\n".join(body)) for name, body in groups]
-    return out
-
-
-def segment_kind(name: str) -> str:
-    """段名的前缀就是它的种类（`block:` / `hit:` / `path:` / `sig:` / `section:`）。"""
-    return name.split(":", 1)[0] if ":" in name else "other"
-
-
 # --------------------------------------------------------------------------
 # 2) 重建（必须核对）
 # --------------------------------------------------------------------------
@@ -189,6 +82,7 @@ class ReconstructReport:
     n_mismatch: int = 0
     n_skipped_no_root: int = 0
     n_skipped_no_args: int = 0
+    n_skipped_native: int = 0
     mismatches: list[dict[str, object]] = field(default_factory=list)
 
     @property
@@ -207,6 +101,7 @@ class ReconstructReport:
             "n_mismatch": self.n_mismatch,
             "n_skipped_no_corpus_root": self.n_skipped_no_root,
             "n_skipped_unparsable_args": self.n_skipped_no_args,
+            "n_skipped_has_native_fields": self.n_skipped_native,
             "coverage": round(self.coverage, 4),
             "note": (
                 "重建 = 用 trace 里记录的参数重放工具，再把结果的字符数与记录的 "
@@ -239,6 +134,11 @@ def reconstruct_calls(
 
     for call in bundle.all_tool_calls:
         report.n_calls += 1
+        if call.has_native_fields:
+            # 已经有原生字段记录 ⇒ **不必重放**。这不只是省事：重放要求工具
+            # 可重放，而真实用户的第三方 MCP 工具未必可重放。原生路径不设这个门槛。
+            report.n_skipped_native += 1
+            continue
         if not call.has_arguments:
             report.n_skipped_no_args += 1
             continue
@@ -426,6 +326,10 @@ class Analysis:
     chars_to_tokens: CharsToTokens = field(default_factory=CharsToTokens)
     proposals: list[Proposal] = field(default_factory=list)
     n_calls_attributed: int = 0
+    # 字段级归因走的是哪条路。**必须分开报**：原生记录对第三方 MCP 工具也成立，
+    # 重放只对"可重放"的工具成立（只读、确定性）。混成一个数就把能力说大了。
+    n_calls_native: int = 0
+    n_calls_replayed: int = 0
     offered_tools: tuple[str, ...] = ()
     tool_list_match_note: str = ""
 
@@ -479,13 +383,20 @@ def _attribute_run(
         after_answer = run.final_answer
 
         for call in turn.tool_calls:
-            content = contents.get(call_key(call))
-            if content is None:
-                continue
-            result.n_calls_attributed += 1
-            segments = segment_payload(call.name, content, result_code=call.result_code)
+            if call.has_native_fields:
+                # **原生路径**：字段在调用发生时就记好了，不需要重放工具。
+                # 这条路径对第三方 MCP 工具同样成立——它们未必可重放。
+                segments = _segments_from_records(call)
+                result.n_calls_native += 1
+            else:
+                content = contents.get(call_key(call))
+                if content is None:
+                    continue
+                segments = segment_payload(call.name, content, result_code=call.result_code)
+                result.n_calls_replayed += 1
             if not segments:
                 continue
+            result.n_calls_attributed += 1
             remaining_turns = max(0, total_turns - turn.turn)
             for verdict in _judge_segments(
                 segments,
@@ -495,6 +406,7 @@ def _attribute_run(
                 before=before,
                 after_args=after_args,
                 after_answer=after_answer,
+                records=call.fields,
             ):
                 result.verdicts.append(verdict)
                 _record_flow(verdict, segments, later_args, call, result, remaining_turns)
@@ -520,6 +432,35 @@ def _later_args_by_tool(run: RunObs, turn: int) -> dict[str, str]:
     return {tool: "\n".join(parts) for tool, parts in by_tool.items()}
 
 
+def _segments_from_records(call: ToolCallObs) -> list[FieldValue]:
+    """把原生字段记录还原成"段"，**用于跨工具信息流**（判定另有原生判据）。
+
+    注意这里 `value` 是**指纹拼起来的**，不是返回原文——原文在记录时就被刻意丢掉了
+    （PII + 体积，见 `fields.py`）。所以原生路径上的信息流证据用的是指纹级匹配，
+    口径比重放路径更窄（只会少报信息流，不会多报）。
+    """
+    return [
+        FieldValue(
+            name=str(rec.get("name", "")),
+            value=" ".join(str(t) for t in rec.get("tokens") or ()),
+            chars=int(rec.get("chars", 0) or 0),
+        )
+        for rec in call.fields
+    ]
+
+
+def _record_from_dict(raw: dict) -> FieldRecord:
+    return FieldRecord(
+        name=str(raw.get("name", "")),
+        kind=str(raw.get("kind", "")),
+        chars=int(raw.get("chars", 0) or 0),
+        tokens=tuple(str(t) for t in raw.get("tokens") or ()),
+        truncated=bool(raw.get("truncated", False)),
+        n_preexisting=int(raw.get("n_preexisting", 0) or 0),
+        n_indistinct=int(raw.get("n_indistinct", 0) or 0),
+    )
+
+
 def _judge_segments(
     segments: list[FieldValue],
     *,
@@ -529,11 +470,23 @@ def _judge_segments(
     before: str,
     after_args: str,
     after_answer: str,
+    records: tuple[dict, ...] = (),
 ) -> list[SegmentVerdict]:
+    """判这一批段。
+
+    `records` 非空时用**原生判据**（`judge_record`）：那些字段的"前侧"在记录时
+    就扣过了，这里只需要 `after`。两者共用同一个判定函数（`judge_record`），
+    所以两条路径的口径不会各漂一份。
+    """
     after = after_args + "\n" + after_answer
+    by_name = {str(r.get("name", "")): r for r in records}
     out: list[SegmentVerdict] = []
     for fv in segments:
-        verdict = attribution.judge_field(fv, before=before, after=after)
+        raw = by_name.get(fv.name)
+        if raw is not None:
+            verdict = judge_record(_record_from_dict(raw), after=after)
+        else:
+            verdict = attribution.judge_field(fv, before=before, after=after)
         arg_hits, answer_hits = _split_hits(fv.value, before=before, after_args=after_args,
                                             after_answer=after_answer)
         out.append(

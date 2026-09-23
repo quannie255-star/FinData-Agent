@@ -67,11 +67,18 @@ class ToolCallObs:
     payload_chars: int
     duration_ms: float
     parse_error: str = ""
+    # 原生字段级记录（R5.1）。有它 ⇒ 字段级归因**不需要重放工具**，
+    # 也就是说这条路径对第三方 MCP 工具同样成立（它们未必可重放）。
+    fields: tuple[dict[str, Any], ...] = ()
 
     @property
     def has_arguments(self) -> bool:
         """参数原文是否可用。parse_error 的调用参数已被丢弃，不算可用。"""
         return not self.parse_error and self.arguments is not None
+
+    @property
+    def has_native_fields(self) -> bool:
+        return bool(self.fields)
 
 
 @dataclass
@@ -285,6 +292,7 @@ def _run_from_record(record: dict[str, Any]) -> RunObs:
                     payload_chars=int(call.get("payload_chars", 0)),
                     duration_ms=float(call.get("duration_ms", 0.0)),
                     parse_error=str(call.get("parse_error", "")),
+                    fields=tuple(call.get("fields") or ()),
                 )
             )
         turns.append(
@@ -368,3 +376,10 @@ def _declare_gaps(bundle: TraceBundle, n_parse_errors: int) -> None:
             "（可能把「本就在系统提示里」的值误判成新信息），"
             "`after` 只含最终答复与后续调用参数（**会漏判**引用，方向单一）"
         )
+        native = sum(1 for c in bundle.all_tool_calls if c.has_native_fields)
+        if native:
+            bundle.gaps.append(
+                f"有 {native} / {bundle.n_tool_calls} 次调用带**原生字段记录**"
+                "（R5.1）⇒ 这部分调用的字段级归因**不依赖重放**，"
+                "对第三方 MCP 工具同样成立；其余调用仍走重放+对账路线"
+            )
