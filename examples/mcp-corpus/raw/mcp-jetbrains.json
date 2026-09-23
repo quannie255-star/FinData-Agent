@@ -1,0 +1,15 @@
+{
+  "server_info": {
+    "name": "jetbrains/proxy",
+    "description": "No description provided.",
+    "repo_url": "https://github.com/JetBrains/mcp-jetbrains",
+    "server_type": "Official Integrations",
+    "server_category": [
+      "Productivity"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [],
+  "resources": [],
+  "prompts": []
+}

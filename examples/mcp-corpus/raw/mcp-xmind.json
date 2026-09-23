@@ -1,0 +1,146 @@
+{
+  "server_info": {
+    "name": "xmind-analysis-server",
+    "description": "Server for parsing and analyzing XMind files with various capabilities such as extracting structures, searching content, and more.",
+    "repo_url": "https://github.com/apeyroux/mcp-xmind",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Productivity",
+      "File System"
+    ],
+    "server_version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "read_xmind",
+      "description": "Parse and analyze XMind files with multiple capabilities including extracting nodes, relationships, callouts, and summaries.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "list_xmind_directory",
+      "description": "Comprehensive XMind file discovery and analysis tool, including recursive scanning, filtering, and searching.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "directory": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "directory"
+        ]
+      }
+    },
+    {
+      "name": "read_multiple_xmind_files",
+      "description": "Advanced multi-file analysis and correlation tool, including simultaneous processing of multiple files.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "paths"
+        ]
+      }
+    },
+    {
+      "name": "search_xmind_files",
+      "description": "Advanced file search tool with recursive capabilities, including case-insensitive searching and filtering.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "directory": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      }
+    },
+    {
+      "name": "extract_node",
+      "description": "Smart node extraction with fuzzy path matching, including full context and hierarchy information.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "searchQuery": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "searchQuery"
+        ]
+      }
+    },
+    {
+      "name": "extract_node_by_id",
+      "description": "Extract a specific node and its subtree using its unique ID, preserving all properties and relationships.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "nodeId"
+        ]
+      }
+    },
+    {
+      "name": "search_nodes",
+      "description": "Advanced node search with multiple criteria, including searching through titles, notes, labels, callouts, and tasks.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "searchIn": {
+            "default": [
+              "title",
+              "notes",
+              "labels",
+              "callouts",
+              "tasks"
+            ]
+          },
+          "caseSensitive": {
+            "default": false
+          }
+        },
+        "required": [
+          "path",
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

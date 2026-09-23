@@ -1,0 +1,42 @@
+{
+  "server_info": {
+    "name": "mcpcognee",
+    "description": "A server for the Model Context Protocol (MCP) that provides tools for knowledge graph building and search.",
+    "repo_url": "https://github.com/topoteretes/cognee-mcp-server",
+    "server_type": "Community Servers",
+    "server_categories": [
+      "Search",
+      "Knowledge Graph"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "Cognify_and_search",
+      "description": "Build knowledge graph from the input text and search in it.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "search_query": {
+            "type": "string"
+          },
+          "graph_model_file": {
+            "type": "string"
+          },
+          "graph_model_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "search_query"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

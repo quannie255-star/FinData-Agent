@@ -1,0 +1,61 @@
+{
+  "src": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen",
+  "dst": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen-noleak",
+  "n_files_copied": 276,
+  "corpus_before": {
+    "sha256": "00a95aea86927097344de03bbf3f76a6",
+    "n_files": 214,
+    "chars": 1253145
+  },
+  "corpus_after": {
+    "sha256": "e4deb476c30c93e4de15fa12a0258015",
+    "n_files": 210,
+    "chars": 1215928
+  },
+  "excluded": [
+    {
+      "path": "docs/r5.0-acceptance.md",
+      "chars": 21958,
+      "markers": [
+        "must_contain"
+      ]
+    },
+    {
+      "path": "examples/context-audit/runs-active7b.jsonl",
+      "chars": 49208,
+      "markers": [
+        "must_contain"
+      ]
+    },
+    {
+      "path": "examples/context-audit/runs-all7b.jsonl",
+      "chars": 51520,
+      "markers": [
+        "must_contain"
+      ]
+    },
+    {
+      "path": "src/findata/contextbudget/__init__.py",
+      "chars": 818,
+      "markers": [
+        "must_contain"
+      ]
+    },
+    {
+      "path": "src/findata/contextbudget/tasks.py",
+      "chars": 5425,
+      "markers": [
+        "must_contain",
+        "def is_hit("
+      ]
+    },
+    {
+      "path": "tests/test_contextbudget.py",
+      "chars": 9016,
+      "markers": [
+        "must_contain"
+      ]
+    }
+  ],
+  "note": "语料 = 冻结快照副本，**删掉所有含判据标记的文件**。理由：判据写在 contextbudget/tasks.py 里，而语料根就是这个仓库 —— 考卷和答案卡都在考场里。实测 active7b-fz 臂有 5 条答案引用了考题定义，其中 2 条本来被判成『命中』。**这是语料缺陷不是判据缺陷**；改语料会改变 list_files 的返回，所以本批读数与 fz 批次不可直接比，必须各自带自己的语料指纹。"
+}

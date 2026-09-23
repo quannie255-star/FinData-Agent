@@ -1,0 +1,45 @@
+{
+  "tools": [
+    {
+      "name": "search",
+      "description": "Search the web using Exa AI",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "numResults": {
+            "type": "number",
+            "description": "Number of results to return (default: 10)",
+            "minimum": 1,
+            "maximum": 50
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "Recent search: {query}",
+      "description": "Search results for: {query} ({timestamp})",
+      "uri": "exa://searches/{index}"
+    }
+  ],
+  "prompts": [],
+  "server_info": {
+    "name": "exa-search-server",
+    "description": "",
+    "repoUrl": "https://github.com/exa-labs/exa-mcp-server",
+    "serverType": "Official Integrations",
+    "categories": [
+      "Search",
+      "Web Scraping"
+    ],
+    "version": "0.1.0"
+  }
+}

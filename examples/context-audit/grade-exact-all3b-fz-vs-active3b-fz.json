@@ -1,0 +1,135 @@
+{
+  "arms": [
+    {
+      "tag": "all3b-fz",
+      "n": 32,
+      "hit_raw": 3,
+      "hit": 3,
+      "process_ok": 24,
+      "verified_hit": 3,
+      "exact_hit": 1,
+      "suspicious_hit": 0,
+      "exam_leak": 0,
+      "exam_leak_that_would_hit": 0,
+      "zero_tool_calls": 7,
+      "tool_calls_total": 43,
+      "tool_codes_bad": 31,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "exam_leak_task_ids": [],
+      "zero_call_task_ids": [
+        "t08",
+        "t10",
+        "t12",
+        "t23",
+        "t25",
+        "t28",
+        "t30"
+      ],
+      "exact_task_ids": [
+        "t26"
+      ],
+      "exact_but_not_keyword_task_ids": [],
+      "keyword_but_not_exact": [
+        {
+          "task_id": "t16",
+          "missing": [
+            "初始化/setup/未配置/没配"
+          ]
+        },
+        {
+          "task_id": "t29",
+          "missing": [
+            "训练/轨迹/质检"
+          ]
+        }
+      ],
+      "leaked_but_keyword_hit": []
+    },
+    {
+      "tag": "active3b-fz",
+      "n": 32,
+      "hit_raw": 6,
+      "hit": 6,
+      "process_ok": 29,
+      "verified_hit": 6,
+      "exact_hit": 4,
+      "suspicious_hit": 0,
+      "exam_leak": 0,
+      "exam_leak_that_would_hit": 0,
+      "zero_tool_calls": 3,
+      "tool_calls_total": 60,
+      "tool_codes_bad": 30,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "exam_leak_task_ids": [],
+      "zero_call_task_ids": [
+        "t10",
+        "t28",
+        "t29"
+      ],
+      "exact_task_ids": [
+        "t01",
+        "t03",
+        "t14",
+        "t26"
+      ],
+      "exact_but_not_keyword_task_ids": [],
+      "keyword_but_not_exact": [
+        {
+          "task_id": "t16",
+          "missing": [
+            "初始化/setup/未配置/没配"
+          ]
+        },
+        {
+          "task_id": "t25",
+          "missing": [
+            "训练/轨迹/质检"
+          ]
+        }
+      ],
+      "leaked_but_keyword_hit": []
+    }
+  ],
+  "judge_definition": {
+    "hit": "tasks.is_hit（关键词命中，弱）",
+    "process_ok": "n_tool_calls>0 且 stopped_reason=='answered'",
+    "verified_hit": "hit AND process_ok（弱判据 + 过程）",
+    "exact_hit": "必需事实全命中（别名组）AND process_ok —— 以此为准",
+    "suspicious_hit": "hit AND NOT process_ok（可能蒙对，单独计数）"
+  },
+  "note": "事后重判，未重跑；两臂可比性不受影响",
+  "paired": {
+    "hit（弱·剔泄漏）": {
+      "criterion": "hit_clean",
+      "both": 2,
+      "only_A": 1,
+      "only_B": 4,
+      "discordant_k": 5,
+      "min_possible_p": 0.0625,
+      "mcnemar_exact_p": 0.375,
+      "mcnemar_exact_p_one_sided_B_not_worse": 0.96875
+    },
+    "verified_hit（弱+过程）": {
+      "criterion": "verified_hit",
+      "both": 2,
+      "only_A": 1,
+      "only_B": 4,
+      "discordant_k": 5,
+      "min_possible_p": 0.0625,
+      "mcnemar_exact_p": 0.375,
+      "mcnemar_exact_p_one_sided_B_not_worse": 0.96875
+    },
+    "exact_hit（精确值，为准）": {
+      "criterion": "exact",
+      "both": 1,
+      "only_A": 0,
+      "only_B": 3,
+      "discordant_k": 3,
+      "min_possible_p": 0.25,
+      "mcnemar_exact_p": 0.25,
+      "mcnemar_exact_p_one_sided_B_not_worse": 1.0
+    }
+  }
+}

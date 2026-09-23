@@ -1,0 +1,33 @@
+{
+  "server_info": {
+    "name": "mcp-server/bigquery",
+    "description": "A Model Context Protocol server for interacting with Google BigQuery.",
+    "repo_url": "https://github.com/ergut/mcp-bigquery-server",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Database"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "query",
+      "description": "Run a read-only BigQuery SQL query.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "sql": {
+            "type": "string"
+          },
+          "maximumBytesBilled": {
+            "type": "string",
+            "description": "Maximum bytes billed (default: 1GB)",
+            "optional": true
+          }
+        }
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

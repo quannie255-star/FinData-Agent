@@ -1,0 +1,69 @@
+{
+  "server_info": {
+    "name": "example-servers/tmdb",
+    "description": "A server that provides access to movies from The Movie Database (TMDB).",
+    "repo_url": "https://github.com/Laksh-star/mcp-server-tmdb",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Web Scraping",
+      "Data Access"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "search_movies",
+      "description": "Search for movies by title or keywords",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query for movie titles"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "get_recommendations",
+      "description": "Get movie recommendations based on a movie ID",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "movieId": {
+            "type": "string",
+            "description": "TMDB movie ID to get recommendations for"
+          }
+        },
+        "required": [
+          "movieId"
+        ]
+      }
+    },
+    {
+      "name": "get_trending",
+      "description": "Get trending movies for a time window",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "timeWindow": {
+            "type": "string",
+            "enum": [
+              "day",
+              "week"
+            ],
+            "description": "Time window for trending movies"
+          }
+        },
+        "required": [
+          "timeWindow"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

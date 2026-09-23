@@ -1,0 +1,57 @@
+{
+  "tools": [
+    {
+      "name": "execute-query",
+      "description": "Execute a SELECT query on the BigQuery database",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "SELECT SQL query to execute using BigQuery dialect"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "list-tables",
+      "description": "List all tables in the BigQuery database",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "describe-table",
+      "description": "Get the schema information for a specific table",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "table_name": {
+            "type": "string",
+            "description": "Name of the table to describe (e.g. my_dataset.my_table)"
+          }
+        },
+        "required": [
+          "table_name"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [],
+  "server_info": {
+    "name": "bigquery-manager",
+    "description": "BigQuery MCP Server",
+    "repo_url": "https://github.com/LucasHild/mcp-server-bigquery",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Database",
+      "Cloud Service"
+    ],
+    "server_version": "0.2.0"
+  }
+}

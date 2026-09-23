@@ -1,0 +1,32 @@
+{
+  "tools": [
+    {
+      "name": "get_information",
+      "description": "Get information from your knowledge base to answer questions.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The query used to get information about your knowledge base."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [],
+  "server_info": {
+    "name": "llamacloud-mcp-server",
+    "description": "This is a MCP server that connects to a managed index on LlamaCloud.",
+    "repo_url": "https://github.com/run-llama/mcp-server-llamacloud",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Communication"
+    ],
+    "server_version": "0.1.0"
+  }
+}

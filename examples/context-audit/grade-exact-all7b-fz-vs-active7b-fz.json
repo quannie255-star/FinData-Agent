@@ -1,0 +1,162 @@
+{
+  "arms": [
+    {
+      "tag": "all7b-fz",
+      "n": 32,
+      "hit_raw": 8,
+      "hit": 8,
+      "process_ok": 31,
+      "verified_hit": 8,
+      "exact_hit": 6,
+      "suspicious_hit": 0,
+      "exam_leak": 2,
+      "exam_leak_that_would_hit": 0,
+      "zero_tool_calls": 1,
+      "tool_calls_total": 52,
+      "tool_codes_bad": 25,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "exam_leak_task_ids": [
+        "t11",
+        "t13"
+      ],
+      "zero_call_task_ids": [
+        "t10"
+      ],
+      "exact_task_ids": [
+        "t01",
+        "t03",
+        "t04",
+        "t05",
+        "t21",
+        "t26"
+      ],
+      "exact_but_not_keyword_task_ids": [],
+      "keyword_but_not_exact": [
+        {
+          "task_id": "t23",
+          "missing": [
+            "推导/派生/规则"
+          ]
+        },
+        {
+          "task_id": "t25",
+          "missing": [
+            "训练/轨迹/质检",
+            "领域包/a股/a 股/不再是主线"
+          ]
+        }
+      ],
+      "leaked_but_keyword_hit": []
+    },
+    {
+      "tag": "active7b-fz",
+      "n": 32,
+      "hit_raw": 12,
+      "hit": 10,
+      "process_ok": 31,
+      "verified_hit": 10,
+      "exact_hit": 6,
+      "suspicious_hit": 0,
+      "exam_leak": 5,
+      "exam_leak_that_would_hit": 2,
+      "zero_tool_calls": 0,
+      "tool_calls_total": 53,
+      "tool_codes_bad": 22,
+      "tool_parse_errors": 0,
+      "suspicious_task_ids": [],
+      "exam_leak_task_ids": [
+        "t10",
+        "t13",
+        "t20",
+        "t22",
+        "t23"
+      ],
+      "zero_call_task_ids": [],
+      "exact_task_ids": [
+        "t01",
+        "t03",
+        "t04",
+        "t05",
+        "t21",
+        "t26"
+      ],
+      "exact_but_not_keyword_task_ids": [],
+      "keyword_but_not_exact": [
+        {
+          "task_id": "t11",
+          "missing": [
+            "default"
+          ]
+        },
+        {
+          "task_id": "t16",
+          "missing": [
+            "初始化/setup/未配置/没配"
+          ]
+        },
+        {
+          "task_id": "t25",
+          "missing": [
+            "训练/轨迹/质检",
+            "领域包/a股/a 股/不再是主线"
+          ]
+        },
+        {
+          "task_id": "t29",
+          "missing": [
+            "训练/轨迹/质检"
+          ]
+        }
+      ],
+      "leaked_but_keyword_hit": [
+        {
+          "task_id": "t10",
+          "would_have_been": "hit / exact"
+        },
+        {
+          "task_id": "t23",
+          "would_have_been": "hit / exact"
+        }
+      ]
+    }
+  ],
+  "judge_definition": {
+    "hit": "tasks.is_hit（关键词命中，弱）",
+    "process_ok": "n_tool_calls>0 且 stopped_reason=='answered'",
+    "verified_hit": "hit AND process_ok（弱判据 + 过程）",
+    "exact_hit": "必需事实全命中（别名组）AND process_ok —— 以此为准",
+    "suspicious_hit": "hit AND NOT process_ok（可能蒙对，单独计数）"
+  },
+  "note": "事后重判，未重跑；两臂可比性不受影响",
+  "paired": {
+    "hit（弱·剔泄漏）": {
+      "criterion": "hit_clean",
+      "both": 7,
+      "only_A": 1,
+      "only_B": 3,
+      "discordant_k": 4,
+      "min_possible_p": 0.125,
+      "mcnemar_exact_p": 0.625,
+      "mcnemar_exact_p_one_sided_B_not_worse": 0.9375
+    },
+    "verified_hit（弱+过程）": {
+      "criterion": "verified_hit",
+      "both": 7,
+      "only_A": 1,
+      "only_B": 3,
+      "discordant_k": 4,
+      "min_possible_p": 0.125,
+      "mcnemar_exact_p": 0.625,
+      "mcnemar_exact_p_one_sided_B_not_worse": 0.9375
+    },
+    "exact_hit（精确值，为准）": {
+      "criterion": "exact",
+      "both": 6,
+      "only_A": 0,
+      "only_B": 0,
+      "discordant_k": 0,
+      "min_possible_p": 1.0
+    }
+  }
+}

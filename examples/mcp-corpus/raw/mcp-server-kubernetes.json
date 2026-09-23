@@ -1,0 +1,155 @@
+{
+  "tools": [
+    {
+      "name": "list_pods",
+      "description": "List pods in a namespace",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "default": "default"
+          }
+        },
+        "required": [
+          "namespace"
+        ]
+      }
+    },
+    {
+      "name": "list_deployments",
+      "description": "List deployments in a namespace",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "default": "default"
+          }
+        },
+        "required": [
+          "namespace"
+        ]
+      }
+    },
+    {
+      "name": "list_services",
+      "description": "List services in a namespace",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespace": {
+            "type": "string",
+            "default": "default"
+          }
+        },
+        "required": [
+          "namespace"
+        ]
+      }
+    },
+    {
+      "name": "list_namespaces",
+      "description": "List all namespaces",
+      "input_schema": {}
+    },
+    {
+      "name": "create_pod",
+      "description": "Create a new Kubernetes pod",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string",
+            "enum": [
+              "ubuntu",
+              "nginx",
+              "busybox",
+              "alpine"
+            ]
+          },
+          "command": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "optional": true
+          }
+        },
+        "required": [
+          "name",
+          "namespace",
+          "template"
+        ]
+      }
+    },
+    {
+      "name": "delete_pod",
+      "description": "Delete a Kubernetes pod",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "ignoreNotFound": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "name",
+          "namespace"
+        ]
+      }
+    },
+    {
+      "name": "cleanup",
+      "description": "Cleanup all managed resources",
+      "input_schema": {}
+    }
+  ],
+  "resources": [
+    {
+      "uri": "k8s://default/pods",
+      "name": "Kubernetes Pods",
+      "description": "List of pods in the default namespace"
+    },
+    {
+      "uri": "k8s://default/deployments",
+      "name": "Kubernetes Deployments",
+      "description": "List of deployments in the default namespace"
+    },
+    {
+      "uri": "k8s://default/services",
+      "name": "Kubernetes Services",
+      "description": "List of services in the default namespace"
+    },
+    {
+      "uri": "k8s://namespaces",
+      "name": "Kubernetes Namespaces",
+      "description": "List of all namespaces"
+    }
+  ],
+  "prompts": [],
+  "server_info": {
+    "name": "kubernetes",
+    "description": "",
+    "repo_url": "https://github.com/Flux159/mcp-server-kubernetes",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Cloud Service",
+      "Development"
+    ],
+    "server_version": "0.1.0"
+  }
+}

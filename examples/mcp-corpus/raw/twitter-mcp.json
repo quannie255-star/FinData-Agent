@@ -1,0 +1,54 @@
+{
+  "server_info": {
+    "name": "twitter-mcp",
+    "description": "A Model Context Protocol server for interacting with the Twitter API",
+    "repo_url": "https://github.com/EnesCinr/twitter-mcp",
+    "server_type": "Community Servers",
+    "server_category": "Social Media, Communication",
+    "server_version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "post_tweet",
+      "description": "Post a new tweet to Twitter",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "The content of your tweet",
+            "maxLength": 280
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "search_tweets",
+      "description": "Search for tweets on Twitter",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of tweets to return (10-100)",
+            "minimum": 10,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "query",
+          "count"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

@@ -1,0 +1,33 @@
+{
+  "server_info": {
+    "name": "any-chat-completions-mcp",
+    "description": "A community server for chat completions using AI chat integrations.",
+    "repo_url": "https://github.com/pyroprompts/any-chat-completions-mcp",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Communication",
+      "Productivity"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "chat-with-openai",
+      "description": "Text chat with OpenAI's language model.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content of the chat to send to OpenAI."
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

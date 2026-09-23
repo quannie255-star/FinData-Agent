@@ -1,0 +1,45 @@
+{
+  "server_info": {
+    "name": "qdrant",
+    "description": "Qdrant server integration with MCP",
+    "repo_url": "https://github.com/qdrant/mcp-server-qdrant/",
+    "server_type": "Official Integrations",
+    "server_category": "Database",
+    "server_version": "0.5.1"
+  },
+  "tools": [
+    {
+      "name": "qdrant-store-memory",
+      "description": "Keep the memory for later use, when you are asked to remember something.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "information": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "information"
+        ]
+      }
+    },
+    {
+      "name": "qdrant-find-memories",
+      "description": "Look up memories in Qdrant. Use this tool when you need to: \n - Find memories by their content \n - Access memories for further analysis \n - Get some personal information about the user",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The query to search for in the memories"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

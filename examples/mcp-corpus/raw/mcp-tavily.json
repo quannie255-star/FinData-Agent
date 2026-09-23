@@ -1,0 +1,207 @@
+{
+  "server_info": {
+    "name": "mcp-tavily",
+    "description": "MCP Tavily Server - AI-powered web search functionality for MCP",
+    "repo_url": "https://github.com/RamXX/mcp-tavily",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Search"
+    ],
+    "server_version": "Not specified"
+  },
+  "tools": [
+    {
+      "name": "tavily_web_search",
+      "description": "Performs a comprehensive web search using Tavily's AI-powered search engine. Excels at extracting and summarizing relevant content from web pages, making it ideal for research, fact-finding, and gathering detailed information. Can run in either 'basic' mode for faster, simpler searches or 'advanced' mode for more thorough analysis. Basic is cheaper and good for most use cases. Supports filtering results by including or excluding specific domains.",
+      "input_schema": {
+        "query": {
+          "description": "Search query",
+          "type": "string"
+        },
+        "max_results": {
+          "description": "Maximum number of results to return",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "search_depth": {
+          "description": "Depth of search - 'basic' or 'advanced'",
+          "type": "string",
+          "enum": [
+            "basic",
+            "advanced"
+          ]
+        },
+        "include_domains": {
+          "description": "List of domains to specifically include in the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude_domains": {
+          "description": "List of domains to specifically exclude from the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "tavily_answer_search",
+      "description": "Performs a web search using Tavily's AI search engine and generates a direct answer to the query, along with supporting search results. Best used for questions that need concrete answers backed by current web sources. Uses advanced search depth by default for comprehensive analysis.",
+      "input_schema": {
+        "query": {
+          "description": "Search query",
+          "type": "string"
+        },
+        "max_results": {
+          "description": "Maximum number of results to return",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "search_depth": {
+          "description": "Depth of search - 'basic' or 'advanced'",
+          "type": "string",
+          "enum": [
+            "basic",
+            "advanced"
+          ]
+        },
+        "include_domains": {
+          "description": "List of domains to specifically include in the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude_domains": {
+          "description": "List of domains to specifically exclude from the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "name": "tavily_news_search",
+      "description": "Searches recent news articles using Tavily's specialized news search functionality. Ideal for current events, recent developments, and trending topics. Can filter results by recency (number of days back to search) and by including or excluding specific news domains.",
+      "input_schema": {
+        "query": {
+          "description": "Search query",
+          "type": "string"
+        },
+        "max_results": {
+          "description": "Maximum number of results to return",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "days": {
+          "description": "Number of days back to search (default is 3)",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        },
+        "include_domains": {
+          "description": "List of domains to specifically include in the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude_domains": {
+          "description": "List of domains to specifically exclude from the search results (e.g. ['example.com', 'test.org'] or 'example.com')",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [
+    {
+      "name": "tavily_web_search",
+      "description": "Search the web using Tavily's AI-powered search engine",
+      "arguments": [
+        {
+          "name": "query",
+          "description": "Search query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "include_domains",
+          "description": "Optional list of domains to specifically include (e.g., 'wsj.com,bloomberg.com' for financial sources, 'nature.com,sciencedirect.com' for scientific sources)",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "exclude_domains",
+          "description": "Optional list of domains to exclude from results (e.g., 'wikipedia.org' to exclude Wikipedia, or 'wsj.com,ft.com' to exclude paywalled sources)",
+          "required": false,
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "tavily_answer_search",
+      "description": "Search the web and get an AI-generated answer with supporting evidence",
+      "arguments": [
+        {
+          "name": "query",
+          "description": "Search query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "include_domains",
+          "description": "Optional comma-separated list of domains to include",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "exclude_domains",
+          "description": "Optional comma-separated list of domains to exclude",
+          "required": false,
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "tavily_news_search",
+      "description": "Search recent news articles with Tavily's news search",
+      "arguments": [
+        {
+          "name": "query",
+          "description": "Search query",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "name": "days",
+          "description": "Number of days back to search",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "name": "include_domains",
+          "description": "Optional comma-separated list of domains to include",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "name": "exclude_domains",
+          "description": "Optional comma-separated list of domains to exclude",
+          "required": false,
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}

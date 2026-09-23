@@ -1,0 +1,537 @@
+{
+  "server_info": {
+    "name": "Cloudflare MCP Server",
+    "description": "The Model Context Protocol server integration for Cloudflare.",
+    "repo_url": "https://github.com/cloudflare/mcp-server-cloudflare",
+    "server_type": "Official Integrations",
+    "server_category": [
+      "Cloud Service"
+    ],
+    "server_version": "1.0.0"
+  },
+  "tools": [
+    {
+      "name": "r2_list_buckets",
+      "description": "List all R2 buckets in your account",
+      "input_schema": {}
+    },
+    {
+      "name": "r2_create_bucket",
+      "description": "Create a new R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the bucket to create"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "r2_delete_bucket",
+      "description": "Delete an R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the bucket to delete"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "r2_list_objects",
+      "description": "List objects in an R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "Name of the bucket"
+          },
+          "prefix": {
+            "type": "string",
+            "description": "Optional prefix to filter objects"
+          },
+          "delimiter": {
+            "type": "string",
+            "description": "Optional delimiter for hierarchical listing"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of objects to return"
+          }
+        },
+        "required": [
+          "bucket"
+        ]
+      }
+    },
+    {
+      "name": "r2_get_object",
+      "description": "Get an object from an R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "Name of the bucket"
+          },
+          "key": {
+            "type": "string",
+            "description": "Key of the object to get"
+          }
+        },
+        "required": [
+          "bucket",
+          "key"
+        ]
+      }
+    },
+    {
+      "name": "r2_put_object",
+      "description": "Put an object into an R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "Name of the bucket"
+          },
+          "key": {
+            "type": "string",
+            "description": "Key of the object to put"
+          },
+          "content": {
+            "type": "string",
+            "description": "Content to store in the object"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "Optional MIME type of the content"
+          }
+        },
+        "required": [
+          "bucket",
+          "key",
+          "content"
+        ]
+      }
+    },
+    {
+      "name": "r2_delete_object",
+      "description": "Delete an object from an R2 bucket",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "description": "Name of the bucket"
+          },
+          "key": {
+            "type": "string",
+            "description": "Key of the object to delete"
+          }
+        },
+        "required": [
+          "bucket",
+          "key"
+        ]
+      }
+    },
+    {
+      "name": "worker_list",
+      "description": "List all Workers in your account",
+      "input_schema": {}
+    },
+    {
+      "name": "worker_get",
+      "description": "Get a Worker's script content",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the Worker script"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "worker_put",
+      "description": "Create or update a Worker script with optional bindings and compatibility settings",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the Worker script"
+          },
+          "script": {
+            "type": "string",
+            "description": "The Worker script content"
+          },
+          "bindings": {
+            "type": "array",
+            "description": "Optional array of resource bindings (KV, R2, D1, etc)",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Type of binding (kv_namespace, r2_bucket, d1_database, service, analytics_engine, queue, durable_object)",
+                  "enum": [
+                    "kv_namespace",
+                    "r2_bucket",
+                    "d1_database",
+                    "service",
+                    "analytics_engine",
+                    "queue",
+                    "durable_object_namespace"
+                  ]
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Name of the binding in the Worker code"
+                },
+                "namespace_id": {
+                  "type": "string",
+                  "description": "ID of the KV namespace (required for kv_namespace type)"
+                },
+                "bucket_name": {
+                  "type": "string",
+                  "description": "Name of the R2 bucket (required for r2_bucket type)"
+                },
+                "database_id": {
+                  "type": "string",
+                  "description": "ID of the D1 database (required for d1_database type)"
+                },
+                "service": {
+                  "type": "string",
+                  "description": "Name of the service (required for service type)"
+                },
+                "dataset": {
+                  "type": "string",
+                  "description": "Name of the analytics dataset (required for analytics_engine type)"
+                },
+                "queue_name": {
+                  "type": "string",
+                  "description": "Name of the queue (required for queue type)"
+                },
+                "class_name": {
+                  "type": "string",
+                  "description": "Name of the Durable Object class (required for durable_object_namespace type)"
+                },
+                "script_name": {
+                  "type": "string",
+                  "description": "Optional script name for external Durable Object bindings"
+                }
+              },
+              "required": [
+                "type",
+                "name"
+              ]
+            }
+          },
+          "migrations": {
+            "type": "object",
+            "description": "Optional migrations object which describes the set of new/changed/deleted Durable Objects to apply when deploying this worker e.g. adding a new Durable Object for the first time requires an entry in the \"new_sqlite_classes\" or \"new_classes\" property.",
+            "items": {
+              "properties": {
+                "new_tag": {
+                  "type": "string",
+                  "description": "The current version after applying this migration (e.g., \"v1\", \"v2\")"
+                },
+                "new_classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The new Durable Objects using legacy storage being added"
+                },
+                "new_sqlite_classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The new Durable Objects using the new, improved SQLite storage being added"
+                },
+                "renamed_classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "from",
+                      "to"
+                    ]
+                  },
+                  "description": "The Durable Objects being renamed"
+                },
+                "deleted_classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The Durable Objects being removed"
+                }
+              },
+              "required": [
+                "tag"
+              ]
+            }
+          },
+          "compatibility_date": {
+            "type": "string",
+            "description": "Optional compatibility date for the Worker (e.g., \"2024-01-01\")"
+          },
+          "compatibility_flags": {
+            "type": "array",
+            "description": "Optional array of compatibility flags",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skip_workers_dev": {
+            "type": "boolean",
+            "description": "Do not deploy the Worker on your workers.dev subdomain. Should be set to true if the user already has a domain name, or doesn't want this worker to be publicly accessible."
+          },
+          "no_observability": {
+            "type": "boolean",
+            "description": "Disable Worker Logs for this worker, which automatically ingests logs emitted from Cloudflare Workers and lets you filter, and analyze them in the Cloudflare dashboard."
+          }
+        },
+        "required": [
+          "name",
+          "script"
+        ]
+      }
+    },
+    {
+      "name": "worker_delete",
+      "description": "Delete a Worker script",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the Worker script"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "analytics_get",
+      "description": "Get analytics data from Cloudflare",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "zoneId": {
+            "type": "string",
+            "description": "The zone ID to get analytics for"
+          },
+          "since": {
+            "type": "string",
+            "description": "Start time for analytics (ISO string)"
+          },
+          "until": {
+            "type": "string",
+            "description": "End time for analytics (ISO string)"
+          }
+        },
+        "required": [
+          "zoneId"
+        ]
+      }
+    },
+    {
+      "name": "get_kvs",
+      "description": "List KV namespaces in your account",
+      "input_schema": {}
+    },
+    {
+      "name": "kv_get",
+      "description": "Get a value from Cloudflare KV store",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "description": "The KV namespace ID"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key to retrieve"
+          }
+        },
+        "required": [
+          "namespaceId",
+          "key"
+        ]
+      }
+    },
+    {
+      "name": "kv_put",
+      "description": "Put a value into Cloudflare KV store",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "description": "The KV namespace ID"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key to store"
+          },
+          "value": {
+            "type": "string",
+            "description": "The value to store"
+          },
+          "expirationTtl": {
+            "type": "number",
+            "description": "Optional expiration time in seconds"
+          }
+        },
+        "required": [
+          "namespaceId",
+          "key",
+          "value"
+        ]
+      }
+    },
+    {
+      "name": "kv_delete",
+      "description": "Delete a key from Cloudflare KV store",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "description": "The KV namespace ID"
+          },
+          "key": {
+            "type": "string",
+            "description": "The key to delete"
+          }
+        },
+        "required": [
+          "namespaceId",
+          "key"
+        ]
+      }
+    },
+    {
+      "name": "kv_list",
+      "description": "List keys in Cloudflare KV store",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "namespaceId": {
+            "type": "string",
+            "description": "The KV namespace ID"
+          },
+          "prefix": {
+            "type": "string",
+            "description": "Optional prefix to filter keys"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of keys to return"
+          }
+        },
+        "required": [
+          "namespaceId"
+        ]
+      }
+    },
+    {
+      "name": "d1_list_databases",
+      "description": "List all D1 databases in your account",
+      "input_schema": {}
+    },
+    {
+      "name": "d1_create_database",
+      "description": "Create a new D1 database",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the database to create"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    {
+      "name": "d1_delete_database",
+      "description": "Delete a D1 database",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "databaseId": {
+            "type": "string",
+            "description": "ID of the database to delete"
+          }
+        },
+        "required": [
+          "databaseId"
+        ]
+      }
+    },
+    {
+      "name": "d1_query",
+      "description": "Execute a SQL query against a D1 database",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "databaseId": {
+            "type": "string",
+            "description": "ID of the database to query"
+          },
+          "query": {
+            "type": "string",
+            "description": "SQL query to execute"
+          },
+          "params": {
+            "type": "array",
+            "description": "Optional array of parameters for prepared statements",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "databaseId",
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

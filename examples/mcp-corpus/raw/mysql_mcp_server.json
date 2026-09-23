@@ -1,0 +1,39 @@
+{
+  "tools": [
+    {
+      "name": "execute_sql",
+      "description": "Execute an SQL query on the MySQL server",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The SQL query to execute"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "Table: <table_name>",
+      "description": "Data in table: <table_name>",
+      "uri": "mysql://<table_name>/data",
+      "mimeType": "text/plain"
+    }
+  ],
+  "prompts": [],
+  "server_info": {
+    "name": "mysql_mcp_server",
+    "description": "A Model Context Protocol (MCP) server for interacting with a MySQL database.",
+    "repo_url": "https://github.com/designcomputer/mysql_mcp_server",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Database"
+    ],
+    "server_version": ""
+  }
+}

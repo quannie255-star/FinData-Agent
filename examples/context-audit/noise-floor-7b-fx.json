@@ -1,0 +1,166 @@
+{
+  "a": "active7b-fx",
+  "b": "active7b-fx-fp",
+  "setup": {
+    "模型": "qwen2.5:latest",
+    "语料": "e4deb476c30c93e4de15fa12a0258015",
+    "工具清单": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "裁剪策略": "none",
+    "工具数": "4"
+  },
+  "setup_b": {
+    "模型": "qwen2.5:latest",
+    "语料": "e4deb476c30c93e4de15fa12a0258015",
+    "工具清单": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "裁剪策略": "none",
+    "工具数": "4"
+  },
+  "unverified_setup_fields": [],
+  "mismatched_setup_fields": [],
+  "trace_policy_evidence": {
+    "active7b-fx": {
+      "per_call_policy": {
+        "none": 56
+      },
+      "n_calls": 56,
+      "n_compaction_applied": 0
+    },
+    "active7b-fx-fp": {
+      "per_call_policy": {
+        "none": 55
+      },
+      "n_calls": 55,
+      "n_compaction_applied": 0
+    }
+  },
+  "n_shared": 32,
+  "stats": {
+    "prompt_tokens": {
+      "label": "prompt token",
+      "n": 32,
+      "a_total": 106843,
+      "b_total": 106024,
+      "delta_median": 0.0,
+      "delta_mean": -25.59375,
+      "delta_min": -4098,
+      "delta_max": 2966,
+      "n_b_larger": 4,
+      "n_b_smaller": 2,
+      "n_identical": 26,
+      "abs_delta_median": 0.0,
+      "b_over_a": 0.9923345469520699,
+      "sign_p_two_sided": 0.6875,
+      "sign_p_one_sided_b_not_larger": 0.34375,
+      "sign_p_one_sided_b_not_smaller": 0.03125
+    },
+    "completion_tokens": {
+      "label": "completion token",
+      "n": 32,
+      "a_total": 14186,
+      "b_total": 14478,
+      "delta_median": 0.0,
+      "delta_mean": 9.125,
+      "delta_min": -394,
+      "delta_max": 629,
+      "n_b_larger": 3,
+      "n_b_smaller": 5,
+      "n_identical": 24,
+      "abs_delta_median": 0.0,
+      "b_over_a": 1.0205836740448329,
+      "sign_p_two_sided": 0.7265625,
+      "sign_p_one_sided_b_not_larger": 0.85546875,
+      "sign_p_one_sided_b_not_smaller": 0.0078125
+    },
+    "turns": {
+      "label": "轮数",
+      "n": 32,
+      "a_total": 87,
+      "b_total": 86,
+      "delta_median": 0.0,
+      "delta_mean": -0.03125,
+      "delta_min": -1,
+      "delta_max": 1,
+      "n_b_larger": 1,
+      "n_b_smaller": 2,
+      "n_identical": 29,
+      "abs_delta_median": 0.0,
+      "b_over_a": 0.9885057471264368,
+      "sign_p_two_sided": 1.0,
+      "sign_p_one_sided_b_not_larger": 0.875,
+      "sign_p_one_sided_b_not_smaller": 0.25
+    },
+    "tool_calls": {
+      "label": "工具调用数",
+      "n": 32,
+      "a_total": 56,
+      "b_total": 55,
+      "delta_median": 0.0,
+      "delta_mean": -0.03125,
+      "delta_min": -1,
+      "delta_max": 1,
+      "n_b_larger": 1,
+      "n_b_smaller": 2,
+      "n_identical": 29,
+      "abs_delta_median": 0.0,
+      "b_over_a": 0.9821428571428571,
+      "sign_p_two_sided": 1.0,
+      "sign_p_one_sided_b_not_larger": 0.875,
+      "sign_p_one_sided_b_not_smaller": 0.25
+    },
+    "payload_chars": {
+      "label": "工具返回字符",
+      "n": 32,
+      "a_total": 134415,
+      "b_total": 138784,
+      "delta_median": 0.0,
+      "delta_mean": 136.53125,
+      "delta_min": -8324,
+      "delta_max": 12689,
+      "n_b_larger": 2,
+      "n_b_smaller": 2,
+      "n_identical": 28,
+      "abs_delta_median": 0.0,
+      "b_over_a": 1.0325038128185098,
+      "sign_p_two_sided": 1.0,
+      "sign_p_one_sided_b_not_larger": 0.6875,
+      "sign_p_one_sided_b_not_smaller": 0.125
+    }
+  },
+  "quality_flips": {
+    "hit（弱·剔泄漏）": {
+      "a_only": [],
+      "b_only": [
+        "t10"
+      ],
+      "a_hits": 11,
+      "b_hits": 12,
+      "n_graded": 32
+    },
+    "verified_hit（弱+过程）": {
+      "a_only": [],
+      "b_only": [
+        "t10"
+      ],
+      "a_hits": 11,
+      "b_hits": 12,
+      "n_graded": 32
+    },
+    "exact_hit（精确值，为准）": {
+      "a_only": [],
+      "b_only": [
+        "t10"
+      ],
+      "a_hits": 7,
+      "b_hits": 8,
+      "n_graded": 32
+    }
+  },
+  "noise_floor": {
+    "prompt_tokens_abs_delta_median": 0.0,
+    "prompt_tokens_total_relative": 0.007665453047930141,
+    "exact_hit_discordant_k": 1,
+    "exact_hit_net": 1,
+    "exact_hit_flips": 1
+  },
+  "note": "token 为 provider 实测；字符为本项目所数，两者不混用。这是**同配置两次运行**的差，不是两臂的差；它给出「跨臂差值多小算噪声」的下界。两个样本之间的显著性检验刻意不做（n=32 只会得到「测不出」）。"
+}

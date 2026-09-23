@@ -1,0 +1,134 @@
+{
+  "source_run": "examples/context-audit/runs-active7b-fz.jsonl",
+  "corpus_root": "C:/Users/10393/WorkBuddy/Worktrees/FinData-Agent/ctxbench-frozen",
+  "label": "runs-active7b-fz.jsonl",
+  "n_verdicts": 657,
+  "n_calls_native": 0,
+  "n_calls_replayed": 53,
+  "keep_rule": "ref_rate > 0 即整类保留；ref_rate == 0 的整类丢（header/whole 除外，除非 --drop-building）",
+  "keep": [
+    {
+      "tool": "get_signature",
+      "kind": "header"
+    },
+    {
+      "tool": "get_signature",
+      "kind": "sig"
+    },
+    {
+      "tool": "list_files",
+      "kind": "path"
+    },
+    {
+      "tool": "read_file",
+      "kind": "section"
+    },
+    {
+      "tool": "search_code",
+      "kind": "header"
+    },
+    {
+      "tool": "search_code",
+      "kind": "hit"
+    }
+  ],
+  "drop": [],
+  "cap_rule": "cap[tool] = 单次调用**被引用段数**的 p90（至少 1）；超出的段折成一行提示",
+  "caps": {
+    "list_files": 2,
+    "search_code": 5,
+    "get_signature": 10,
+    "read_file": 24
+  },
+  "per_call": {
+    "get_signature": {
+      "n_calls": 7,
+      "n_ref_p50": 3,
+      "n_ref_p90": 10,
+      "n_ref_max": 10
+    },
+    "list_files": {
+      "n_calls": 9,
+      "n_ref_p50": 0,
+      "n_ref_p90": 2,
+      "n_ref_max": 40
+    },
+    "read_file": {
+      "n_calls": 3,
+      "n_ref_p50": 14,
+      "n_ref_p90": 24,
+      "n_ref_max": 24
+    },
+    "search_code": {
+      "n_calls": 11,
+      "n_ref_p50": 3,
+      "n_ref_p90": 5,
+      "n_ref_max": 5
+    }
+  },
+  "table": [
+    {
+      "tool": "search_code",
+      "kind": "hit",
+      "n": 40,
+      "n_ref": 29,
+      "ref_rate": 0.725,
+      "chars": 120431,
+      "chars_ref": 96561
+    },
+    {
+      "tool": "read_file",
+      "kind": "section",
+      "n": 58,
+      "n_ref": 39,
+      "ref_rate": 0.6724,
+      "chars": 35642,
+      "chars_ref": 29219
+    },
+    {
+      "tool": "list_files",
+      "kind": "path",
+      "n": 459,
+      "n_ref": 44,
+      "ref_rate": 0.0959,
+      "chars": 12369,
+      "chars_ref": 1024
+    },
+    {
+      "tool": "get_signature",
+      "kind": "sig",
+      "n": 70,
+      "n_ref": 35,
+      "ref_rate": 0.5,
+      "chars": 1856,
+      "chars_ref": 961
+    },
+    {
+      "tool": "search_code",
+      "kind": "header",
+      "n": 11,
+      "n_ref": 0,
+      "ref_rate": 0.0,
+      "chars": 665,
+      "chars_ref": 0
+    },
+    {
+      "tool": "get_signature",
+      "kind": "header",
+      "n": 3,
+      "n_ref": 1,
+      "ref_rate": 0.3333,
+      "chars": 97,
+      "chars_ref": 32
+    }
+  ],
+  "savings": {
+    "seg_chars_droppable": 0,
+    "seg_chars_total": 171060,
+    "fraction": 0.0,
+    "note": "这个比例是**字段级字符**上的，不是 prompt token 上的：真实进上下文的字符串里还夹着段之间的连接文本，而且模型可能因为上下文变短而改变行为（多调或少调工具）。报告里的 token 数一律来自实测。"
+  },
+  "counts": {
+    "n_never_referenced_kinds": 1
+  }
+}

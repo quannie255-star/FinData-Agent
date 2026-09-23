@@ -1,0 +1,35 @@
+{
+  "server_info": {
+    "name": "axiom-mcp",
+    "description": "An MCP server implementation for Axiom that enables AI agents to query data using Axiom Processing Language (APL).",
+    "repo_url": "https://github.com/axiomhq/mcp-server-axiom",
+    "server_type": "Official Integrations",
+    "server_category": "Database, Data Analytics",
+    "server_version": "dev"
+  },
+  "tools": [
+    {
+      "name": "queryApl",
+      "description": "Query Axiom datasets using Axiom Processing Language (APL). The query must be a valid APL query string.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The APL query to run"
+          }
+        }
+      }
+    },
+    {
+      "name": "listDatasets",
+      "description": "List all available Axiom datasets",
+      "input_schema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

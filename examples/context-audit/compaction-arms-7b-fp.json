@@ -1,0 +1,194 @@
+{
+  "base": {
+    "arm": "active7b-fx-fp",
+    "n_tasks": 32,
+    "compact_policy": "none",
+    "compact_caps": {},
+    "n_tools_in_list": 4,
+    "corpus_sha256": "e4deb476c30c93e4de15fa12a0258015",
+    "code_sha256": "ef9f3bcab2abf402af8f29a24a1dc404",
+    "code_commit": "f3c92b751fdaf29a2ad43884ffb64b0c85c0a155",
+    "code_dirty": true,
+    "prompt_tokens": 83627,
+    "completion_tokens": 11586,
+    "turns": 87,
+    "tool_calls": 64,
+    "payload_chars": 63560,
+    "compacted_chars": 63560,
+    "compacted_chars_source": "实测",
+    "saved_chars": 0,
+    "n_answered": 32,
+    "hit_clean": 7,
+    "verified_hit": 7,
+    "exact": 6
+  },
+  "arms": [
+    {
+      "arm": "active7b-ch-fp",
+      "n_tasks": 32,
+      "compact_policy": "head",
+      "compact_caps": {},
+      "n_tools_in_list": 4,
+      "corpus_sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "code_sha256": "ef9f3bcab2abf402af8f29a24a1dc404",
+      "code_commit": "f3c92b751fdaf29a2ad43884ffb64b0c85c0a155",
+      "code_dirty": true,
+      "prompt_tokens": 64074,
+      "completion_tokens": 6083,
+      "turns": 82,
+      "tool_calls": 59,
+      "payload_chars": 37712,
+      "compacted_chars": 9742,
+      "compacted_chars_source": "实测",
+      "saved_chars": 27970,
+      "n_answered": 32,
+      "hit_clean": 3,
+      "verified_hit": 3,
+      "exact": 2
+    },
+    {
+      "arm": "active7b-ci-fp",
+      "n_tasks": 32,
+      "compact_policy": "hint",
+      "compact_caps": {},
+      "n_tools_in_list": 4,
+      "corpus_sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "code_sha256": "ef9f3bcab2abf402af8f29a24a1dc404",
+      "code_commit": "f3c92b751fdaf29a2ad43884ffb64b0c85c0a155",
+      "code_dirty": true,
+      "prompt_tokens": 65650,
+      "completion_tokens": 5610,
+      "turns": 86,
+      "tool_calls": 66,
+      "payload_chars": 91434,
+      "compacted_chars": 6865,
+      "compacted_chars_source": "实测",
+      "saved_chars": 84569,
+      "n_answered": 32,
+      "hit_clean": 2,
+      "verified_hit": 2,
+      "exact": 0
+    },
+    {
+      "arm": "active7b-cp-fp",
+      "n_tasks": 32,
+      "compact_policy": "cap",
+      "compact_caps": {
+        "get_signature": 10,
+        "list_files": 2,
+        "read_file": 24,
+        "search_code": 5
+      },
+      "n_tools_in_list": 4,
+      "corpus_sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "code_sha256": "ef9f3bcab2abf402af8f29a24a1dc404",
+      "code_commit": "f3c92b751fdaf29a2ad43884ffb64b0c85c0a155",
+      "code_dirty": true,
+      "prompt_tokens": 62639,
+      "completion_tokens": 5397,
+      "turns": 77,
+      "tool_calls": 53,
+      "payload_chars": 32257,
+      "compacted_chars": 23989,
+      "compacted_chars_source": "实测",
+      "saved_chars": 8268,
+      "n_answered": 32,
+      "hit_clean": 3,
+      "verified_hit": 3,
+      "exact": 3
+    }
+  ],
+  "paired": {
+    "active7b-ch-fp": {
+      "n_shared": 32,
+      "hit（弱·剔泄漏）": {
+        "both": 3,
+        "base_only": 4,
+        "arm_only": 0,
+        "discordant_k": 4,
+        "min_possible_p": 0.125,
+        "p_two_sided": 0.125,
+        "p_one_sided_arm_not_worse": 0.0625
+      },
+      "verified_hit（弱+过程）": {
+        "both": 3,
+        "base_only": 4,
+        "arm_only": 0,
+        "discordant_k": 4,
+        "min_possible_p": 0.125,
+        "p_two_sided": 0.125,
+        "p_one_sided_arm_not_worse": 0.0625
+      },
+      "exact_hit（精确值，为准）": {
+        "both": 2,
+        "base_only": 4,
+        "arm_only": 0,
+        "discordant_k": 4,
+        "min_possible_p": 0.125,
+        "p_two_sided": 0.125,
+        "p_one_sided_arm_not_worse": 0.0625
+      }
+    },
+    "active7b-ci-fp": {
+      "n_shared": 32,
+      "hit（弱·剔泄漏）": {
+        "both": 2,
+        "base_only": 5,
+        "arm_only": 0,
+        "discordant_k": 5,
+        "min_possible_p": 0.0625,
+        "p_two_sided": 0.0625,
+        "p_one_sided_arm_not_worse": 0.03125
+      },
+      "verified_hit（弱+过程）": {
+        "both": 2,
+        "base_only": 5,
+        "arm_only": 0,
+        "discordant_k": 5,
+        "min_possible_p": 0.0625,
+        "p_two_sided": 0.0625,
+        "p_one_sided_arm_not_worse": 0.03125
+      },
+      "exact_hit（精确值，为准）": {
+        "both": 0,
+        "base_only": 6,
+        "arm_only": 0,
+        "discordant_k": 6,
+        "min_possible_p": 0.03125,
+        "p_two_sided": 0.03125,
+        "p_one_sided_arm_not_worse": 0.015625
+      }
+    },
+    "active7b-cp-fp": {
+      "n_shared": 32,
+      "hit（弱·剔泄漏）": {
+        "both": 3,
+        "base_only": 4,
+        "arm_only": 0,
+        "discordant_k": 4,
+        "min_possible_p": 0.125,
+        "p_two_sided": 0.125,
+        "p_one_sided_arm_not_worse": 0.0625
+      },
+      "verified_hit（弱+过程）": {
+        "both": 3,
+        "base_only": 4,
+        "arm_only": 0,
+        "discordant_k": 4,
+        "min_possible_p": 0.125,
+        "p_two_sided": 0.125,
+        "p_one_sided_arm_not_worse": 0.0625
+      },
+      "exact_hit（精确值，为准）": {
+        "both": 2,
+        "base_only": 4,
+        "arm_only": 1,
+        "discordant_k": 5,
+        "min_possible_p": 0.0625,
+        "p_two_sided": 0.375,
+        "p_one_sided_arm_not_worse": 0.1875
+      }
+    }
+  },
+  "note": "token 为实测（provider usage）；字符数为本项目所数，两者不混用。配对检验报 McNemar 精确 p 与分辨力下限（k<6 时该对照测不出差异）。"
+}

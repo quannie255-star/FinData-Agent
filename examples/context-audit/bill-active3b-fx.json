@@ -1,0 +1,78 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:3b",
+    "n_tools_in_list": 4,
+    "n_silent_tools": 0,
+    "tools_chars_per_call": 2524,
+    "semconv": "gen-ai-stable-2026"
+  },
+  "measured": {
+    "n_answered": 32,
+    "n_errored": 0,
+    "keyword_hits": 6,
+    "total_turns": 88,
+    "total_tool_calls": 60,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 83571,
+    "completion_tokens": 10749,
+    "tool_payload_chars": 65163,
+    "tools_def_chars_carried": 222112
+  },
+  "per_tool": [
+    {
+      "tool": "get_signature",
+      "calls": 31,
+      "payload_chars": 3508,
+      "avg_chars": 113.2,
+      "codes": {
+        "not_found": 17,
+        "ok": 13,
+        "error": 1
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 21,
+      "payload_chars": 9143,
+      "avg_chars": 435.4,
+      "codes": {
+        "ok": 10,
+        "error": 4,
+        "not_found": 7
+      }
+    },
+    {
+      "tool": "search_code",
+      "calls": 5,
+      "payload_chars": 32491,
+      "avg_chars": 6498.2,
+      "codes": {
+        "ok": 4,
+        "not_found": 1
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 3,
+      "payload_chars": 20021,
+      "avg_chars": 6673.7,
+      "codes": {
+        "ok": 3
+      }
+    }
+  ],
+  "reproducibility": {
+    "code_commit": "unknown",
+    "code_dirty": false,
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen-noleak",
+    "corpus": {
+      "sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "n_files": 210,
+      "chars": 1215928
+    },
+    "tools_list_sha256": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "n_tools_in_list": 4,
+    "note": "code_commit/code_dirty 取自**语料根**（不是调用方工作区）：实验读的是语料根，提交号也必须是它的。corpus.sha256 是「相对路径:内容sha256」归并后的指纹，只记聚合值不记原文。"
+  }
+}

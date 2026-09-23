@@ -1,0 +1,23 @@
+{
+  "tools": [],
+  "resources": [
+    {
+      "name": "Tinybird Pipe",
+      "description": "A data processing pipeline in Tinybird.",
+      "uri": "https://tinybird.co/docs/pipes"
+    }
+  ],
+  "prompts": [],
+  "server_info": {
+    "name": "MCP Tinybird Server",
+    "description": "An official integration server for Tailwind CSS and Next.js using Tinybird.",
+    "repo_url": "https://github.com/tinybirdco/mcp-tinybird",
+    "server_type": "Official Integrations",
+    "server_category": [
+      "Web Development",
+      "Tailwind CSS",
+      "Next.js"
+    ],
+    "server_version": null
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "tools": [
+    {
+      "name": "semantic-search",
+      "description": "Search pineconeknowledge base",
+      "category": "search",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "top_k": {
+            "type": "integer",
+            "default": 10
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Optional namespace to search in"
+          },
+          "category": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "date_range": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date"
+              },
+              "end": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "read-document",
+      "description": "Read a document from the pinecone knowledge base",
+      "category": "read",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "document_id": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Optional namespace to read from"
+          }
+        },
+        "required": [
+          "document_id"
+        ]
+      }
+    },
+    {
+      "name": "upsert-document",
+      "description": "Add or update content in the pinecone knowledge base",
+      "category": "mutation",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "namespace": {
+            "type": "string",
+            "description": "Optional namespace to store the document in"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "Vector {record['id']}",
+      "description": "{metadata.get('text', '')[:100] + '...'}",
+      "uri": "pinecone://vectors/{record['id']}",
+      "mimeType": "text/plain"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "brain-query",
+      "description": "Search knowledge base and construct an answer based on relevant pinecone documents",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ],
+  "server_info": {
+    "name": "pinecone-mcp",
+    "description": "Server for interacting with Pinecone knowledge base",
+    "repo_url": "https://github.com/sirmews/mcp-pinecone",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Search",
+      "Web Scraping",
+      "Communication"
+    ],
+    "server_version": "0.1.4"
+  }
+}

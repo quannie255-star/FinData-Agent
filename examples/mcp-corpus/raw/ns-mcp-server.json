@@ -1,0 +1,100 @@
+{
+  "tools": [
+    {
+      "name": "get_disruptions",
+      "description": "Get current train disruptions from NS API",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Filter to only return active disruptions"
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of disruptions to return (e.g., MAINTENANCE, DISRUPTION)",
+            "enum": [
+              "MAINTENANCE",
+              "DISRUPTION"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "get_travel_advice",
+      "description": "Get travel advice between two train stations",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "fromStation": {
+            "type": "string",
+            "description": "Name or code of departure station"
+          },
+          "toStation": {
+            "type": "string",
+            "description": "Name or code of destination station"
+          },
+          "dateTime": {
+            "type": "string",
+            "description": "Optional departure/arrival time in ISO format (e.g. 2024-03-20T14:00:00+01:00)"
+          },
+          "searchForArrival": {
+            "type": "boolean",
+            "description": "If true, dateTime is treated as desired arrival time instead of departure time"
+          }
+        },
+        "required": [
+          "fromStation",
+          "toStation"
+        ]
+      }
+    },
+    {
+      "name": "get_departures",
+      "description": "Get list of departing trains from a station",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "station": {
+            "type": "string",
+            "description": "Station name or code to get departures for"
+          },
+          "dateTime": {
+            "type": "string",
+            "description": "Optional departure time in ISO format (e.g. 2024-03-20T14:00:00+01:00)"
+          },
+          "maxJourneys": {
+            "type": "number",
+            "description": "Maximum number of departures to return (default: 40)",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "lang": {
+            "type": "string",
+            "description": "Language for messages (default: nl)",
+            "enum": [
+              "nl",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "station"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [],
+  "server_info": {
+    "name": "ns-disruptions-server",
+    "description": "MCP Server implementation for NS (Dutch Railways) API providing tools for getting travel advice between stations and checking current disruptions.",
+    "repo_url": "https://github.com/r-huijts/ns-mcp-server",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Transport"
+    ],
+    "server_version": "1.0.0"
+  }
+}

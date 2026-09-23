@@ -1,0 +1,32 @@
+{
+  "tools": [
+    {
+      "name": "run_code",
+      "description": "Run python code in a secure sandbox by E2B. Using the Jupyter Notebook syntax.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [],
+  "server_info": {
+    "name": "e2b-code-mcp-server",
+    "description": "",
+    "repo_url": "https://github.com/e2b-dev/mcp-server",
+    "server_type": "Official Integrations",
+    "server_categories": [
+      "Productivity",
+      "Development"
+    ],
+    "server_version": ""
+  }
+}

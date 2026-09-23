@@ -1,0 +1,89 @@
+{
+  "server_info": {
+    "name": "stagehand",
+    "description": "A server that integrates with Stagehand, a tool for automating web interactions.",
+    "repo_url": "https://github.com/browserbase/mcp-server-browserbase",
+    "server_type": "Official Integrations",
+    "server_category": [
+      "Web Scraping",
+      "Automation"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "stagehand_navigate",
+      "description": "Navigate to a URL in the browser.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The URL to navigate to."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    {
+      "name": "stagehand_act",
+      "description": "Performs an action on the web page.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "The action to perform."
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Variables used in the action template."
+          }
+        },
+        "required": [
+          "action"
+        ]
+      }
+    },
+    {
+      "name": "stagehand_extract",
+      "description": "Extracts structured data from the web page based on an instruction and a JSON schema.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "description": "Clear instruction for what data to extract from the page"
+          },
+          "schema": {
+            "type": "object",
+            "description": "A JSON Schema object defining the structure of data to extract",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "instruction",
+          "schema"
+        ]
+      }
+    },
+    {
+      "name": "stagehand_observe",
+      "description": "Observes actions that can be performed on the web page.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "description": "Instruction for observation."
+          }
+        }
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

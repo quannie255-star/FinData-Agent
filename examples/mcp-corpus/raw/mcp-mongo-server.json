@@ -1,0 +1,83 @@
+{
+  "server_info": {
+    "name": "mongodb",
+    "description": "This is an MCP server that implements a MongoDB interface. It demonstrates core MCP concepts by allowing: - Listing collections as resources - Reading collection schemas and contents - Executing MongoDB queries via tools - Providing collection summaries via prompts",
+    "repo_url": "https://github.com/kiliczsh/mcp-mongo-server",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Database"
+    ],
+    "server_version": "0.1.3"
+  },
+  "tools": [
+    {
+      "name": "query",
+      "description": "Execute a MongoDB query",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "collection": {
+            "type": "string",
+            "description": "Name of the collection to query"
+          },
+          "filter": {
+            "type": "object",
+            "description": "MongoDB query filter"
+          },
+          "projection": {
+            "type": "object",
+            "description": "Fields to include/exclude"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of documents to return"
+          }
+        },
+        "required": [
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "aggregate",
+      "description": "Execute a MongoDB aggregation pipeline",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "collection": {
+            "type": "string",
+            "description": "Name of the collection to aggregate"
+          },
+          "pipeline": {
+            "type": "array",
+            "description": "Aggregation pipeline stages"
+          }
+        },
+        "required": [
+          "collection",
+          "pipeline"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "",
+      "description": "MongoDB collection: {collection_name}",
+      "uri": "mongodb:///{collection_name}"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "analyze_collection",
+      "description": "Analyze a MongoDB collection structure and contents",
+      "input_schema": [
+        {
+          "name": "collection",
+          "description": "Name of the collection to analyze",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

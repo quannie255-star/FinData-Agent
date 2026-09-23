@@ -1,0 +1,94 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:latest",
+    "n_tools_in_list": 4,
+    "n_silent_tools": 0,
+    "tools_chars_per_call": 2524,
+    "semconv": "gen-ai-stable-2026",
+    "compact_policy": "none",
+    "compact_caps": {}
+  },
+  "measured": {
+    "n_answered": 32,
+    "n_errored": 0,
+    "keyword_hits": 12,
+    "total_turns": 86,
+    "total_tool_calls": 55,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 106024,
+    "completion_tokens": 14478,
+    "tool_payload_chars": 138784,
+    "tool_compacted_chars": 138784,
+    "tool_saved_chars": 0,
+    "tools_def_chars_carried": 217064
+  },
+  "per_tool": [
+    {
+      "tool": "search_code",
+      "calls": 20,
+      "payload_chars": 65346,
+      "avg_chars": 3267.3,
+      "codes": {
+        "ok": 8,
+        "not_found": 9,
+        "error": 3
+      }
+    },
+    {
+      "tool": "get_signature",
+      "calls": 17,
+      "payload_chars": 2574,
+      "avg_chars": 151.4,
+      "codes": {
+        "not_found": 9,
+        "ok": 8
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 13,
+      "payload_chars": 12710,
+      "avg_chars": 977.7,
+      "codes": {
+        "ok": 9,
+        "not_found": 4
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 5,
+      "payload_chars": 58154,
+      "avg_chars": 11630.8,
+      "codes": {
+        "ok": 5
+      }
+    }
+  ],
+  "reproducibility": {
+    "code_commit": "unknown",
+    "code_dirty": false,
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen-noleak",
+    "corpus": {
+      "sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "n_files": 210,
+      "chars": 1215928
+    },
+    "executed_code_root": "C:\\Users\\10393\\Desktop\\FinData-Agent",
+    "executed_code": {
+      "sha256": "ef9f3bcab2abf402af8f29a24a1dc404",
+      "n_files": 101,
+      "chars": 625281
+    },
+    "executed_code_commit": "f3c92b751fdaf29a2ad43884ffb64b0c85c0a155",
+    "executed_code_dirty": true,
+    "tools_list_sha256": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "n_tools_in_list": 4,
+    "compact_policy": "none",
+    "compact_caps": {},
+    "compact_profile_path": "",
+    "compact_profile_sha256": "",
+    "compact_profile_corpus_root": "",
+    "note": "code_commit/code_dirty 取自**语料根**（不是调用方工作区）：实验读的是语料根，提交号也必须是它的。corpus.sha256 是「相对路径:内容sha256」归并后的指纹，只记聚合值不记原文。**executed_code 才是真正跑起来的那份源码**（口径同语料指纹，覆盖整个 src/findata/ 树 + 本脚本）：语料根与代码根常常不是同一个目录（语料是快照、代码是工作区），所以这两个身份必须分开记。两批读数只有在 corpus.sha256、executed_code.sha256、compact_policy/caps 都相同时才可比。"
+  }
+}

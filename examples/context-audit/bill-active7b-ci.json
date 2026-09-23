@@ -1,0 +1,86 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:latest",
+    "n_tools_in_list": 4,
+    "n_silent_tools": 0,
+    "tools_chars_per_call": 2524,
+    "semconv": "gen-ai-stable-2026",
+    "compact_policy": "hint",
+    "compact_caps": {}
+  },
+  "measured": {
+    "n_answered": 32,
+    "n_errored": 0,
+    "keyword_hits": 3,
+    "total_turns": 112,
+    "total_tool_calls": 81,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 90663,
+    "completion_tokens": 8764,
+    "tool_payload_chars": 205768,
+    "tool_compacted_chars": 8392,
+    "tool_saved_chars": 197376,
+    "tools_def_chars_carried": 282688
+  },
+  "per_tool": [
+    {
+      "tool": "search_code",
+      "calls": 34,
+      "payload_chars": 134130,
+      "avg_chars": 3945.0,
+      "codes": {
+        "not_found": 13,
+        "ok": 19,
+        "error": 2
+      }
+    },
+    {
+      "tool": "get_signature",
+      "calls": 25,
+      "payload_chars": 1783,
+      "avg_chars": 71.3,
+      "codes": {
+        "not_found": 18,
+        "ok": 7
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 16,
+      "payload_chars": 16970,
+      "avg_chars": 1060.6,
+      "codes": {
+        "ok": 13,
+        "not_found": 3
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 6,
+      "payload_chars": 52885,
+      "avg_chars": 8814.2,
+      "codes": {
+        "not_found": 2,
+        "ok": 4
+      }
+    }
+  ],
+  "reproducibility": {
+    "code_commit": "unknown",
+    "code_dirty": false,
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen-noleak",
+    "corpus": {
+      "sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "n_files": 210,
+      "chars": 1215928
+    },
+    "tools_list_sha256": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "n_tools_in_list": 4,
+    "compact_policy": "hint",
+    "compact_caps": {},
+    "compact_profile_path": "",
+    "compact_profile_sha256": "",
+    "note": "code_commit/code_dirty 取自**语料根**（不是调用方工作区）：实验读的是语料根，提交号也必须是它的。corpus.sha256 是「相对路径:内容sha256」归并后的指纹，只记聚合值不记原文。两批读数只有在 corpus.sha256 与 compact_policy/caps 都相同时才可比。"
+  }
+}

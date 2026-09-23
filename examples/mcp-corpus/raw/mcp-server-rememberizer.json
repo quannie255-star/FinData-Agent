@@ -1,0 +1,141 @@
+{
+  "server_info": {
+    "name": "mcp_server_rememberizer",
+    "description": "A Model Context Protocol server for interacting with the Rememberizer API.",
+    "repo_url": "https://github.com/skydeckai/mcp-server-rememberizer",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Cloud Service",
+      "API Integration"
+    ],
+    "server_version": "Not specified in the provided code"
+  },
+  "tools": [
+    {
+      "name": "ACCOUNT_INFORMATION",
+      "description": "Get account information",
+      "input_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "SEARCH",
+      "description": "Search for documents by semantic similarity",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Up to a 400-word sentence for which you wish to find semantically similar chunks of knowledge."
+          },
+          "n": {
+            "type": "integer",
+            "description": "Number of semantically similar chunks of text to return. Use 'n_results=3' for up to 5, and 'n_results=10' for more information. If you do not receive enough information, consider trying again with a larger 'n_results' value."
+          },
+          "from": {
+            "type": "string",
+            "description": "Start date in ISO 8601 format with timezone (e.g., 2023-01-01T00:00:00Z). Use this to filter results from a specific date."
+          },
+          "to": {
+            "type": "string",
+            "description": "End date in ISO 8601 format with timezone (e.g., 2024-01-01T00:00:00Z). Use this to filter results until a specific date."
+          }
+        },
+        "required": [
+          "q"
+        ]
+      }
+    },
+    {
+      "name": "AGENTIC_SEARCH",
+      "description": "Search for documents by semantic similarity",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Up to a 400-word sentence for which you wish to find semantically similar chunks of knowledge."
+          },
+          "user_context": {
+            "type": "string",
+            "description": "The additional context for the query. You might need to summarize the conversation up to this point for better context-awared results."
+          },
+          "n_chunks": {
+            "type": "integer",
+            "description": "Number of semantically similar chunks of text to return. Use 'n_results=3' for up to 5, and 'n_results=10' for more information. If you do not receive enough information, consider trying again with a larger 'n_results' value."
+          },
+          "from": {
+            "type": "string",
+            "description": "Start date in ISO 8601 format with timezone (e.g., 2023-01-01T00:00:00Z). Use this to filter results from a specific date."
+          },
+          "to": {
+            "type": "string",
+            "description": "End date in ISO 8601 format with timezone (e.g., 2024-01-01T00:00:00Z). Use this to filter results until a specific date."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "LIST_INTEGRATIONS",
+      "description": "List available data source integrations",
+      "input_schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "LIST_DOCUMENTS",
+      "description": "Retrieves a paginated list of all documents in the system.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Page number for pagination (starts at 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of documents per page (1-1000)",
+            "minimum": 1,
+            "maximum": 1000,
+            "default": 100
+          }
+        }
+      }
+    },
+    {
+      "name": "MEMORIZE",
+      "description": "Save a piece of text information in your Rememberizer account to help you discover semantically similar knowledge in the future.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the information. This is used to identify the information in the future."
+          },
+          "content": {
+            "type": "string",
+            "description": "The information you wish to memorize."
+          }
+        }
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "document",
+      "description": "A document resource from Rememberizer.",
+      "uri": "rememberizer://document/{id}"
+    },
+    {
+      "name": "slack",
+      "description": "A Slack resource from Rememberizer.",
+      "uri": "rememberizer://slack/{id}"
+    }
+  ],
+  "prompts": []
+}

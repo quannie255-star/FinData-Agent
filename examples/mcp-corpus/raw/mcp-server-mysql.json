@@ -1,0 +1,32 @@
+{
+  "server_info": {
+    "name": "example-servers/mysql",
+    "description": "A MySQL server implementation of the Model Context Protocol (MCP) server.",
+    "repo_url": "https://github.com/benborla/mcp-server-mysql",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Database"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "mysql_query",
+      "description": "Run a read-only MySQL query",
+      "input_schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "sql": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sql"
+        ]
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}

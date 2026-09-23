@@ -1,0 +1,161 @@
+{
+  "tools": [
+    {
+      "name": "search",
+      "description": "Search for a task in Google Tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "list",
+      "description": "List all tasks in Google Tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "description": "Cursor for pagination"
+          }
+        }
+      }
+    },
+    {
+      "name": "create",
+      "description": "Create a new task in Google Tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "taskListId": {
+            "type": "string",
+            "description": "Task list ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Task notes"
+          },
+          "due": {
+            "type": "string",
+            "description": "Due date"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      }
+    },
+    {
+      "name": "clear",
+      "description": "Clear completed tasks from a Google Tasks task list",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "taskListId": {
+            "type": "string",
+            "description": "Task list ID"
+          }
+        },
+        "required": [
+          "taskListId"
+        ]
+      }
+    },
+    {
+      "name": "delete",
+      "description": "Delete a task in Google Tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "taskListId": {
+            "type": "string",
+            "description": "Task list ID"
+          },
+          "id": {
+            "type": "string",
+            "description": "Task id"
+          }
+        },
+        "required": [
+          "id",
+          "taskListId"
+        ]
+      }
+    },
+    {
+      "name": "update",
+      "description": "Update a task in Google Tasks",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "taskListId": {
+            "type": "string",
+            "description": "Task list ID"
+          },
+          "id": {
+            "type": "string",
+            "description": "Task ID"
+          },
+          "uri": {
+            "type": "string",
+            "description": "Task URI"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Task notes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "needsAction",
+              "completed"
+            ],
+            "description": "Task status (needsAction or completed)"
+          },
+          "due": {
+            "type": "string",
+            "description": "Due date"
+          }
+        },
+        "required": [
+          "id",
+          "uri"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "task",
+      "description": "A task in Google Tasks",
+      "uri": "gtasks:///{taskId}"
+    }
+  ],
+  "prompts": [],
+  "server_info": {
+    "name": "example-servers/gtasks",
+    "description": "A Model Context Protocol server for interacting with Google Tasks",
+    "repo_url": "https://github.com/zcaceres/gtasks-mcp",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Productivity"
+    ],
+    "server_version": "0.1.0"
+  }
+}

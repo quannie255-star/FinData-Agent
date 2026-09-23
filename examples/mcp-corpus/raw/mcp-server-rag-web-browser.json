@@ -1,0 +1,58 @@
+{
+  "server_info": {
+    "name": "MCP Server for Rag Web Browser",
+    "description": "A Model Context Protocol server that allows to call the RAG Web Browser Actor.",
+    "repo_url": "https://github.com/apify/mcp-server-rag-web-browser",
+    "server_type": "Community Servers",
+    "server_category": [
+      "Web Scraping",
+      "Search"
+    ],
+    "server_version": "0.1.0"
+  },
+  "tools": [
+    {
+      "name": "search",
+      "description": "Search phrase or a URL at Google and return crawled web pages as text or Markdown",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Google Search keywords or a URL of a specific web page"
+          },
+          "maxResults": {
+            "type": "number",
+            "int": true,
+            "positive": true,
+            "default": 1,
+            "description": "The maximum number of top organic Google Search results whose web pages will be extracted (default: 1)"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "resources": [],
+  "prompts": [
+    {
+      "name": "search",
+      "description": "Search phrase or a URL at Google and return crawled web pages as text or Markdown",
+      "arguments": [
+        {
+          "name": "query",
+          "description": "Google Search keywords or a URL of a specific web page",
+          "required": true
+        },
+        {
+          "name": "maxResults",
+          "description": "The maximum number of top organic Google Search results whose web pages will be extracted (default: 1)",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

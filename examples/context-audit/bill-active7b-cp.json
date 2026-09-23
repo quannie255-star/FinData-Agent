@@ -1,0 +1,95 @@
+{
+  "scope": {
+    "n_tasks": 32,
+    "model": "qwen2.5:latest",
+    "n_tools_in_list": 4,
+    "n_silent_tools": 0,
+    "tools_chars_per_call": 2524,
+    "semconv": "gen-ai-stable-2026",
+    "compact_policy": "cap",
+    "compact_caps": {
+      "get_signature": 10,
+      "list_files": 2,
+      "read_file": 24,
+      "search_code": 5
+    }
+  },
+  "measured": {
+    "n_answered": 31,
+    "n_errored": 1,
+    "keyword_hits": 7,
+    "total_turns": 92,
+    "total_tool_calls": 62,
+    "silent_tool_calls": 0,
+    "prompt_tokens": 97431,
+    "completion_tokens": 13228,
+    "tool_payload_chars": 123839,
+    "tool_compacted_chars": 101882,
+    "tool_saved_chars": 21957,
+    "tools_def_chars_carried": 232208
+  },
+  "per_tool": [
+    {
+      "tool": "search_code",
+      "calls": 23,
+      "payload_chars": 66469,
+      "avg_chars": 2890.0,
+      "codes": {
+        "ok": 9,
+        "not_found": 11,
+        "error": 3
+      }
+    },
+    {
+      "tool": "list_files",
+      "calls": 17,
+      "payload_chars": 16737,
+      "avg_chars": 984.5,
+      "codes": {
+        "ok": 12,
+        "not_found": 5
+      }
+    },
+    {
+      "tool": "get_signature",
+      "calls": 16,
+      "payload_chars": 1335,
+      "avg_chars": 83.4,
+      "codes": {
+        "not_found": 10,
+        "ok": 6
+      }
+    },
+    {
+      "tool": "read_file",
+      "calls": 6,
+      "payload_chars": 39298,
+      "avg_chars": 6549.7,
+      "codes": {
+        "ok": 6
+      }
+    }
+  ],
+  "reproducibility": {
+    "code_commit": "unknown",
+    "code_dirty": false,
+    "corpus_root": "C:\\Users\\10393\\WorkBuddy\\Worktrees\\FinData-Agent\\ctxbench-frozen-noleak",
+    "corpus": {
+      "sha256": "e4deb476c30c93e4de15fa12a0258015",
+      "n_files": 210,
+      "chars": 1215928
+    },
+    "tools_list_sha256": "c0a61040fb0b9b1ec6aa3cbdb7dc3773",
+    "n_tools_in_list": 4,
+    "compact_policy": "cap",
+    "compact_caps": {
+      "get_signature": 10,
+      "list_files": 2,
+      "read_file": 24,
+      "search_code": 5
+    },
+    "compact_profile_path": "examples/context-audit/compaction-profile-active7b.json",
+    "compact_profile_sha256": "cfc07f51ea334b8987a8075bbb436622",
+    "note": "code_commit/code_dirty 取自**语料根**（不是调用方工作区）：实验读的是语料根，提交号也必须是它的。corpus.sha256 是「相对路径:内容sha256」归并后的指纹，只记聚合值不记原文。两批读数只有在 corpus.sha256 与 compact_policy/caps 都相同时才可比。"
+  }
+}
