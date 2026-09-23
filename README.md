@@ -1,11 +1,34 @@
-# Findata — Agent 训练数据的质检与过滤
+# Findata — Agent 上下文与工具预算的自治策展
 
 [![test](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)
 [![release](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 
-**一句话**：丢进去一批 Agent 轨迹，吐出「哪些能喂训练、哪些不能、为什么」，
-每条判定带证据链。
+**一句话**：一个 agent 每轮往上下文里塞什么、塞多少，现在没人管、也**没人能证明管了没坏事**。
+本项目读真实 trace，产出**经过配对验证的**裁剪策略（`policy.json`）、验证报告与可回滚基线。
+
+> **它和"上下文优化工具"的区别**：那些工具负责**执行过滤**（少发工具定义、检索注入、
+> 截断返回），早已商品化；本项目负责**决定过滤什么、并证明过滤没伤到结果**。
+> 不造网关，给网关产出策略 —— 见 [`docs/business-case.md`](docs/business-case.md)。
+
+三条已经实测出来的读数（同批 32 个任务 / 同一份冻结语料 / 同一份代码，唯一变量是被测的那一维）：
+
+| 改什么 | 省多少（实测 token） | 质量侧（配对） | 结论 |
+| --- | ---: | --- | --- |
+| 工具定义 27 → 4 个 | **−53.4%**（p=2.46e-07） | 命中 7/32 → **13/32**（p=0.03125） | 不降反升 |
+| 工具返回裁掉 **88.7%** | **−25.8%** | `exact_hit` 7/32 → 7/32（7B，k=6，p=1.0）<br>**6/32 → 2/32**（3B，k=4，没达显著但方向不利） | ⚠️ **未证实**：7B 没测到伤害，3B 方向不利 |
+| 工具返回裁掉 **95.9%** | −15.1% | `exact_hit` **7/32 → 1/32**（7B，p=0.03125）<br>**6/32 → 0/32**（3B，p=0.03125） | **两个模型上都显著变差** |
+
+→ 第三行是**唯一在两个模型上都复现出来**的结论；第二行是"**没测到**"而不是"**没有**"。
+再往前一步（第二行 → 第三行）就跨过了一个台阶：「**少给内容**」和「**不给内容**」不是
+程度差异，是两种东西。复现命令、噪声下界与全套口径见
+[`docs/r5.0-acceptance.md`](docs/r5.0-acceptance.md)（§3.8–§3.11）。
+
+---
+
+## v3.0 领域包：Agent 训练数据的质检与过滤（仍可用）
+
+**一句话**：丢进去一批 Agent 轨迹，吐出「哪些能喂训练、哪些不能、为什么」，每条判定带证据链。
 
 ```bash
 uv run python scripts/run_trust_filter.py    # 默认跑全量，约 16 秒
@@ -92,7 +115,7 @@ data/filtered/
 
 ```bash
 uv sync
-uv run pytest                                        # 463 例测试
+uv run pytest                                        # 577 例测试
 uv run ruff check .
 
 uv run python scripts/run_trust_filter.py             # 主闭环（真实语料，默认全量）
@@ -150,14 +173,16 @@ findata 最早是**可信数据增强模块**：挂到成熟 Agent 项目上，�
 那套**归因引擎原封不动地用在了轨迹域上**，只是换了个域。A 股降级为领域包 1，
 它是「这套归因不是只会一件事」的证据。
 
-**原本的三个接入面仍然可用**（MCP / HTTP / Python），只是不再是主线：
+**原本的四个能力面仍然可用**，只是不再是主线：
 
 | 组成 | 给谁用 | 一句话 |
 | --- | --- | --- |
-| **Agent 轨迹质检**（v3.0，主线） | 做 Agent 训练的人 | 丢轨迹进去，吐出能喂训练的样本 + 归因证据链 |
-| **可信增强模块**（v2.1） | 任何 Agent 宿主 | MCP / HTTP / Python 三个接入面，引用数字前查一次 `trust_check` |
-| **通用数据可信包**（v2.2） | 任何有数据的人 | `findata-trust-report <csv|xlsx|duckdb|sqlite>`——任意表出带徽章报告 |
+| **上下文策展**（v4.0，主线） | 所有跑 agent 的人 | 读 trace → 产出裁剪策略 + 配对验证报告 + 可回滚基线 |
+| **Agent 轨迹质检**（v3.0，领域包 2） | 做 Agent 训练的人 | 丢轨迹进去，吐出能喂训练的样本 + 归因证据链 |
+| **可信增强模块**（v2.1，领域包 1） | 任何 Agent 宿主 | MCP / HTTP / Python 三个接入面，引用数字前查一次 `trust_check` |
 | **A 股领域包**（v0.x–v2.0） | 金融数据团队 | 探针→归因→抑制→徽章日报全链路，是"领域包"的参考实现 |
+
+（v2.2 的通用数据可信包 `findata-trust-report` 仍随包发布，见附二。）
 
 ---
 
@@ -265,7 +290,7 @@ uv run findata-trust-report warehouse.duckdb --table stock_daily --strict
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(463, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(577, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）
