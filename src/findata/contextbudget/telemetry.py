@@ -75,11 +75,16 @@ def record_tool_call(
     duration_ms: float,
     retry_count: int = 0,
     parallel_batch_size: int = 1,
+    fields_json: str = "",
 ) -> Span:
     """一次工具调用（span 名 gen_ai.tool.call）。
 
     `payload_chars` 走扩展前缀：GenAI 约定没有"返回多大"这个字段，
     而本项目整份账单的核心正是这个量，所以务必让它可查、但不冒充标准。
+
+    `fields_json` 是**原生字段级记录**（字段名 + 字符数 + 值指纹），
+    同样走扩展前缀。**它不含返回原文**——GenAI 约定坚持摘要而非原文，
+    理由（PII + 体积）对返回内容一样成立，见 `fields.py` 模块头。
     """
     with tracer.start_as_current_span("gen_ai.tool.call") as span:
         span.set_attribute("gen_ai.tool.name", tool_name)
@@ -90,6 +95,8 @@ def record_tool_call(
         span.set_attribute("gen_ai.tool.parallel_batch_size", int(parallel_batch_size))
         span.set_attribute("gen_ai.tool.duration_ms", round(duration_ms, 3))
         span.set_attribute("findata.context.tool_payload_chars", int(payload_chars))
+        if fields_json:
+            span.set_attribute("findata.context.tool_fields_json", fields_json)
         return span
 
 

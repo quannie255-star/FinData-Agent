@@ -122,6 +122,97 @@ class Verdict:
     n_candidates: int = 0
 
 
+# **原生记录**时每个字段最多留多少个指纹（0 = 不截断）。
+#
+# 它是**存储**约束，不是判定约束 —— 这个区分很关键：
+#   · 原生记录要把指纹落进 trace，所以必须封顶；
+#   · 重放路径手里有原文，**不该受这个上限影响**。若让上限也作用在重放上，
+#     就会静默改写 v0.1 已发布的那些读数（同一份 trace 会算出两个不同的数）。
+# 截断方向是**漏判**（模型用的恰好是被砍掉的那个值 ⇒ 判成"未观测到引用"），
+# 对"裁剪更好"这个结论不利 ⇒ 安全方向。但必须把 `truncated` 报出来，
+# 否则读的人会以为 n_candidates 就是全部可区分值。
+MAX_FIELD_TOKENS = 120
+
+
+@dataclass(frozen=True)
+class FieldRecord:
+    """工具返回里一个字段的**原生记录**：只有指纹，没有原文。
+
+    `tokens` 已经扣掉了"调用前就在上下文里"的那批值，所以判定 `referenced`
+    只需要 `after`，不需要 `before` —— 这正是"可判定是否被引用的**最小信息**"：
+    少一个字段判不了，多一个字段就是白存（且是 PII 与体积上的白存）。
+
+    **代价**：`before` 被固化了，事后不能换口径重判。这是拿"可重判"换"不用重放"
+    —— 重放要求工具可重放，而真实用户的第三方 MCP 工具未必可重放。
+    """
+
+    name: str
+    kind: str
+    chars: int
+    tokens: tuple[str, ...]
+    truncated: bool = False
+    # 两个**计数**（不是值，所以没有 PII 与体积问题），只为把
+    # "判不了"的**成因**说清楚。丢了它们，两种完全不同的成因会被合并成一句话：
+    #   ① 值太短/太常见 → 这个值本来就不能当证据（换多少上下文都一样）
+    #   ② 调用前已在上下文里 → 它不新，无法把它与既有信息分开（换 `before` 就变）
+    # 这两句话给读报告的人的信息完全不同，所以宁可各存一个整数。
+    n_preexisting: int = 0
+    n_indistinct: int = 0
+
+    @property
+    def n_candidates(self) -> int:
+        return len(self.tokens)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "kind": self.kind,
+            "chars": self.chars,
+            "n_candidates": len(self.tokens),
+            "n_preexisting": self.n_preexisting,
+            "n_indistinct": self.n_indistinct,
+            "truncated": self.truncated,
+            "tokens": list(self.tokens),
+        }
+
+
+def fingerprint(value: str, *, min_len: int = DEFAULT_MIN_LEN) -> tuple[str, ...]:
+    """值 → 可区分值的指纹（去重、排序、小写）。"""
+    return tuple(sorted(t for t in value_tokens(value) if is_distinctive(t, min_len=min_len)))
+
+
+def make_record(
+    name: str,
+    kind: str,
+    value: str,
+    *,
+    chars: int = 0,
+    before_tokens: frozenset[str] | set[str] = frozenset(),
+    min_len: int = DEFAULT_MIN_LEN,
+    max_tokens: int = 0,
+) -> FieldRecord:
+    """从一个字段值造出记录。**"调用前是否已在上下文里"就在这里扣掉。**
+
+    `max_tokens=0`（默认）= 不截断。这是给**重放路径**用的：那条路手里有原文，
+    没有存储压力，截断只会白白引入漏判。原生记录由 `fields.record_fields`
+    显式传 `MAX_FIELD_TOKENS`。
+    """
+    all_tokens = value_tokens(value)
+    candidates = {t for t in all_tokens if is_distinctive(t, min_len=min_len)}
+    preexisting = candidates & set(before_tokens)
+    observable = sorted(candidates - preexisting)
+    kept = tuple(observable if max_tokens <= 0 else observable[:max_tokens])
+    return FieldRecord(
+        name=name,
+        kind=kind,
+        chars=chars or len(value),
+        tokens=kept,
+        truncated=len(observable) > len(kept),
+        n_preexisting=len(preexisting),
+        n_indistinct=len(all_tokens) - len(candidates),
+    )
+
+
 @dataclass
 class Attribution:
     """一次归因的汇总。**分档计数，不合成一个"利用率"。**
@@ -191,6 +282,54 @@ def is_distinctive(token: str, *, min_len: int = DEFAULT_MIN_LEN) -> bool:
     return len(token) >= min_len
 
 
+def judge_record(rec: FieldRecord, *, after: str, min_hits: int = 1) -> Verdict:
+    """判一个**原生记录**的字段：值在调用后出现在模型后续消息里了吗。
+
+    唯一需要的"后侧"输入是 `after` —— "前侧"已经在**记录时**扣掉了（见 `FieldRecord`）。
+    """
+    if not rec.tokens:
+        # 成因分开说：这两句话给读报告的人的信息完全不同（见 `FieldRecord`）。
+        if rec.n_preexisting and not rec.n_indistinct:
+            reason = "该字段的所有可区分值在工具调用前已在上下文里，无法把它与既有信息分开"
+        elif rec.n_indistinct and not rec.n_preexisting:
+            reason = "值太短或太常见，撞车概率高，出现也不构成引用证据"
+        else:
+            reason = (
+                f"值太短/太常见（{rec.n_indistinct} 个）且有 "
+                f"{rec.n_preexisting} 个值调用前已在上下文里 ⇒ 无法构成引用证据"
+            )
+        return Verdict(rec.name, STATUS_UNVERIFIABLE, reason, n_candidates=0)
+
+    hit = set(rec.tokens) & value_tokens(after)
+    suffix = "；指纹被截断，n_candidates 是下界" if rec.truncated else ""
+    if len(hit) >= min_hits:
+        return Verdict(
+            rec.name,
+            STATUS_REFERENCED,
+            f"值在调用后出现在模型后续消息里（命中 {len(hit)} / 可判 {len(rec.tokens)} 个）"
+            + suffix,
+            tuple(sorted(hit))[:3],
+            n_matched=len(hit),
+            n_candidates=len(rec.tokens),
+        )
+    if hit:
+        return Verdict(
+            rec.name,
+            STATUS_NOT_REFERENCED,
+            f"命中 {len(hit)} 个值，低于本次阈值 min_hits={min_hits}，不足以判为引用" + suffix,
+            tuple(sorted(hit))[:3],
+            n_matched=len(hit),
+            n_candidates=len(rec.tokens),
+        )
+    return Verdict(
+        rec.name,
+        STATUS_NOT_REFERENCED,
+        "本次运行未观测到引用（**不等于该字段无用**，可能只是本批任务没覆盖）" + suffix,
+        n_matched=0,
+        n_candidates=len(rec.tokens),
+    )
+
+
 def judge_field(
     fv: FieldValue,
     *,
@@ -199,63 +338,26 @@ def judge_field(
     min_len: int = DEFAULT_MIN_LEN,
     min_hits: int = 1,
 ) -> Verdict:
-    """判一个字段。
+    """判一个字段（**有原文**的调用路径，实现上是 `judge_record` 的薄包装）。
 
     `before` = 本次工具调用**之前**的全部上下文（用户消息 + 历史 + 系统提示）；
     `after`  = 此后模型产出的全部文本（回答 + 后续工具调用参数）。
 
-    `min_hits` 是"至少命中几个不同的值才算引用"。默认 1；**大字段应当抬高它**，
+    `min_hits` = 至少命中几个不同的值才算引用。默认 1；**大字段应当抬高它**，
     否则命中一个标识符就把整段算成被引用（见模块 docstring 的虚高风险）。
+
+    写成薄包装是刻意的：**判定口径只能有一份**。原生记录（`judge_record`）与
+    重放路径（`judge_field`）各维护一份逻辑的话，两边迟早会漂出两个数来。
     """
-    candidates = {t for t in value_tokens(fv.value) if is_distinctive(t, min_len=min_len)}
-    if not candidates:
-        return Verdict(
-            fv.name,
-            STATUS_UNVERIFIABLE,
-            "值太短或太常见，撞车概率高，出现也不构成引用证据",
-            n_candidates=0,
-        )
-
-    in_before = value_tokens(before)
-    # ② 此前就在上下文里 → 出现不算证据。这一条是引用率不虚高的前提。
-    preexisting = candidates & in_before
-    observable = candidates - in_before
-    if not observable:
-        return Verdict(
-            fv.name,
-            STATUS_UNVERIFIABLE,
-            "该字段的所有可区分值在工具调用前已在上下文里，无法把它与既有信息分开",
-            matched=tuple(sorted(preexisting))[:3],
-            n_matched=0,
-            n_candidates=len(candidates),
-        )
-
-    hit = observable & value_tokens(after)
-    if len(hit) >= min_hits:
-        return Verdict(
-            fv.name,
-            STATUS_REFERENCED,
-            f"值在调用后出现在模型后续消息里（命中 {len(hit)} / 可判 {len(observable)} 个）",
-            tuple(sorted(hit))[:3],
-            n_matched=len(hit),
-            n_candidates=len(observable),
-        )
-    if hit:
-        return Verdict(
-            fv.name,
-            STATUS_NOT_REFERENCED,
-            f"命中 {len(hit)} 个值，低于本次阈值 min_hits={min_hits}，不足以判为引用",
-            tuple(sorted(hit))[:3],
-            n_matched=len(hit),
-            n_candidates=len(observable),
-        )
-    return Verdict(
+    rec = make_record(
         fv.name,
-        STATUS_NOT_REFERENCED,
-        "本次运行未观测到引用（**不等于该字段无用**，可能只是本批任务没覆盖）",
-        n_matched=0,
-        n_candidates=len(observable),
+        "field",
+        fv.value,
+        chars=fv.chars,
+        before_tokens=value_tokens(before),
+        min_len=min_len,
     )
+    return judge_record(rec, after=after, min_hits=min_hits)
 
 
 def attribute(

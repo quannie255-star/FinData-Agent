@@ -23,12 +23,26 @@
 from __future__ import annotations
 
 import ast
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from findata.contextbudget import corpus
+from findata.contextbudget.attribution import FieldRecord
+from findata.contextbudget.fields import extract_blocks, record_fields
+
+# `extract_blocks` 现在住在 `fields.py`（切段是"工具返回的形状"这件事的属性，
+# 不是经济学分析的属性）。这里再导出一次是**故意的**：旧的 import 路径
+# (`from findata.contextbudget.tools import extract_blocks`) 仍然有效。
+__all__ = [
+    "ACTIVE_IMPL",
+    "REPO_ROOT",
+    "ToolResult",
+    "call_tool",
+    "extract_blocks",
+    "get_corpus_root",
+    "set_corpus_root",
+]
 
 # src/findata/contextbudget/tools.py → parents[3] = 仓库根
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -39,9 +53,6 @@ _corpus_root: Path = REPO_ROOT
 
 _MAX_SEARCH_BLOCKS = 20
 _MAX_FILE_BYTES = 200_000
-
-# top-level 定义的起始行
-_TOP_LEVEL_RE = re.compile(r"^(?:async\s+def|def|class)\s+(\w+)")
 
 
 def get_corpus_root() -> Path:
@@ -66,6 +77,11 @@ class ToolResult:
 
     `payload_chars` 是**确定性**量：序列化后字符数，换机器也一样。
     token 侧的量由 LLM 的 usage 提供，两者都进 trace，但**不许互相冒充**。
+
+    `fields` 是**原生字段级记录**（R5.1）：调用发生时就把返回切成字段、
+    记下每个字段的字符数与值指纹。它让"这个字段被引用了吗"**不再需要重放工具**
+    ——这是从"只能给自己用"到"能给别人用"的那一步，理由见 `fields.py` 模块头。
+    由 `call_tool` 填充；直接构造的 ToolResult 里它是空的（读作"未记录"，不是"没字段"）。
     """
 
     name: str
@@ -73,6 +89,7 @@ class ToolResult:
     result_code: str = "ok"
     payload_chars: int = 0
     detail: dict[str, Any] = field(default_factory=dict)
+    fields: tuple[FieldRecord, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.payload_chars:
@@ -103,31 +120,6 @@ def _iter_source_files(prefix: str = "") -> list[Path]:
 
 def _rel(path: Path) -> str:
     return path.resolve().relative_to(get_corpus_root()).as_posix()
-
-
-def extract_blocks(source: str) -> list[tuple[str, int, int, str]]:
-    """切出 top-level 的 def/class 块。
-
-    返回 [(名字, 起始行, 结束行, 原文)]。结束行 = 下一个 top-level 定义的前一行
-    （或文件末）。这是"完整函数体"的来源，也是 `search_code` 大 payload 的来源。
-    """
-    lines = source.splitlines()
-    starts: list[tuple[str, int]] = []
-    for idx, line in enumerate(lines):
-        match = _TOP_LEVEL_RE.match(line)
-        if match:
-            starts.append((match.group(1), idx))
-
-    blocks: list[tuple[str, int, int, str]] = []
-    for pos, (name, start) in enumerate(starts):
-        end = starts[pos + 1][1] - 1 if pos + 1 < len(starts) else len(lines) - 1
-        # 把紧贴在上面的装饰器与注释行并进来
-        head = start
-        while head > 0 and lines[head - 1].lstrip().startswith(("@", "#")):
-            head -= 1
-        text = "\n".join(lines[head : end + 1])
-        blocks.append((name, head + 1, end + 1, text))
-    return blocks
 
 
 def _signature_summary(path: Path) -> str:
@@ -284,7 +276,9 @@ def _valid_param_names(name: str) -> tuple[str, ...] | None:
     return None
 
 
-def call_tool(name: str, arguments: dict[str, Any]) -> ToolResult:
+def call_tool(
+    name: str, arguments: dict[str, Any], *, before_text: str = ""
+) -> ToolResult:
     """统一入口：活跃工具走真实实现，沉默工具如实回 not_implemented。
 
     **参数名预检是刻意加的**，不是防御性编程：实测 qwen2.5:3b 在 27 个工具
@@ -320,6 +314,26 @@ def call_tool(name: str, arguments: dict[str, Any]) -> ToolResult:
             )
 
     try:
-        return impl(**arguments)
+        result = impl(**arguments)
     except TypeError as exc:
-        return ToolResult(name, f"bad_arguments: {exc}", "error")
+        result = ToolResult(name, f"bad_arguments: {exc}", "error")
+    # 原生字段级记录：**在这一刻**记，不靠事后重放（理由见 fields.py 模块头）。
+    return _with_fields(result, before_text=before_text)
+
+
+def _with_fields(result: ToolResult, *, before_text: str) -> ToolResult:
+    """给结果补上字段记录表。
+
+    `before_text` 为空时**照样记录**，但那时"可区分值"没扣过上下文——
+    所以记下的 `tokens` 会偏多（引用率偏高的方向）。
+    调用方（`agent.run_agent`）总是传真实上下文；这里不抛异常，
+    是因为"记录不全"应当表现为一个**可观测的数字**（后续统计里能看出来），
+    而不是让整批实验跑不起来。
+    """
+    result.fields = record_fields(
+        result.name,
+        result.content,
+        result_code=result.result_code,
+        before_text=before_text,
+    )
+    return result

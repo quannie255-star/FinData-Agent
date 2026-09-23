@@ -27,6 +27,7 @@ from findata.contextbudget.corpus import (
     corpus_manifest,
     diff_manifests,
     iter_corpus_files,
+    manifest_of,
     manifests_agree,
 )
 
@@ -258,3 +259,55 @@ def test_drift_script_exits_nonzero_when_it_finds_drift(tmp_path: Path) -> None:
 
     # main() 返回 1 → sys.exit(1)；被 pytest.raises 捕获
     assert exc.value.code == 1
+
+
+def test_manifest_of_covers_the_files_it_is_given(snapshot: Path) -> None:
+    """`manifest_of` 是**代码指纹**用的入口：口径与语料指纹相同，只换"选哪些文件"。
+
+    它必须真的只覆盖给定清单 —— 否则"两臂同代码"会被无关文件的改动搅成假警报，
+    或者更糟：把**没覆盖到**的关键文件漏掉，让"同代码"变成一句空话。
+    """
+    only_a = [snapshot / "pkg" / "a.py"]
+    man = manifest_of(only_a, base=snapshot)
+    assert man["n_files"] == 1
+    assert man["chars"] == len((snapshot / "pkg" / "a.py").read_text(encoding="utf-8"))
+
+    # 清单多一个文件，指纹必须变（多覆盖 = 更敏感，这是我们选的方向）
+    man2 = manifest_of([*only_a, snapshot / "docs" / "n.md"], base=snapshot)
+    assert man2["n_files"] == 2
+    assert man2["sha256"] != man["sha256"]
+
+
+def test_manifest_of_is_relative_to_base_not_absolute_path(snapshot: Path, tmp_path: Path) -> None:
+    """指纹是**内容的函数 + 相对路径的函数**，不是目录位置的函数。
+
+    这条是给"语料根是快照、代码根是工作区"这种两目录结构用的：如果指纹里混进了
+    绝对路径，同一份代码在两台机器上永远对不上。
+
+    ⚠️ 写这条时我先写错过一次：把 `a.py` 放进新根的**根目录**、原根放在 `pkg/` 下，
+    两边相对路径不同（`a.py` vs `pkg/a.py`），当然对不上。**相对路径是指纹的一部分**
+    （它就是要发现"改名"），所以"换根不变"的前提是**相对路径逐字相同**——
+    被测代码是对的，错的是我那条断言。
+    """
+    copy = tmp_path / "elsewhere"
+    (copy / "pkg").mkdir(parents=True)
+    (copy / "pkg" / "a.py").write_text(
+        (snapshot / "pkg" / "a.py").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    here = manifest_of([snapshot / "pkg" / "a.py"], base=snapshot)
+    there = manifest_of([copy / "pkg" / "a.py"], base=copy)
+    assert here == there
+    assert here["sha256"]  # 空指纹等于没测，这里必须非空
+
+
+def test_manifest_of_skips_missing_files_instead_of_inventing_empty_ones(
+    snapshot: Path,
+) -> None:
+    """清单里有不存在的路径时**跳过**，不许当成"空文件"计入。
+
+    "文件不见了"和"文件是空的"是两件事：混起来会让代码指纹在文件被删掉时
+    **看起来没变**（少一个空文件 = 少一行空哈希，但如果实现成"读失败按空串算"，
+    就可能凑出同一个值）。跳过时 n_files 会变小，这才是可观测的。
+    """
+    man = manifest_of([snapshot / "pkg" / "a.py", snapshot / "pkg" / "ghost.py"], base=snapshot)
+    assert man["n_files"] == 1

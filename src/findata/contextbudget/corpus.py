@@ -38,6 +38,7 @@ __all__ = [
     "corpus_manifest",
     "diff_manifests",
     "iter_corpus_files",
+    "manifest_of",
     "manifests_agree",
 ]
 
@@ -171,3 +172,35 @@ def manifests_agree(manifests: Iterable[dict[str, Any]]) -> bool | None:
     if not digests or any(not d for d in digests):
         return None
     return len(set(digests)) == 1
+
+
+def manifest_of(paths: Iterable[Path], *, base: Path) -> dict[str, Any]:
+    """对**指定文件清单**算指纹（口径与 `corpus_manifest` 完全相同）。
+
+    为什么需要它（**代码指纹**）：账单里的 `code_commit` 取自**语料根**，而在这套
+    实验里语料根是仓库的一份冻结快照（`--corpus-root`），**真正被执行的代码却在
+    调用方工作区**。于是"同一批臂用的是同一份代码"这句话没有任何产物能证伪它
+    —— 正是 §2.5 那条铁律针对的形态（2026-09-20 实测：跑臂期间我提交了 4 个提交）。
+
+    与 `corpus_manifest` 的唯一区别是"选哪些文件"：语料是整棵树（由后缀与目录
+    边界决定），代码是调用方给的一份固定清单。**清单必须覆盖真正跑到的每一个
+    文件，多覆盖比少覆盖安全**：多覆盖只会让指纹更敏感（更容易报"不等"），
+    少覆盖会让"不等"被漏掉。所以调用方一律给**整个 `src/findata/` 树 +
+    入口脚本**，不做"只挑我用到的模块"这种优化。
+
+    `base` 只用于算相对路径（让指纹与目录位置无关）。
+    """
+    lines: list[str] = []
+    total_chars = 0
+    for path in paths:
+        if not path.is_file():
+            continue
+        total_chars += _file_chars(path)
+        lines.append(f"{path.resolve().relative_to(base.resolve()).as_posix()}"
+                     f":{_file_digest(path)}")
+    payload = "\n".join(sorted(lines)).encode("utf-8")
+    return {
+        "sha256": hashlib.sha256(payload).hexdigest()[:32],
+        "n_files": len(lines),
+        "chars": total_chars,
+    }

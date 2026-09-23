@@ -18,6 +18,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from findata.contextbudget import telemetry
+from findata.contextbudget.compaction import (
+    POLICY_NONE,
+    CompactResult,
+    compact,
+)
 from findata.contextbudget.llm import ChatClient, payload_chars
 from findata.contextbudget.tools import call_tool
 
@@ -41,6 +46,24 @@ class ToolCallRecord:
     payload_chars: int
     duration_ms: float
     parse_error: str = ""
+    # 原生字段级记录（R5.1）。空表读作"未记录"，**不读作"没有字段"**。
+    fields: list[dict[str, Any]] = field(default_factory=list)
+    # 进上下文的字符数（**裁剪之后**）。不裁剪时等于 `payload_chars`。
+    # 两个都要留：`payload_chars - compacted_chars` 是"这次调用省下多少"的实测值，
+    # 而只有 `payload_chars` 才能和 R5.0 的旧批次对齐口径。
+    compacted_chars: int = 0
+    compact_policy: str = POLICY_NONE
+    # 策略**确实改动了文本**才为真。`compacted_chars == payload_chars` 分不清
+    # "这个工具没有上限"和"裁了但没省下来"，这笔账要能分开算。
+    compact_applied: bool = False
+
+    @property
+    def n_fields(self) -> int:
+        return len(self.fields)
+
+    @property
+    def saved_chars(self) -> int:
+        return max(0, self.payload_chars - self.compacted_chars)
 
 
 @dataclass
@@ -75,6 +98,17 @@ class AgentRun:
         return sum(c.payload_chars for t in self.turns for c in t.tool_calls)
 
     @property
+    def total_compacted_chars(self) -> int:
+        """真正进了上下文的工具返回字符数（裁剪后）。"""
+        return sum(
+            c.compacted_chars or c.payload_chars for t in self.turns for c in t.tool_calls
+        )
+
+    @property
+    def total_saved_chars(self) -> int:
+        return sum(c.saved_chars for t in self.turns for c in t.tool_calls)
+
+    @property
     def n_tool_calls(self) -> int:
         return sum(len(t.tool_calls) for t in self.turns)
 
@@ -91,8 +125,16 @@ def run_agent(
     tools: list[dict[str, Any]],
     max_turns: int = DEFAULT_MAX_TURNS,
     system_prompt: str = SYSTEM_PROMPT,
+    compact_policy: str = POLICY_NONE,
+    compact_caps: dict[str, int] | None = None,
 ) -> AgentRun:
-    """跑一个任务，返回带完整账目的 AgentRun。"""
+    """跑一个任务，返回带完整账目的 AgentRun。
+
+    `compact_policy` 是 R5.2 的**唯一自变量**。**裁剪发生在"进消息"这一步**，
+    字段记录仍取自原始返回：这样"省了多少字符"（实测差）与"哪些字段被引用"
+    （字段记录）是两个独立观测，可以互相核对。先裁再记账会让"裁剪没伤到
+    被引用的字段"变成同义反复。
+    """
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": task},
@@ -163,8 +205,24 @@ def run_agent(
                     parse_error = f"unparsable arguments: {exc}"
 
             tool_started = time.perf_counter()
-            result = call_tool(name, arguments)
+            # `before` = 此刻上下文里的全部文本。**原生记录的第一步就在这里**：
+            # 它必须在 append 本条 tool 消息**之前**取，否则工具自己的返回会被
+            # 当成"调用前就在上下文里"而全部扣光（那样什么都判不出来）。
+            before_text = "\n".join(
+                str(m.get("content") or "") for m in messages if m.get("content")
+            )
+            result = call_tool(name, arguments, before_text=before_text)
             tool_duration = (time.perf_counter() - tool_started) * 1000
+
+            # 裁剪（R5.2）。**原始返回已经进了字段记录**，这里只决定
+            # "模型看到的那份文本"是什么。
+            cut: CompactResult = compact(
+                name,
+                result.content,
+                policy=compact_policy,
+                caps=compact_caps,
+                result_code=result.result_code,
+            )
 
             telemetry.record_tool_call(
                 tracer,
@@ -176,6 +234,9 @@ def run_agent(
                 duration_ms=tool_duration,
                 retry_count=0,  # 本 loop 不重试：账单里"重试浪费"记为未观测，不记为 0
                 parallel_batch_size=1,
+                fields_json=json.dumps(
+                    [f.to_dict() for f in result.fields], ensure_ascii=False
+                ),
             )
             turn_record.tool_calls.append(
                 ToolCallRecord(
@@ -186,6 +247,10 @@ def run_agent(
                     payload_chars=result.payload_chars,
                     duration_ms=tool_duration,
                     parse_error=parse_error,
+                    fields=[f.to_dict() for f in result.fields],
+                    compacted_chars=cut.chars_after,
+                    compact_policy=cut.policy,
+                    compact_applied=cut.applied,
                 )
             )
 
@@ -194,7 +259,7 @@ def run_agent(
                     "role": "tool",
                     "tool_call_id": call_id,
                     "name": name,
-                    "content": result.content,
+                    "content": cut.text,
                 }
             )
 
