@@ -1,0 +1,53 @@
+# 语料泄漏检查 —— 含答案卡的快照（判据 1/2/3 全跑）
+# 命令：uv run python scripts/check_corpus_leak.py \
+#   --corpus-root  C:/Users/10393/WorkBuddy/Worktrees/FinData-Agent/ctxbench-frozen \
+#   --compare-root C:/Users/10393/WorkBuddy/Worktrees/FinData-Agent/ctxbench-frozen-noleak \
+#   --replay-queries-from examples/context-audit/runs-active7b-fz.jsonl
+# 退出码 = 3（发现泄漏，可作 CI 门禁）
+
+==============================================================================
+语料泄漏检查：答案卡在不在、模型有没有真的看到
+==============================================================================
+语料根   : C:\Users\10393\WorkBuddy\Worktrees\FinData-Agent\ctxbench-frozen
+语料指纹 : 00a95aea86927097  214 文件  1,253,145 字符
+
+--- 判据 1：受保护路径（声明式清单）---
+  ✗ 在   : src/findata/contextbudget/tasks.py
+  ✗ 在   : src/findata/contextbudget/__init__.py
+  ✗ 在   : tests/test_contextbudget.py
+  ✗ 在   : docs/r5.0-acceptance.md
+  · 不在 : src/findata/contextbudget/grading.py
+
+--- 判据 2：内容指纹（与文件名无关）---
+  ✗ docs/r5.0-acceptance.md
+      命中指纹: ['must_contain']
+  ✗ src/findata/contextbudget/__init__.py
+      命中指纹: ['must_contain']
+  ✗ src/findata/contextbudget/tasks.py
+      命中指纹: ['must_contain', 'Task\\(\\s*"t\\d\\d"', 'tags=\\(\\s*"(?:single|multi|cross)"']
+  ✗ tests/test_contextbudget.py
+      命中指纹: ['must_contain']
+  （扫了 214 个文件，跳过 0 个）
+
+--- 判据 3：重放真实查询（16 条，来自 runs-active7b-fz.jsonl）---
+  返回里带答案卡指纹的查询: 10 / 16
+  与对照语料比返回大小（16 条可比）:
+    更 大 的查询数 : 10
+    多出的总字符  : 45,514
+    单条最多多出  : 4,696
+  返回最大的 5 条（看夹带规模）:
+    ✗夹带  16,802 字符 (差   +4,667)  DEFECT_MISPLACED
+    ✗夹带  15,721 字符 (差   +4,667)  CAT_SCHEMA_CONTRADICTION
+    ✗夹带  15,441 字符 (差   +4,667)  缺陷种类
+    ✗夹带  15,193 字符 (差   +4,667)  沉默工具
+    ✗夹带  14,788 字符 (差   +4,667)  CAT_LUCKY_GUESS
+
+--- 结论 ---
+  ✗ 语料里有答案卡 —— 这一批的**命中数已被高估**，对外报数前必须
+    ① 把受保护路径移出语料重建快照（记新指纹），或
+    ② 用 grading.has_exam_leak 把引用考题定义的答案单列剔除。
+
+--- 重放的边界 ---
+  · 这 16 条查询**来自另一批 trace**，
+    所以它是「这批查询会夹带什么」的下界，不是「任意查询会夹带什么」。
+  · 工具是确定性的，所以这里的差异不含采样噪声，只含语料差异。
