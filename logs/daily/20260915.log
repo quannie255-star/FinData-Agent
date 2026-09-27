@@ -1,0 +1,35 @@
+2026-09-15T19:16:15 ===== 每日管线开始 2026-09-15T19:16:15 =====
+2026-09-15T19:16:18 巡检完成：asof=2026-09-09 标的=25 信号=9 告警=7 抑制=0 健康分=72
+2026-09-15T19:16:18 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-09.md
+2026-09-15T19:16:18 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-15T19:16:18 ===== 管线结束，耗时 3s =====
+2026-09-15T19:16:29 ===== 每日管线开始 2026-09-15T19:16:29 =====
+2026-09-15T19:16:29 采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py
+2026-09-15T19:17:00 采集完成
+2026-09-15T19:17:03 巡检完成：asof=2026-09-15 标的=25 信号=9 告警=7 抑制=0 健康分=72
+2026-09-15T19:17:03 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-15.md
+2026-09-15T19:17:03 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-15T19:17:03 ===== 管线结束，耗时 34s =====
+2026-09-15T19:17:55 ===== 每日管线开始 2026-09-15T19:17:55 =====
+2026-09-15T19:17:55 采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py
+2026-09-15T19:19:28 ===== 每日管线开始 2026-09-15T19:19:28 =====
+2026-09-15T19:19:28 采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py
+2026-09-15T19:19:30 采集完成
+2026-09-15T19:19:33 巡检完成：asof=2026-09-15 标的=25 信号=9 告警=7 抑制=0 健康分=72
+2026-09-15T19:19:33 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-15.md
+2026-09-15T19:19:33 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-15T19:19:33 ===== 管线结束，耗时 5s =====
+2026-09-15T19:21:24 ===== 每日管线开始 2026-09-15T19:21:24 =====
+2026-09-15T19:21:24 采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py
+2026-09-15T19:21:26 采集完成
+2026-09-15T19:21:29 巡检完成：asof=2026-09-15 标的=25 信号=9 告警=7 抑制=0 健康分=72
+2026-09-15T19:21:29 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-15.md
+2026-09-15T19:21:29 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-15T19:21:29 ===== 管线结束，耗时 5s =====
+2026-09-15T22:57:25 ===== 每日管线开始 2026-09-15T22:57:25 =====
+2026-09-15T22:57:25 采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py
+2026-09-15T22:57:26 采集完成
+2026-09-15T22:57:29 巡检完成：asof=2026-09-15 标的=25 信号=9 告警=7 抑制=0 健康分=72
+2026-09-15T22:57:29 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-15.md
+2026-09-15T22:57:29 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-15T22:57:29 ===== 管线结束，耗时 5s =====
