@@ -29,7 +29,7 @@ jobs:
       - name: uv sync (dev)
         run: uv sync --dev
       # 用项目锁定的 ruff 版本，避免 CI 独立装 ruff 造成规则漂移
-      - run: uv run ruff check src tests
+      - run: uv run ruff check src tests scripts
 
   test:
     name: pytest (py ${{ matrix.python-version }})
