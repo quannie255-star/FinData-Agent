@@ -28,12 +28,18 @@ r"""每日数据管线：采集 → 事件采集 → 巡检 → 告警推送 →
     FINDATA_NOTIFY_CHANNEL=wecom            # wecom / dingtalk / feishu / serverchan
     FINDATA_NOTIFY_WEBHOOK_URL=https://...
 
-退出码：0 全过；1 采集或巡检失败（调度器的日志里能看到）。
+超时（无人值守下最重要的一条约束）：
+    每个采集步骤都有硬超时，默认 1800 秒，可用 FINDATA_STEP_TIMEOUT_SECONDS 覆盖。
+    没有它的时候，一次卡住的网络请求会静默占住调度窗口：进程还在、日志不写、
+    第二天早上你只看到「昨天没跑」。超时的步骤被终止、退出码 124、日志尾巴照常落盘。
+
+退出码：0 全过；1 采集或巡检失败；124 某个步骤超时被终止（调度器日志里一眼可辨）。
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -46,24 +52,77 @@ sys.path.insert(0, str(ROOT))
 LOG_DIR = ROOT / "logs" / "daily"
 REPORT_DIR = ROOT / "reports" / "daily"
 
+# 单步硬超时（秒）。取 1800 是因为实测整条管线 66s 跑完，最慢的 --full 采集也在几分钟级；
+# 半小时还没结束只可能是网络卡死，不是数据大。
+STEP_TIMEOUT_SECONDS = int(os.environ.get("FINDATA_STEP_TIMEOUT_SECONDS", "1800"))
 
-def _run_step(cmd: list[str], log_name: str) -> tuple[int, str]:
-    """跑一个采集子进程，返回 (退出码, 日志尾部)。
+# 与 GNU timeout 同码：调度器日志里看到 124 就知道是超时，不用翻正文。
+TIMEOUT_EXIT = 124
+
+
+def _as_text(chunk: object) -> str:
+    """超时异常里的 stdout/stderr 在 bytes/str 两种形态间摇摆，统一成 str。
+
+    宁可乱码不许崩——上游是 akshare/网络，解码崩掉会把「超时」这个真相盖成
+    「UnicodeDecodeError」，09-15 已经因为相似原因在调度器会话里崩过一次。
+    """
+    if chunk is None:
+        return ""
+    if isinstance(chunk, bytes):
+        return chunk.decode("utf-8", errors="replace")
+    return str(chunk)
+
+
+def _write_text_atomic(path: Path, text: str) -> None:
+    """先写同目录临时文件再 os.replace：读者永远看不到半截文件。
+
+    日报是「先落盘再推送」的，推送失败不影响落盘；反过来落盘写一半才是真事故
+    ——按日期命名的报告文件被截断后，第二天重跑之前没人会发现。同目录是为了让
+    os.replace 落在同一卷上（跨卷是复制+删除，不保证原子）。
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():  # replace 成功后 tmp 已不存在；失败路径上别留垃圾
+            tmp.unlink(missing_ok=True)
+
+
+def _run_step(
+    cmd: list[str], log_name: str, timeout: int = STEP_TIMEOUT_SECONDS
+) -> tuple[int, str]:
+    """跑一个采集子进程，返回 (退出码, 日志尾部)。超时则终止它并返回 124。
 
     无控制台会话（schtasks/cron）下捕获句柄可能为 None，显式 PIPE + 兜底，
     管线不许因日志崩——capture_output 的隐式行为在 schtasks 会话实测出过 None。
     """
-    proc = subprocess.run(  # noqa: UP022
-        cmd,
-        cwd=ROOT,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
+    try:
+        proc = subprocess.run(  # noqa: UP022
+            cmd,
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        # subprocess.run 在抛这个异常前已经 kill+wait 过子进程（Windows 上杀的是直接子进程，
+        # 这里是 python -m 直起，没有孙进程），所以这里只需要记录、不需要再收拾。
+        tail = (
+            _as_text(exc.stdout)[-20_000:]
+            + "\n--- stderr ---\n"
+            + _as_text(exc.stderr)[-20_000:]
+            + f"\n--- timeout ---\n步骤 {log_name} 超过 {timeout}s 未结束，已终止。"
+        )
+        _write_text_atomic(LOG_DIR / f"{log_name}-{datetime.now():%Y%m%d}.log", tail)
+        return TIMEOUT_EXIT, tail
+
     tail = ((proc.stdout or "")[-20_000:]) + "\n--- stderr ---\n" + (proc.stderr or "")[-20_000:]
-    (LOG_DIR / f"{log_name}-{datetime.now():%Y%m%d}.log").write_text(tail, encoding="utf-8")
+    _write_text_atomic(LOG_DIR / f"{log_name}-{datetime.now():%Y%m%d}.log", tail)
     return proc.returncode, tail
 
 
@@ -83,10 +142,11 @@ def main() -> int:
     # ── 1. 行情采集（子进程跑已验证的 CLI；失败则无数据可巡检，直接退出）──
     if not args.skip_ingest:
         cmd = [sys.executable, str(ROOT / "scripts" / "ingest_finance.py")]
-        log(f"行情采集开始：{' '.join(cmd[1:])}")
+        log(f"行情采集开始：{' '.join(cmd[1:])}（超时 {STEP_TIMEOUT_SECONDS}s）")
         code, _ = _run_step(cmd, "ingest")
         if code != 0:
-            log(f"行情采集失败（exit={code}），详见 logs/daily/。本次不巡检。")
+            why = "超时被终止" if code == TIMEOUT_EXIT else f"退出码 {code}"
+            log(f"行情采集失败（{why}），详见 logs/daily/。本次不巡检。")
             return 1
         log("行情采集完成")
 
@@ -98,7 +158,8 @@ def main() -> int:
             log("事件采集开始（含停牌历史种子）")
             code_ev, _ = _run_step(cmd_ev, "events")
             if code_ev != 0:
-                log(f"事件采集失败（exit={code_ev}），详见 logs/daily/。知识层将降级，继续巡检。")
+                why = "超时被终止" if code_ev == TIMEOUT_EXIT else f"退出码 {code_ev}"
+                log(f"事件采集失败（{why}），详见 logs/daily/。知识层将降级，继续巡检。")
             else:
                 log("事件采集完成")
 
@@ -148,9 +209,9 @@ def main() -> int:
     stamped = f"\n> 由每日管线自动生成于 {datetime.now():%Y-%m-%d %H:%M}\n"
     md = render_markdown(result, header_extra=stamped, footer_extra=agent_md)
     report_md = REPORT_DIR / f"{s.asof}.md"
-    report_md.write_text(md, encoding="utf-8")
-    (REPORT_DIR / f"{s.asof}.html").write_text(
-        render_html(result, extra_sections=agent_html), encoding="utf-8"
+    _write_text_atomic(report_md, md)
+    _write_text_atomic(
+        REPORT_DIR / f"{s.asof}.html", render_html(result, extra_sections=agent_html)
     )
     log(f"报告归档：{report_md}")
 
