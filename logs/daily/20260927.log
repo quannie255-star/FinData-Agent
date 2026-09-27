@@ -8,3 +8,9 @@
 2026-09-27T20:51:46 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-24.md
 2026-09-27T20:51:46 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
 2026-09-27T20:51:46 ===== 管线结束，耗时 66s =====
+2026-09-27T22:14:01 ===== 每日管线开始 2026-09-27T22:14:01 =====
+2026-09-27T22:14:05 巡检完成：asof=2026-09-24 标的=25 信号=9 告警=1 抑制=8 健康分=96
+2026-09-27T22:14:07 报告 Agent：llm=是 审校拦截=0 耗时=1133ms 字符入/出=707/402
+2026-09-27T22:14:07 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-24.md
+2026-09-27T22:14:07 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
+2026-09-27T22:14:07 ===== 管线结束，耗时 6s =====
