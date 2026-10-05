@@ -51,11 +51,20 @@ class TestAssemble:
 
 class TestJudgeMessages:
     def test_contains_statement_and_rules(self):
-        messages = build_judge_messages("背景问题", "D", "陈述内容", "【片段】……")
+        messages = build_judge_messages(
+            "背景问题", "D", "陈述内容", "【片段】……", "多选题"
+        )
         user = messages[1]["content"]
         assert "选项D：陈述内容" in user
         assert "VERDICT: UNCERTAIN" in user
         assert "背景问题" in user
+
+    def test_false_covers_true_but_out_of_scope(self):
+        # M2.3 语义：FALSE 必须明确涵盖「陈述虽真实但不属于题目所问」
+        messages = build_judge_messages("下列属于不得担任情形", "C", "每年自查", "片段", "多选题")
+        user = messages[1]["content"]
+        assert "不属于题目所问" in user
+        assert "应作为本题正确答案的一部分被选入" in user
 
 
 class _ScriptedClient:

@@ -46,6 +46,9 @@ def main() -> int:
     parser.add_argument("--mode", default="full", choices=MODES)
     parser.add_argument("--k", type=int, default=6, help="检索臂每查询取多少片段（逐选项多查询）")
     parser.add_argument("--k-total", type=int, default=12, help="检索臂合并后片段总数上限")
+    parser.add_argument(
+        "--k-option", type=int, default=4, help="隔离臂每选项片段数（M2.3 起默认 4）"
+    )
     parser.add_argument("--limit", type=int, default=0, help="只跑前 N 题（0=全部）")
     parser.add_argument("--max-doc-chars", type=int, default=0, help="文档截断上限（0=不截断）")
     parser.add_argument("--out", default=None, help="报告输出路径（txt）；同目录写同名 .json")
@@ -64,7 +67,7 @@ def main() -> int:
         if mode == "isolate":
             details, ledger, report, skipped = run_isolate(
                 questions, docs, client, limit=args.limit,
-                k=args.k, k_total=args.k_total,
+                k=args.k, k_total=args.k_total, k_option=args.k_option,
             )
         else:
             details, ledger, report, skipped = run_baseline(

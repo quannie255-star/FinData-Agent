@@ -37,17 +37,25 @@ _VERDICT_LINE = re.compile(r"VERDICT\s*[:：]\s*(TRUE|FALSE|UNCERTAIN)", re.IGNO
 
 
 def build_judge_messages(
-    question: str, letter: str, option_text: str, chunks_text: str
+    question: str, letter: str, option_text: str, chunks_text: str, fmt_label: str
 ) -> list[dict[str, str]]:
+    """判定语义是「该选项是否应选入本题答案」，不是「陈述是否为真」。
+
+    M2.2 的教训（reg_s_009 选项 C）：陈述为真 ≠ 选项该选——「独董每年自查」
+    是真话，但不在「不得担任情形」的集合里。FALSE 必须明确涵盖
+    「陈述虽真实、但不属于题目所问」这一支。
+    """
     user = (
-        "以下是与该陈述相关的文档检索片段：\n\n"
+        "以下是与该选项相关的文档检索片段：\n\n"
         f"{chunks_text}\n\n"
-        f"【背景问题】{question}\n\n"
-        f"【待判断陈述】选项{letter}：{option_text}\n\n"
-        "【判断要求】只能依据片段内容判断该陈述是否正确：\n"
-        "- 片段提供充分依据支持陈述 → VERDICT: TRUE\n"
-        "- 片段提供充分依据反驳陈述（或与陈述矛盾）→ VERDICT: FALSE\n"
-        "- 片段依据不足、无法确定 → VERDICT: UNCERTAIN\n"
+        f"【题目】{question}\n【题型】{fmt_label}\n\n"
+        f"【待判定选项】选项{letter}：{option_text}\n\n"
+        "【判定要求】判断该选项是否应作为本题正确答案的一部分被选入，"
+        "只能依据片段：\n"
+        "- 片段提供充分依据，该选项正确且符合题目所问 → VERDICT: TRUE（应选入）\n"
+        "- 片段提供充分依据表明不应选入——陈述错误、与片段矛盾、"
+        "或陈述虽真实但不属于题目所问的集合 → VERDICT: FALSE\n"
+        "- 片段依据不足、无法判断 → VERDICT: UNCERTAIN\n"
         "先引用条文或数据给一句依据，然后另起一行严格按格式输出最终判定。"
     )
     return [
@@ -80,9 +88,14 @@ def run_isolate(
     client: QwenClient,
     limit: int = 0,
     k: int = 6,
-    k_total: int = 6,
+    k_total: int = 12,
+    k_option: int = 4,
 ) -> tuple[list[dict[str, object]], TokenLedger, ScoreReport, list[str]]:
-    """选项级隔离作答；返回结构与 run_baseline 一致（skipped 恒为空）。"""
+    """选项级隔离作答；返回结构与 run_baseline 一致（skipped 恒为空）。
+
+    k_option 是每选项召回的片段数（M2.3：12 → 4——聚焦判定不需要大片池，
+    token ×3.1 的主因就是它）；k_total 只作用于回退仲裁的合并检索。
+    """
     index = BM25Index(chunk_docs(docs))
     ledger = TokenLedger()
     report = ScoreReport()
@@ -94,7 +107,7 @@ def run_isolate(
             # tf 的选项只是「正确/错误」，无信息量——不逐选项判定
             for letter, text in sorted(q.options.items()):
                 chunks = index.retrieve_many(
-                    [f"{q.question} {text}"], k_per_query=k, total_cap=k_total,
+                    [f"{q.question} {text}"], k_per_query=k_option, total_cap=k_option,
                     doc_ids=q.doc_ids or None,
                 )
                 chunks_text = (
@@ -102,7 +115,7 @@ def run_isolate(
                 )
                 reply, record = client.chat(
                     q.qid, f"judge:{letter}",
-                    build_judge_messages(q.question, letter, text, chunks_text),
+                    build_judge_messages(q.question, letter, text, chunks_text, q.format_label()),
                 )
                 ledger.add(record)
                 prompt_sum += record.prompt_tokens
