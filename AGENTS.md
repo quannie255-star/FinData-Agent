@@ -3,25 +3,33 @@
 > 给下一个 AI 会话（或新同事）的启动文件。读完这一页 + `docs/ROADMAP.md`
 > 就应该能直接开工，不需要考古聊天记录。
 
-## 当前主赛道（2026-09-18 起，先读这段）
+## 当前定位（2026-10-04 修订，先读这段）
 
-**Agent 训练数据的质检与过滤。** 一句话：findata 原来回答「这个数字能不能
-引用」，现在也回答**「这条轨迹能不能拿去训练，以及它为什么会这样」**。
+**主线：金融长文本 QA 的记忆压缩与高效问答 Agent（对齐 AFAC2026 赛题四，
+出题方复旦大学）。** v4.0 上下文/记忆资产从「封存证据」解封为主线主体；
+金融数据可信引擎降为**零维护运行**（每日管线照跑当运行证据）；v3.0 维持封存。
+开发计划唯一权威：`docs/afac-track4.md`；方向依据与硬约束：`docs/final-scope.md` §6。
 
-为什么切过来：10 份目标 JD 里 JD9 几乎逐条对口，且缺口真实——
-Langfuse / LangSmith 做的是「记录 + 打分 + 改进 agent」，而 JD9 要的是
-「从海量轨迹里筛出能喂训练的正负样本」。目标不同，不是同一件事的竞争。
-完整论证与里程碑见 `docs/ROADMAP.md` 顶部重定向节与 Phase R4。
+三条定位级事实（做任何主线决定前先看）：
 
-核心命题没变，还是「形态相同、结论相反」：
-- 数据域：停牌缺行 vs 上游漏采
-- **轨迹域：表面成功但路径错误（蒙对）vs 真成功；表面失败但归因于环境
-  （沙箱超时）vs 真能力不足**
+1. **AFAC2026 已收官**（2026-08-26 总决赛）——本仓库不声称任何 AFAC 参赛
+   成绩或官方关联，只按公开题面口径构建；目标是 AFAC2027（预计 2027-05/06
+   报名）带成型系统下场，期间留意在报的同类比赛；
+2. **赛题四 = 金融域 ∩ 上下文域，不是新域**——它恰好补齐 final-scope §0
+   记录的 v4.0 三个短板（外部用户 0 / 云端模型没跑过 / 任务自撰 32 道）；
+3. **3 个月方向锁（2026-10-04 ~ 2027-01-04）**：不改主线；新想法只许写进
+   `docs/afac-track4.md` §6 parking-lot，不做。
 
-新代码一律进 `src/findata/agentops/`；A 股降为**领域包 1**（保留，作为
-「这套归因不是只会一件事」的证据），金融侧封存模块继续不动。
+核心命题不变，还是「形态相同、结论相反」：看着信息丰富的工具返回 vs 模型
+实际只用了 3 个字段；记忆里**少了关键信息** vs **多了无用信息**——症状
+一样（答错），处置相反（一个补、一个裁），判据仍是**加信息可逆、删信息
+不可逆 → 证据不足时选可逆的那个**。
 
-**已达成闭环（真实数据，2026-09-18）**：`scripts/run_trust_filter.py` 一条
+新代码进 `src/findata/` 既有模块（M1 起按 afac-track4 §3 建 harness 与
+记忆模块）；`agentops/`（v3.0）与金融侧 dq/report/semantic 等不加功能
+（bug 修可以）。
+
+**已封存的真实语料闭环（v3.0，证据用，不加功能）**：`scripts/run_trust_filter.py` 一条
 命令跑完「拉公开 tool-calling 语料 → 归一化 → 探针 + 归因 → 过滤出可训练
 样本」。语料是 `Salesforce/xlam-function-calling-60k`（ModelScope，96MB，
 ijson 流式），**没有一条是我们自己编的**——自造样本证明不了自己的规则。
@@ -43,7 +51,13 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 删除的探针的自我否定记录），逐条拷问作答见 `docs/interview-qa.md` 与
 `docs/interview-qa-round2.md`。
 
-## 这个项目是什么（三句话，v2.2 定位，仍成立）
+**为什么方向变过三次（给下一个 AI 的背景）**：09-18 按 JD 对口度切到轨迹
+质检（v3.0），09-20 又切到上下文策展（v4.0），09-27 复盘「三个域都做成
+半成品 = 三个都不是产品」收敛回金融侧，10-04 随 AFAC 赛题四对齐把 v4.0
+资产迎回主线（金融∩上下文的交集，理由见 `docs/final-scope.md` §6）。历史
+论证都保留在 `docs/ROADMAP.md`——**开发依据只有 `docs/afac-track4.md` 一份**。
+
+## 这个项目是什么（三句话，金融域定位，2026-09-28 定稿）
 
 1. **Findata 是可信数据基础设施**：接入数据源，产出数据分析报告，
    报告上**每个数字带可信徽章**（✓ 已核验 / ✓ 基线通过 / ⚠️ 仅借鉴 /
@@ -54,7 +68,7 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 3. A 股是第一个领域包（已建成），架构是**通用协议 + 领域包**，
    后续可扩展任意数据域。
 
-## 当前状态（截至 2026-09-17）
+## 当前状态（截至 2026-09-28：收敛定稿）
 
 - 监控层（探针→归因→抑制→报告）、问数层（多智能体）与可信日报（R1）已验收
   （v2.0.0，2026-09-16）：知识层上线、逐指标徽章层（`dq/badges.py` +
@@ -79,10 +93,10 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
   定位重写（README 三组成结构，数字全部对应 examples/ 归档）；分发止损
   计划落 `docs/distribution.md`——**开发阶段到此收官**，进入 30 天止损
   观察窗：唯一指标 = 可验证的陌生宿主集成（模块内零遥测）。
-- **下一步**（唯一权威来源 `docs/ROADMAP.md` 与 `docs/distribution.md`）：
-  tag `v2.2.0` 发布 → 回填计时起点 → 30 天后按决策门走 A（加领域包）
-  或 B（停线复盘）。开发铁律继续有效；改动抑制/徽章逻辑前先看归因复盘
-  与回放 golden。
+- **下一步**（唯一权威来源 `docs/final-scope.md`）：收敛定稿后只做三类事
+  ——修 bug / 补测试与归档 / 把已有能力接到真实使用场景。求职两轨的讲述
+  素材见 `PITCH.md` 与 `docs/interview-story.md`。开发铁律继续有效；
+  改动抑制/徽章逻辑前先看归因复盘与回放 golden。
 - 2026-09-15 真实数据首次考试：7/7 告警全是合法事件（停牌/行情），
   抑制 0/9，根因是知识层（corporate_event）从未上线——完整复盘与修复
   方案在 `docs/reviews/2026-09-15-attribution.md`，R1 即其落地。
@@ -90,12 +104,13 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 
 ## 必读文档（按顺序）
 
-1. `docs/ROADMAP.md` —— 主线计划、验收门禁、不做清单
-2. `docs/reviews/2026-09-15-attribution.md` —— 真实告警归因复盘（v2.0 的起点）
-3. `docs/interview-qa.md` —— **拷问逐条作答**（五个红旗的正面回应 + 不自证清单）；
-   动主线逻辑前先看它，里面记着「凭想象设口径」是怎么造成误杀的
-4. `PITCH.md` —— 项目叙事与"能撑住追问的数字"（改数字必须对应 examples/ 归档）
-5. `README.md` —— 架构与已完成里程碑（v2.0 定位重写在 R3，读时注意其口径是 v0.9 时代的）
+1. `docs/afac-track4.md` —— **当前主线唯一权威开发计划**（里程碑/停止清单/parking-lot）
+2. `docs/final-scope.md` —— 收敛与修订史（**§6 = 2026-10-04 对齐决定 + 3 个月方向锁**）
+3. `docs/ROADMAP.md` —— 历代主线论证（背景，不据此开发）
+4. `docs/reviews/2026-09-15-attribution.md` —— 真实告警归因复盘（金融引擎的立身故事，零维护期间别弄丢）
+5. `docs/interview-qa.md` —— **拷问逐条作答**（五个红旗的正面回应 + 不自证清单）
+6. `PITCH.md` —— 项目叙事与"能撑住追问的数字"（改数字必须对应 examples/ 归档）
+7. `README.md` —— 架构与已完成里程碑
 
 ## 开发铁律（违反任何一条的 PR 不许合入）
 
@@ -113,6 +128,8 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 | --- | --- |
 | `eval/evolution.py` · `scripts/evolve_prompt.py` · `eval/prompts/` | v0.9 GEPA 进化（已验收） |
 | `dq/memory.py` · `agent/llm_triage.py` · `eval/extended.py` | v0.9 记忆/LLM归因/扩充语料（已验收） |
+| `src/findata/agentops/` · `scripts/run_trust_filter.py` 等 | v3.0 轨迹质检（换域证据，真实语料闭环可复现，不加功能） |
+| 金融侧 `dq/report/semantic/core/generic/mcp` | **零维护运行**（2026-10-04 起）：每日管线照跑、bug 修、功能不加 |
 
 它们是已验收里程碑与投递材料证据（PITCH 数字直接引用其归档），
 测试与 CI 照常跑；新功能一律不进这些模块。
@@ -123,24 +140,23 @@ ijson 流式），**没有一条是我们自己编的**——自造样本证明�
 uv run pytest                                  # 全量测试（CI 同款）
 uv run ruff check .                            # lint
 
-# ── 主赛道（Agent 轨迹质检）──
-uv run python scripts/run_trust_filter.py --limit 0   # **主闭环**：真实语料→质检→过滤（0=全量）
+# ── 主线（AFAC 赛题四对齐：金融长文本 QA 记忆压缩）──
+# 系统 M1 起按 docs/afac-track4.md §4 里程碑新建；v4.0 既有资产（解封为主线）复现：
+uv run findata-context-economist --trace examples/context-audit --corpus-root <冻结快照> \
+    --out-dir examples/context-economist        # 读真实 trace 出三组数字（token/成本/成功率）
+
+# ── 金融数据可信引擎（零维护运行：每日管线照跑=运行证据，不加功能）──
+uv run python scripts/daily_pipeline.py --skip-ingest  # 只巡检出带徽章日报（调试，离线）
+uv run python scripts/daily_pipeline.py        # 采集→事件→巡检→推送→归档（生产）
+uv run python scripts/eval_golden.py --strict  # golden 集严格门禁（含真实回放 9 case）
+uv run findata-trust-report data.csv --schema schema.yaml --strict  # 通用包：任意表出带徽章报告
+uv run python scripts/attribute_alerts.py      # 真实告警归因复盘复现
+
+# ── 封存证据（可复现，不加功能）──
+uv run python scripts/run_trust_filter.py --limit 0   # v3.0：真实语料→质检→过滤（0=全量）
 uv run python scripts/run_agent_trace.py       # 本机 Ollama 真实轨迹采集（48 条）
 uv run python scripts/run_sandbox_probe.py      # 沙箱信号 → 归因验证（真起子进程）
 uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
-uv run python scripts/eval_golden.py --strict  # golden 集严格门禁（含真实回放 9 case）
-uv run python scripts/daily_pipeline.py --skip-ingest  # 只巡检出带徽章日报（调试）
-uv run python scripts/daily_pipeline.py        # 采集→事件→巡检→推送→归档（生产）
-uv run python scripts/seed_events.py           # 停牌历史种子入库（幂等）
-uv run python scripts/build_replay_fixture.py  # 真实回放 fixture 固化（只在真实仓库机器跑）
-uv run findata-trust-report data.csv --schema schema.yaml --strict  # 通用包：任意表出带徽章报告
-uv run python scripts/compare_domain_vs_generic.py  # 通用包 vs 领域包对比页（需真实仓库）
-uv run python scripts/attribute_alerts.py      # 真实告警归因复盘复现
-uv run python scripts/ingest_finance.py --full --events  # 全量+公司事件采集
-uv run python scripts/run_trustbench.py --strict  # TrustBench：SQL 正确但答案不该引用
-uv run python scripts/run_parser_eval.py          # 解析层评测（规则，离线）
-uv run python scripts/run_parser_eval.py --llm    # + 本机 Ollama（默认 qwen2.5:3b）
-uv run python scripts/chatbi_demo.py --llm --show-cost "..."  # ChatBI 自然语言问答
 ```
 
 ## 目录地图（只列关键路径）
