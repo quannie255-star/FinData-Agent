@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-10-05T00:44:17",
+  "model": "qwen3.6-plus",
+  "params": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 20261005,
+    "max_tokens": 1024
+  },
+  "fixture": "eval/fixtures/afac_scaffold",
+  "report": {
+    "total": 5,
+    "correct": 4,
+    "accuracy": 0.8,
+    "prompt_tokens": 6374,
+    "completion_tokens": 11359,
+    "total_tokens": 17733,
+    "token_score": 0.9964534,
+    "final_score": 79.9148816
+  },
+  "details": [
+    {
+      "qid": "reg_s_001",
+      "domain": "regulatory",
+      "answer_format": "multi",
+      "gold": "AC",
+      "pred": "A",
+      "correct": false,
+      "reply": "依据《上市公司章程指引（2023年修订）》第四十七条第（四）项，为资产负债率超过70%的担保对象提供担保须经股东会审议，事项①已触发该条件；事项②变更募集资金用途依第四十六条第（十一）项及第八十一条第（四）项适用普通决议，事项③所述“12个月内提供法律服务”的具体情形在提供文档中无明确依据，事项④修改章程依第八十二条第（三）项依法须经特别决议。\nANSWER: A",
+      "prompt_tokens": 1827,
+      "completion_tokens": 5120
+    },
+    {
+      "qid": "reg_s_002",
+      "domain": "regulatory",
+      "answer_format": "mcq",
+      "gold": "B",
+      "pred": "B",
+      "correct": true,
+      "reply": "根据《上市公司章程指引》第四十七条第（四）项规定，为资产负债率超过百分之七十的担保对象提供的担保须经股东会审议通过。该全资子公司资产负债率为75%，已明确触发该法定情形，故必须提交股东会审议。\nANSWER: B",
+      "prompt_tokens": 1376,
+      "completion_tokens": 1328
+    },
+    {
+      "qid": "reg_s_003",
+      "domain": "regulatory",
+      "answer_format": "tf",
+      "gold": "A",
+      "pred": "A",
+      "correct": true,
+      "reply": "根据文档第八十二条规定，本章程的修改明确列为应由股东会以特别决议通过的事项。\nANSWER: A",
+      "prompt_tokens": 1309,
+      "completion_tokens": 1320
+    },
+    {
+      "qid": "reg_s_004",
+      "domain": "regulatory",
+      "answer_format": "mcq",
+      "gold": "C",
+      "pred": "C",
+      "correct": true,
+      "reply": "根据《上市公司治理准则》第四十一条规定，独立董事不得与其所受聘上市公司存在直接或间接利害关系，或者其他可能影响其进行独立客观判断的关系；候选人作为律所合伙人，其所在机构与公司存在业务往来，属于可能影响独立客观判断的关系，构成独立性障碍。\nANSWER: C",
+      "prompt_tokens": 358,
+      "completion_tokens": 1356
+    },
+    {
+      "qid": "reg_s_005",
+      "domain": "regulatory",
+      "answer_format": "multi",
+      "gold": "AB",
+      "pred": "AB",
+      "correct": true,
+      "reply": "依据《上市公司章程指引（2023年修订）》第四十七条第（四）项及第八十二条第（三）项，A、B项表述正确；变更募集资金用途未列入第八十二条特别决议事项，依法适用第八十一条普通决议，D项错误；《上市公司治理准则》第四十一条明确独立董事不得存在可能影响独立客观判断的关系，C项所述情形无文档依据且与独立性要求相悖。\nANSWER: AB",
+      "prompt_tokens": 1504,
+      "completion_tokens": 2235
+    }
+  ]
+}

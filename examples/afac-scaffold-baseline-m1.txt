@@ -1,0 +1,21 @@
+# AFAC 赛题四 M1 baseline 报告（脚手架口径）
+
+生成时间：2026-10-05T00:40:19
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（5 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+文档截断：无
+
+## 逐题
+- ✗ reg_s_001 [multi] gold=AC pred=A | 1961+723
+- ✓ reg_s_002 [mcq] gold=B pred=B | 1491+60
+- ✓ reg_s_003 [tf] gold=A pred=A | 1415+46
+- ✓ reg_s_004 [mcq] gold=C pred=C | 394+114
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 1629+377
+
+## 汇总
+题目数 5，正确 4，Accuracy 0.8000
+prompt_tokens 6890，completion_tokens 1320，total_tokens 8210
+TokenScore 0.9984（预算 5,000,000）
+FinalScore 79.9606 = 100 × 0.8000 × (0.7 + 0.3 × 0.9984)
+分域：
+  regulatory: 4/5（80.00%），tokens 8,210

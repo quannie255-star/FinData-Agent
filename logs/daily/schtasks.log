@@ -123,3 +123,6 @@ TypeError: 'NoneType' object is not subscriptable
 2026-09-27T20:51:46 报告归档：C:\Users\10393\Desktop\FinData-Agent\reports\daily\2026-09-24.md
 2026-09-27T20:51:46 推送：推送未配置（FINDATA_NOTIFY_CHANNEL / FINDATA_NOTIFY_WEBHOOK_URL），已写日志
 2026-09-27T20:51:46 ===== 管线结束，耗时 66s =====
+2026-09-30T10:32:39 ===== 每日管线开始 2026-09-30T10:32:39 =====
+2026-09-30T10:32:39 行情采集开始：C:\Users\10393\Desktop\FinData-Agent\scripts\ingest_finance.py（超时 1800s）
+2026-09-30T10:34:04 行情采集失败（退出码 1），详见 logs/daily/。本次不巡检。

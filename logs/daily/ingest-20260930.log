@@ -1,0 +1,110 @@
+�ɼ���ɣ��ɹ� 0 �� / ʧ�� 28 �� / ��д�� 0 ��
+  �����ջ��25 ֻ��ȡ�� stock_daily ���գ�
+  ����������0 �������գ��ɼ�ʧ�ܣ��ڼ��ջ��󱨣�
+  [ʧ��] stock_daily 600519: stock_daily:600519 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 000858: stock_daily:000858 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 000568: stock_daily:000568 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 300750: stock_daily:300750 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 002594: stock_daily:002594 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 601012: stock_daily:601012 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 601318: stock_daily:601318 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600036: stock_daily:600036 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 601166: stock_daily:601166 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600030: stock_daily:600030 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 000333: stock_daily:000333 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 000651: stock_daily:000651 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600887: stock_daily:600887 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600276: stock_daily:600276 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 300760: stock_daily:300760 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 688981: stock_daily:688981 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 002371: stock_daily:002371 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 601899: stock_daily:601899 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600309: stock_daily:600309 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 600900: stock_daily:600900 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 601088: stock_daily:601088 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 300059: stock_daily:300059 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 002415: stock_daily:002415 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 000063: stock_daily:000063 ���� 3 ����ʧ��
+  [ʧ��] stock_daily 002475: stock_daily:002475 ���� 3 ����ʧ��
+  [ʧ��] index_daily 000300: index_daily:sh000300 ���� 3 ����ʧ��
+  [ʧ��] index_daily 000001: index_daily:sh000001 ���� 3 ����ʧ��
+  [ʧ��] index_daily 399006: index_daily:sz399006 ���� 3 ����ʧ��
+
+�ֿ���״��
+  stock_daily           28652 ��   25 �����
+  index_daily            3441 ��    3 �����
+  valuation_daily       28400 ��   25 �����
+  ���½�����: 2026-09-24
+
+--- stderr ---
+TPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:26,281 ERROR stock_daily 002594 �ɼ�ʧ��: stock_daily:002594 ���� 3 ����ʧ��
+2026-09-30 10:33:26,687 WARNING [stock_daily:601012] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601012/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:27,088 WARNING [stock_daily:601012] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601012/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:27,893 ERROR stock_daily 601012 �ɼ�ʧ��: stock_daily:601012 ���� 3 ����ʧ��
+2026-09-30 10:33:28,297 WARNING [stock_daily:601318] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601318/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:28,700 WARNING [stock_daily:601318] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601318/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:29,503 ERROR stock_daily 601318 �ɼ�ʧ��: stock_daily:601318 ���� 3 ����ʧ��
+2026-09-30 10:33:29,927 WARNING [stock_daily:600036] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600036/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:30,328 WARNING [stock_daily:600036] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600036/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:31,132 ERROR stock_daily 600036 �ɼ�ʧ��: stock_daily:600036 ���� 3 ����ʧ��
+2026-09-30 10:33:31,538 WARNING [stock_daily:601166] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601166/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:31,939 WARNING [stock_daily:601166] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601166/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:32,742 ERROR stock_daily 601166 �ɼ�ʧ��: stock_daily:601166 ���� 3 ����ʧ��
+2026-09-30 10:33:33,146 WARNING [stock_daily:600030] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600030/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:33,549 WARNING [stock_daily:600030] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600030/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:34,374 ERROR stock_daily 600030 �ɼ�ʧ��: stock_daily:600030 ���� 3 ����ʧ��
+2026-09-30 10:33:34,780 WARNING [stock_daily:000333] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000333/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:35,184 WARNING [stock_daily:000333] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000333/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:35,989 ERROR stock_daily 000333 �ɼ�ʧ��: stock_daily:000333 ���� 3 ����ʧ��
+2026-09-30 10:33:36,394 WARNING [stock_daily:000651] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000651/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:36,796 WARNING [stock_daily:000651] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000651/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:37,600 ERROR stock_daily 000651 �ɼ�ʧ��: stock_daily:000651 ���� 3 ����ʧ��
+2026-09-30 10:33:38,033 WARNING [stock_daily:600887] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600887/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:38,434 WARNING [stock_daily:600887] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600887/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:39,238 ERROR stock_daily 600887 �ɼ�ʧ��: stock_daily:600887 ���� 3 ����ʧ��
+2026-09-30 10:33:39,643 WARNING [stock_daily:600276] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600276/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:40,046 WARNING [stock_daily:600276] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600276/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:40,851 ERROR stock_daily 600276 �ɼ�ʧ��: stock_daily:600276 ���� 3 ����ʧ��
+2026-09-30 10:33:41,260 WARNING [stock_daily:300760] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz300760/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:41,662 WARNING [stock_daily:300760] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz300760/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:42,465 ERROR stock_daily 300760 �ɼ�ʧ��: stock_daily:300760 ���� 3 ����ʧ��
+2026-09-30 10:33:42,871 WARNING [stock_daily:688981] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh688981/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:43,274 WARNING [stock_daily:688981] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh688981/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:44,077 ERROR stock_daily 688981 �ɼ�ʧ��: stock_daily:688981 ���� 3 ����ʧ��
+2026-09-30 10:33:44,482 WARNING [stock_daily:002371] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002371/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:44,884 WARNING [stock_daily:002371] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002371/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:45,697 ERROR stock_daily 002371 �ɼ�ʧ��: stock_daily:002371 ���� 3 ����ʧ��
+2026-09-30 10:33:46,102 WARNING [stock_daily:601899] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601899/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:46,522 WARNING [stock_daily:601899] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601899/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:47,326 ERROR stock_daily 601899 �ɼ�ʧ��: stock_daily:601899 ���� 3 ����ʧ��
+2026-09-30 10:33:47,730 WARNING [stock_daily:600309] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600309/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:48,132 WARNING [stock_daily:600309] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600309/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:48,936 ERROR stock_daily 600309 �ɼ�ʧ��: stock_daily:600309 ���� 3 ����ʧ��
+2026-09-30 10:33:49,341 WARNING [stock_daily:600900] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600900/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:49,743 WARNING [stock_daily:600900] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh600900/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:50,641 ERROR stock_daily 600900 �ɼ�ʧ��: stock_daily:600900 ���� 3 ����ʧ��
+2026-09-30 10:33:51,049 WARNING [stock_daily:601088] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601088/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:51,450 WARNING [stock_daily:601088] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh601088/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:52,267 ERROR stock_daily 601088 �ɼ�ʧ��: stock_daily:601088 ���� 3 ����ʧ��
+2026-09-30 10:33:52,690 WARNING [stock_daily:300059] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz300059/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:53,091 WARNING [stock_daily:300059] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz300059/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:53,895 ERROR stock_daily 300059 �ɼ�ʧ��: stock_daily:300059 ���� 3 ����ʧ��
+2026-09-30 10:33:54,300 WARNING [stock_daily:002415] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002415/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:54,702 WARNING [stock_daily:002415] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002415/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:55,507 ERROR stock_daily 002415 �ɼ�ʧ��: stock_daily:002415 ���� 3 ����ʧ��
+2026-09-30 10:33:55,910 WARNING [stock_daily:000063] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000063/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:56,313 WARNING [stock_daily:000063] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz000063/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:57,117 ERROR stock_daily 000063 �ɼ�ʧ��: stock_daily:000063 ���� 3 ����ʧ��
+2026-09-30 10:33:57,522 WARNING [stock_daily:002475] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002475/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:57,923 WARNING [stock_daily:002475] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz002475/hisdata_klc2/klc_kl.js (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:33:58,735 ERROR stock_daily 002475 �ɼ�ʧ��: stock_daily:002475 ���� 3 ����ʧ��
+2026-09-30 10:33:59,140 WARNING [index_daily:sh000300] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh000300/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:33:59,542 WARNING [index_daily:sh000300] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh000300/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:34:00,368 ERROR index_daily 000300 �ɼ�ʧ��: index_daily:sh000300 ���� 3 ����ʧ��
+2026-09-30 10:34:00,792 WARNING [index_daily:sh000001] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh000001/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:34:01,195 WARNING [index_daily:sh000001] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sh000001/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:34:01,999 ERROR index_daily 000001 �ɼ�ʧ��: index_daily:sh000001 ���� 3 ����ʧ��
+2026-09-30 10:34:02,402 WARNING [index_daily:sz399006] �� 1 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz399006/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.4s ������
+2026-09-30 10:34:02,805 WARNING [index_daily:sz399006] �� 2 ��ʧ�ܣ�HTTPSConnectionPool(host='finance.sina.com.cn', port=443): Max retries exceeded with url: /realstock/company/sz399006/hisdata/klc_kl.js?d=2020_2_4 (Caused by NameResolutionError("HTTPSConnection(host='finance.sina.com.cn', port=443): Failed to resolve 'finance.sina.com.cn' ([Errno 11001] getaddrinfo failed)"))��0.8s ������
+2026-09-30 10:34:03,611 ERROR index_daily 399006 �ɼ�ʧ��: index_daily:sz399006 ���� 3 ����ʧ��
