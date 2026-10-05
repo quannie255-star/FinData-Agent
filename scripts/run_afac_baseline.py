@@ -18,10 +18,11 @@ from pathlib import Path
 
 from findata.finqa import fixture as fx
 from findata.finqa.baseline import run_baseline
+from findata.finqa.isolate import run_isolate
 from findata.finqa.qwen import DecodingParams, QwenClient
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODES = ("full", "retrieve", "both")
+MODES = ("full", "retrieve", "isolate", "both")
 
 
 def _print_run(title: str, details, report, skipped) -> None:
@@ -60,10 +61,16 @@ def main() -> int:
 
     runs: dict[str, dict] = {}
     for mode in run_modes:
-        details, ledger, report, skipped = run_baseline(
-            questions, docs, client, limit=args.limit, mode=mode,
-            k=args.k, k_total=args.k_total,
-        )
+        if mode == "isolate":
+            details, ledger, report, skipped = run_isolate(
+                questions, docs, client, limit=args.limit,
+                k=args.k, k_total=args.k_total,
+            )
+        else:
+            details, ledger, report, skipped = run_baseline(
+                questions, docs, client, limit=args.limit, mode=mode,
+                k=args.k, k_total=args.k_total,
+            )
         _print_run(f"mode={mode}", details, report, skipped)
         runs[mode] = {"details": details, "report": report, "skipped": skipped}
 
