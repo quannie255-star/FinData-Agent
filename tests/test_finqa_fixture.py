@@ -67,8 +67,14 @@ class TestRealFixture:
         questions = fx.load_questions(FIXTURE_ROOT)
         docs = fx.load_docs(FIXTURE_ROOT)
         fx.check_docs(questions, docs)
-        assert len(questions) >= 5
-        assert set(docs) >= {"strict_csrc_035", "strict_csrc_023"}
+        assert len(questions) >= 20
+        expected_docs = {
+            "strict_csrc_035", "strict_csrc_023", "strict_csrc_036", "fin_rep_byd_2025",
+        }
+        assert set(docs) >= expected_docs
+        # B 榜题（无 doc_ids）必须存在且证据字段仍指向真实文档
+        b_split = [q for q in questions if not q.doc_ids]
+        assert len(b_split) >= 2
         # 官方样例原题必须在，且标准答案与题面一致
         q1 = next(q for q in questions if q.qid == "reg_s_001")
         assert q1.gold == "AC"

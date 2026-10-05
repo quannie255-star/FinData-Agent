@@ -1,0 +1,66 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-05T16:06:36
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（20 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：both（k=6）；文档截断：无
+
+## mode=full
+
+- ✓ reg_s_001 [multi] gold=AC pred=AC | 24915+842
+- ✓ reg_s_002 [mcq] gold=B pred=B | 19467+36
+- ✓ reg_s_003 [tf] gold=A pred=A | 19391+47
+- ✓ reg_s_004 [mcq] gold=C pred=C | 394+105
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 19605+342
+- ✓ reg_s_006 [mcq] gold=D pred=D | 5188+343
+- ✓ reg_s_007 [tf] gold=A pred=A | 5130+36
+- ✓ reg_s_008 [mcq] gold=B pred=B | 5175+51
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 5178+343
+- ✓ fin_s_001 [multi] gold=ABD pred=ABD | 5734+285
+- ✓ fin_s_002 [mcq] gold=B pred=B | 5664+50
+- ✓ fin_s_003 [tf] gold=A pred=A | 5652+99
+- ✓ reg_s_012 [mcq] gold=A pred=A | 19460+114
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 19459+233
+- ✓ reg_s_014 [tf] gold=A pred=A | 5155+93
+- ✓ reg_s_016 [mcq] gold=C pred=C | 19412+70
+- （跳过 B 榜题：reg_s_010/reg_s_011/fin_s_004/reg_s_015）
+
+题目数 16，正确 16，Accuracy 1.0000
+prompt_tokens 184979，completion_tokens 3089，total_tokens 188068
+TokenScore 0.9624（预算 5,000,000）
+FinalScore 98.8716 = 100 × 1.0000 × (0.7 + 0.3 × 0.9624)
+分域：
+  financial_reports: 3/3（100.00%），tokens 17,484
+  regulatory: 13/13（100.00%），tokens 170,584
+
+## mode=retrieve
+
+- ✗ reg_s_001 [multi] gold=AC pred=A | 1706+762
+- ✓ reg_s_002 [mcq] gold=B pred=B | 1422+71
+- ✓ reg_s_003 [tf] gold=A pred=A | 737+41
+- ✓ reg_s_004 [mcq] gold=C pred=C | 415+90
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 1177+328
+- ✓ reg_s_006 [mcq] gold=D pred=D | 1241+250
+- ✓ reg_s_007 [tf] gold=A pred=A | 729+37
+- ✓ reg_s_008 [mcq] gold=B pred=B | 1073+51
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 1153+213
+- ✓ reg_s_010 [multi] gold=ABC pred=ABC | 1091+169
+- ✓ reg_s_011 [mcq] gold=B pred=B | 971+176
+- ✓ fin_s_001 [multi] gold=ABD pred=ABD | 5771+336
+- ✓ fin_s_002 [mcq] gold=B pred=B | 5701+69
+- ✓ fin_s_003 [tf] gold=A pred=A | 5689+183
+- ✓ fin_s_004 [mcq] gold=C pred=C | 5701+77
+- ✓ reg_s_012 [mcq] gold=A pred=A | 1923+125
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 1354+119
+- ✓ reg_s_014 [tf] gold=A pred=A | 1057+93
+- ✗ reg_s_015 [multi] gold=ABD pred=BD | 1365+145
+- ✓ reg_s_016 [mcq] gold=C pred=C | 924+37
+
+题目数 20，正确 18，Accuracy 0.9000
+prompt_tokens 41200，completion_tokens 3372，total_tokens 44572
+TokenScore 0.9911（预算 5,000,000）
+FinalScore 89.7593 = 100 × 0.9000 × (0.7 + 0.3 × 0.9911)
+分域：
+  financial_reports: 4/4（100.00%），tokens 23,527
+  regulatory: 14/16（87.50%），tokens 21,045
+

@@ -215,5 +215,178 @@
       {"doc_id": "strict_csrc_035", "clause": "第四十七条（五）"},
       {"doc_id": "strict_csrc_035", "clause": "第八十条"}
     ]
+  },
+  {
+    "qid": "fin_s_001",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据比亚迪股份有限公司2025年年度报告摘要，下列关于公司2025年度经营情况与2024年度对比的描述中，准确的有：",
+    "options": {
+      "A": "2025年营业收入较2024年实现增长",
+      "B": "2025年归属于上市公司股东的净利润出现下滑",
+      "C": "2025年经营活动产生的现金流量净额优于2024年",
+      "D": "2025年末归属于上市公司股东的净资产较2024年末实现增长"
+    },
+    "answer_format": "multi",
+    "type": "年报指标对比（复刻题面样例题型）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "二、近三年主要会计数据（营业收入 +3.46%）"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "归母净利润 -18.97%"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "经营活动现金流量净额 -55.69%"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "归母净资产 +32.94%"}
+    ]
+  },
+  {
+    "qid": "fin_s_002",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要中的近三年主要会计数据，比亚迪2025年度加权平均净资产收益率为：",
+    "options": {
+      "A": "26.05%",
+      "B": "15.31%",
+      "C": "24.40%",
+      "D": "10.74%"
+    },
+    "answer_format": "mcq",
+    "type": "年报指标定位（干扰项为文档内相近数字）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "加权平均净资产收益率 15.31%（2024 年 26.05%、2023 年 24.40%）"}
+    ]
+  },
+  {
+    "qid": "fin_s_003",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要，比亚迪2025年经营活动产生的现金流量净额较2024年下降超过一半。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "年报数值判断",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "经营活动现金流量净额 -55.69%"}
+    ]
+  },
+  {
+    "qid": "fin_s_004",
+    "domain": "financial_reports",
+    "split": "B",
+    "question": "根据所提供文档，比亚迪股份有限公司2025年营业收入约为：",
+    "options": {
+      "A": "6,023亿元",
+      "B": "7,771亿元",
+      "C": "8,040亿元",
+      "D": "13,345亿元"
+    },
+    "answer_format": "mcq",
+    "type": "年报数值定位（B 榜口径：不给 doc_ids；干扰项为 2023 收入 / 2024 收入 / 2024 现金流）",
+    "doc_ids": [],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "营业收入 803,964,958,000.00 元"}
+    ]
+  },
+  {
+    "qid": "reg_s_012",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第八十三条，下列判断正确的是：",
+    "options": {
+      "A": "股东会审议影响中小投资者利益的重大事项时，对中小投资者表决应当单独计票，且单独计票结果应当及时公开披露",
+      "B": "公司持有的本公司股份享有表决权，并计入出席股东会有表决权的股份总数",
+      "C": "单独计票结果仅供公司内部存档，无须对外披露",
+      "D": "每一股份享有一票表决权，类别股股东也不例外"
+    },
+    "answer_format": "mcq",
+    "type": "表决权规则判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第八十三条"}
+    ]
+  },
+  {
+    "qid": "reg_s_013",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第四十九条，下列情形中公司应当在事实发生之日起两个月以内召开临时股东会的有：",
+    "options": {
+      "A": "董事人数不足《公司法》规定人数或者本章程所定人数的三分之二时",
+      "B": "单独持有公司百分之五以上股份的股东请求时",
+      "C": "公司未弥补的亏损达股本总额三分之一时",
+      "D": "审计委员会提议召开时"
+    },
+    "answer_format": "multi",
+    "type": "临时股东会情形（近似阈值干扰）",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "ACD",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第四十九条（一）（二）（三）（五）"}
+    ]
+  },
+  {
+    "qid": "reg_s_014",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司独立董事管理办法》第二十条，独立董事连续两次未能亲自出席董事会会议，也不委托其他独立董事代为出席的，董事会应当在该事实发生之日起三十日内提议召开股东大会解除该独立董事职务。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "独董履职义务判断",
+    "doc_ids": ["strict_csrc_036"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "strict_csrc_036", "clause": "第二十条"}
+    ]
+  },
+  {
+    "qid": "reg_s_015",
+    "domain": "regulatory",
+    "split": "B",
+    "question": "根据所提供文档，下列说法正确的有：",
+    "options": {
+      "A": "比亚迪2025年末总资产较2024年末增长约12.83%",
+      "B": "独立董事原则上最多在三家境内上市公司担任独立董事",
+      "C": "公司发生应当召开临时股东会的情形时，应当在事实发生之日起三个月以内召开临时股东会",
+      "D": "公司持有的本公司股份没有表决权，且该部分股份不计入出席股东会有表决权的股份总数"
+    },
+    "answer_format": "multi",
+    "type": "跨领域综合判断（B 榜口径：法规+财报盲检）",
+    "doc_ids": [],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "总资产 +12.83%"},
+      {"doc_id": "strict_csrc_036", "clause": "第八条"},
+      {"doc_id": "strict_csrc_035", "clause": "第四十九条（两个月，非三个月）"},
+      {"doc_id": "strict_csrc_035", "clause": "第八十三条"}
+    ]
+  },
+  {
+    "qid": "reg_s_016",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第八十条，股东会作出特别决议，应当由出席股东会的股东所持表决权的多少通过？",
+    "options": {
+      "A": "过半数",
+      "B": "三分之一以上",
+      "C": "三分之二以上",
+      "D": "全体股东一致同意"
+    },
+    "answer_format": "mcq",
+    "type": "决议门槛判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第八十条"}
+    ]
   }
 ]

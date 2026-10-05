@@ -87,11 +87,14 @@ class TestRunBaselineModes:
 
     def test_full_mode_skips_b_split(self):
         questions = fx.load_questions(FIXTURE_ROOT)
+        b_split = {q.qid for q in questions if not q.doc_ids}
+        assert b_split, "脚手架应包含 B 榜口径题（无 doc_ids）"
         docs = fx.load_docs(FIXTURE_ROOT)
         client = self.FakeClient()
         details, ledger, report, skipped = run_baseline(questions, docs, client)
-        assert skipped == ["reg_s_010", "reg_s_011"]
-        assert report.total == len(questions) - len(skipped)
+        # 期望从 fixture 推导，不硬编码清单——题集扩缩时这条不该跟着改
+        assert set(skipped) == b_split
+        assert report.total == len(questions) - len(b_split)
         assert len(ledger.records) == report.total
 
     def test_retrieve_mode_covers_all(self):
