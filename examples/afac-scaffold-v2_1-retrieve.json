@@ -1,0 +1,250 @@
+{
+  "generated_at": "2026-10-05T16:23:18",
+  "model": "qwen-plus",
+  "params": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 20261005,
+    "max_tokens": 1024
+  },
+  "fixture": "eval/fixtures/afac_scaffold",
+  "mode": "retrieve",
+  "k": 6,
+  "runs": {
+    "retrieve": {
+      "report": {
+        "total": 20,
+        "correct": 19,
+        "accuracy": 0.95,
+        "prompt_tokens": 59400,
+        "completion_tokens": 3083,
+        "total_tokens": 62483,
+        "token_score": 0.9875034,
+        "final_score": 94.64384689999999
+      },
+      "skipped": [],
+      "details": [
+        {
+          "qid": "reg_s_001",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AC",
+          "pred": "ACD",
+          "correct": false,
+          "reply": "依据【strict_csrc_035 · 第四十七条】第（四）项：“为资产负债率超过百分之七十的担保对象提供的担保”须经股东会审议通过；事项①中被担保方资产负债率75%＞70%，触发该条款，无论金额大小均须股东会审议——故A正确。  \n依据【strict_csrc_035 · 第四十六条】第（十一）项：“审议批准变更募集资金用途事项”属股东会职权；且无例外授权董事会代行（注释2明确“上述股东会的职权不得通过授权的形式由董事会……代为行使”），故事项②必须经股东大会审议；但是否需“特别决议”？查【strict_csrc_035 · 第八十二条】，变更募集资金用途未列入特别决议事项清单，仅列于第四十六条普通职权中，故应适用普通决议（过半数）；B称“须经特别决议”无依据，错误。  \n依据【strict_csrc_036 · 第六条】第（六）项：“为上市公司……提供法律……服务的人员……不得担任独立董事”；第（七）项明确“最近十二个月内曾经具有……第六项所列举情形的人员”亦不得担任；该律所过去12个月内提供常年法律顾问服务，属于“提供法律服务”，构成独立性障碍；又据【strict_csrc_036 · 第十一条】：“证券交易所提出异议的，上市公司不得提交股东大会选举”，即该候选人不得进入股东大会表决环节；故C正确。  \n依据【strict_csrc_035 · 第八十二条】注释1及正文，特别决议事项须由法律、行政法规、本章程或股东会以普通决议认定“重大影响”而明确列举；事项④系章程自主增设特别决议事项，但【strict_csrc_035 · 第八十二条】正文第（六）项授权“股东会以普通决议认定……需要以特别决议通过的其他事项”，即新增特别决议事项本身须经股东会以普通决议方式认定；再查【strict_csrc_035 · 第八十条】，普通决议需“出席股东所持表决权过半数通过”；D称“须经股东大会普通决议通过即可生效”符合规定，且未要求特别决议，故D正确。  \n\nANSWER: ACD",
+          "prompt_tokens": 2646,
+          "completion_tokens": 510
+        },
+        {
+          "qid": "reg_s_002",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "reply": "依据《上市公司章程指引》第四十七条第（四）项：“为资产负债率超过百分之七十的担保对象提供的担保”须经股东会审议通过。题干中该全资子公司资产负债率为75%，超过70%，符合该项规定。\n\nANSWER: B",
+          "prompt_tokens": 2685,
+          "completion_tokens": 55
+        },
+        {
+          "qid": "reg_s_003",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "reply": "依据《strict_csrc_035 · 第八十二条》第（三）项：“本章程的修改”明确列为股东会特别决议事项；同时，《strict_csrc_035 · 第四十六条》第（七）项亦将“修改本章程”列为股东会职权，结合第八十条关于特别决议需三分之二以上表决权通过的规定，可确认章程修改须以特别决议通过。\n\nANSWER: A",
+          "prompt_tokens": 2242,
+          "completion_tokens": 94
+        },
+        {
+          "qid": "reg_s_004",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "reply": "依据《上市公司治理准则》第四十一条：“独立董事不得与其所受聘上市公司及其主要股东、实际控制人存在直接或者间接利害关系，或者其他可能影响其进行独立客观判断的关系。”\n\n该候选人作为律所合伙人，其所在律所过去12个月内为公司提供常年法律顾问服务，属于与上市公司存在的间接业务关系，构成“其他可能影响其进行独立客观判断的关系”，因此不满足独立性要求。\n\nANSWER: C",
+          "prompt_tokens": 415,
+          "completion_tokens": 94
+        },
+        {
+          "qid": "reg_s_005",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AB",
+          "pred": "AB",
+          "correct": true,
+          "reply": "A项依据：【strict_csrc_035 · 第四十七条】第（四）项明确规定“为资产负债率超过百分之七十的担保对象提供的担保”须经股东会审议通过。  \nB项依据：【strict_csrc_035 · 第八十二条】第（三）项明确“本章程的修改”由股东会以特别决议通过。  \nC项依据：【strict_csrc_035 · 第一百二十七条】第（六）项规定“为公司及其控股股东、实际控制人或者其各自附属企业提供财务、法律、咨询、保荐等服务的人员……不得担任独立董事”，且第（七）项将“最近十二个月内曾经具有第一项至第六项所列举情形的人员”纳入禁止范围；律所合伙人若过去12个月内曾提供常年法律顾问服务，属于第（六）项“提供法律服务的人员”，故受禁止，C错误。  \nD项依据：【strict_csrc_035 · 第四十六条】第（十一）项规定“审议批准变更募集资金用途事项”属于股东会职权，但未规定须以特别决议通过；而【strict_csrc_035 · 第八十二条】所列特别决议事项中无此项，【strict_csrc_035 · 第八十一条】明确“除法律、行政法规规定或者本章程规定应当以特别决议通过以外的其他事项”为普通决议，故变更募集资金用途属普通决议事项，D错误。\n\nANSWER: AB",
+          "prompt_tokens": 2070,
+          "completion_tokens": 320
+        },
+        {
+          "qid": "reg_s_006",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "D",
+          "pred": "D",
+          "correct": true,
+          "reply": "依据《上市公司独立董事管理办法》第六条，该条明确列举了八类不得担任独立董事的情形，需逐项排除：A项属于第六条第一项“在上市公司或者其附属企业任职的人员及其配偶”；B项属于第二项“直接或者间接持有上市公司已发行股份百分之一以上……的自然人股东”；C项属于第六项“为上市公司……提供法律……服务的人员……包括……合伙人”；D项中“持有3%股份的股东”不属于“百分之五以上的股东”，且该股东“不在前五名股东之列”，故不触发第六条第三项（要求是“百分之五以上”或“前五名股东”），亦不落入其他各项禁止情形。\n\nANSWER: D",
+          "prompt_tokens": 1645,
+          "completion_tokens": 157
+        },
+        {
+          "qid": "reg_s_007",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "reply": "依据《上市公司独立董事管理办法》第八条规定：“独立董事原则上最多在三家境内上市公司担任独立董事，并应当确保有足够的时间和精力有效地履行独立董事的职责。”\n\nANSWER: A",
+          "prompt_tokens": 1185,
+          "completion_tokens": 36
+        },
+        {
+          "qid": "reg_s_008",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "reply": "依据【strict_csrc_036 · 第五条】：“上市公司应当在董事会中设置审计委员会。审计委员会成员应当为不在上市公司担任高级管理人员的董事，其中独立董事应当过半数，并由独立董事中会计专业人士担任召集人。”\n\nANSWER: B",
+          "prompt_tokens": 1748,
+          "completion_tokens": 57
+        },
+        {
+          "qid": "reg_s_009",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "reply": "依据《上市公司独立董事管理办法》第六条，该条明确列举了八类不得担任独立董事的情形，其中第（六）项规定“为上市公司及其控股股东、实际控制人或者其各自附属企业提供财务、法律、咨询、保荐等服务的人员……”，且第（七）项明确将“最近十二个月内曾经具有第一项至第六项所列举情形的人员”纳入禁止范围；第（一）项规定“在上市公司或者其附属企业任职的人员及其配偶、父母、子女、主要社会关系”；第（三）项规定“在直接或者间接持有上市公司已发行股份百分之五以上的股东或者在上市公司前五名股东任职的人员及其配偶、父母、子女”。\n\n选项C是第六条规定的义务性行为（自查并提交），属于应履行的合规要求，而非禁止情形，故不属于“不得担任”的情形。\n\nANSWER: ABD",
+          "prompt_tokens": 1730,
+          "completion_tokens": 186
+        },
+        {
+          "qid": "reg_s_010",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "reply": "A项依据【strict_csrc_036 · 第五条】：“上市公司独立董事占董事会成员的比例不得低于三分之一，且至少包括一名会计专业人士。”  \nB项依据【strict_csrc_035 · 第八十二条】第（三）项：“本章程的修改”属于股东会特别决议事项。  \nC项依据【strict_csrc_035 · 第四十七条】第（四）项：“为资产负债率超过百分之七十的担保对象提供的担保”须经股东会审议通过。  \nD项错误：【strict_csrc_036 · 第二十条】规定“董事会应当在该事实发生之日起三十日内提议召开股东大会解除该独立董事职务”，并非“自动丧失董事资格”，需经股东大会决议解除，非自动失效。\n\nANSWER: ABC",
+          "prompt_tokens": 1631,
+          "completion_tokens": 168
+        },
+        {
+          "qid": "reg_s_011",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "reply": "依据【strict_csrc_036 · 第八条】，独立董事原则上最多在三家境内上市公司担任独立董事，故A错误；  \n依据【strict_csrc_035 · 第一百三十四条】和【strict_csrc_036 · 第五条】，审计委员会成员中独立董事应当过半数，故B正确；  \n依据【strict_csrc_035 · 第四十七条】第（五）项，须经股东会审议的是“单笔担保额超过最近一期经审计净资产百分之十的担保”，而非百分之五，故C错误；  \n依据【strict_csrc_035 · 第八十条】，普通决议需“过半数通过”，而非三分之二，故D错误。  \n\nANSWER: B",
+          "prompt_tokens": 1940,
+          "completion_tokens": 164
+        },
+        {
+          "qid": "fin_s_001",
+          "domain": "financial_reports",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "reply": "依据【fin_rep_byd_2025 · 三、主要会计数据和财务指标】中“（1）近三年主要会计数据和财务指标”表格数据：  \n- 营业收入：2025年803,964,958,000.00元 vs 2024年777,102,455,000.00元，增长3.46% → A正确；  \n- 归属于上市公司股东的净利润：2025年32,619,022,000.00元 vs 2024年40,254,346,000.00元，下降18.97% → B正确；  \n- 经营活动产生的现金流量净额：2025年59,135,544,000.00元 vs 2024年133,453,873,000.00元，下降55.69% → C错误；  \n- 归属于上市公司股东的净资产：2025年末246,274,606,000.00元 vs 2024年末185,251,104,000.00元，增长32.94% → D正确。  \n\nANSWER: ABD",
+          "prompt_tokens": 5771,
+          "completion_tokens": 328
+        },
+        {
+          "qid": "fin_s_002",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "reply": "依据【fin_rep_byd_2025 · 二、公司基本情况】中“3、主要会计数据和财务指标”表格下“（1）近三年主要会计数据和财务指标”部分，2025年对应的“加权平均净资产收益率”为15.31%。  \nANSWER: B",
+          "prompt_tokens": 5701,
+          "completion_tokens": 71
+        },
+        {
+          "qid": "fin_s_003",
+          "domain": "financial_reports",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "reply": "依据【fin_rep_byd_2025 · 二、公司基本情况】中“3、主要会计数据和财务指标”表格显示：2025年经营活动产生的现金流量净额为59,135,544,000.00元，2024年为133,453,873,000.00元，下降幅度为(133,453,873,000 − 59,135,544,000) / 133,453,873,000 ≈ 55.69%，原文明确标注“-55.69%”，符合“下降超过一半”（即>50%）。\n\nANSWER: A",
+          "prompt_tokens": 5689,
+          "completion_tokens": 181
+        },
+        {
+          "qid": "fin_s_004",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "reply": "依据【fin_rep_byd_2025 · 三、主要会计数据和财务指标】中“（1）近三年主要会计数据和财务指标”表格，2025年营业收入为“803,964,958,000.00元”，即约8040亿元。\n\nANSWER: C",
+          "prompt_tokens": 6597,
+          "completion_tokens": 77
+        },
+        {
+          "qid": "reg_s_012",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "reply": "依据《上市公司章程指引》第八十三条：“股东会审议影响中小投资者利益的重大事项时，对中小投资者表决应当单独计票。单独计票结果应当及时公开披露。”该条明确要求单独计票及及时公开披露，故A正确；B错误，因该条明确规定“公司持有的本公司股份没有表决权，且该部分股份不计入出席股东会有表决权的股份总数”；C错误，与“应当及时公开披露”直接矛盾；D错误，因该条第一句即载明“每一股份享有一票表决权，类别股股东除外”。\n\nANSWER: A",
+          "prompt_tokens": 2487,
+          "completion_tokens": 128
+        },
+        {
+          "qid": "reg_s_013",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ACD",
+          "pred": "ACD",
+          "correct": true,
+          "reply": "依据《上市公司章程指引》第四十九条，明确列举了应当在事实发生之日起两个月内召开临时股东会的六种情形，其中包含选项A、C、D；而选项B中“单独持有公司百分之五以上股份”不符合该条第（三）项规定的“百分之十以上股份”的要求。\n\nANSWER: ACD",
+          "prompt_tokens": 2568,
+          "completion_tokens": 73
+        },
+        {
+          "qid": "reg_s_014",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "reply": "依据《上市公司独立董事管理办法》第二十条：“独立董事应当亲自出席董事会会议。因故不能亲自出席会议的，独立董事应当事先审阅会议材料，形成明确的意见，并书面委托其他独立董事代为出席。独立董事连续两次未能亲自出席董事会会议，也不委托其他独立董事代为出席的，董事会应当在该事实发生之日起三十日内提议召开股东大会解除该独立董事职务。”\n\n该条文内容与题干陈述完全一致。\n\nANSWER: A",
+          "prompt_tokens": 1718,
+          "completion_tokens": 93
+        },
+        {
+          "qid": "reg_s_015",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "reply": "A项依据：文档【fin_rep_byd_2025 · 二、公司基本情况】“3、主要会计数据和财务指标”表格中明确列示：“总资产”2025年末为883,729,883,000.00元，2024年末为783,355,855,000.00元，“本年末比上年末增减”为12.83%，数据完全匹配。  \nB项依据：【strict_csrc_036 · 第八条】原文：“独立董事原则上最多在三家境内上市公司担任独立董事，并应当确保有足够的时间和精力有效地履行独立董事的职责。”  \nC项依据：【strict_csrc_035 · 第四十九条】规定：“有下列情形之一的，公司在事实发生之日起**两个月以内**召开临时股东会”，而非“三个月”，故C错误。  \nD项依据：【strict_csrc_035 · 第八十三条】第一款后半句：“公司持有的本公司股份没有表决权，且该部分股份不计入出席股东会有表决权的股份总数。”  \n\nANSWER: ABD",
+          "prompt_tokens": 6753,
+          "completion_tokens": 254
+        },
+        {
+          "qid": "reg_s_016",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "reply": "依据《上市公司章程指引》第八十条：“股东会作出特别决议，应当由出席股东会的股东所持表决权的三分之二以上通过。”\n\nANSWER: C",
+          "prompt_tokens": 2179,
+          "completion_tokens": 37
+        }
+      ]
+    }
+  }
+}

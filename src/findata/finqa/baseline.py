@@ -70,6 +70,16 @@ def query_text(q: Question) -> str:
     return f"{q.question} {options}"
 
 
+def option_queries(q: Question) -> list[str]:
+    """逐选项查询组（M2.1）：题干 + 每个选项各一查，每个选项的证据诉求独立召回。
+
+    tf 题的选项只是「正确/错误」，无信息量——退回单查询（题干+选项全文）。
+    """
+    if q.answer_format == "tf":
+        return [query_text(q)]
+    return [f"{q.question} {text}" for text in q.options.values()]
+
+
 def build_messages_from_chunks(q: Question, chunks: list[Chunk]) -> list[dict[str, str]]:
     """检索臂的上下文：BM25 召回的条款片段，块头带 doc_id 与条款号。"""
     options_block = "\n".join(f"{k}. {v}" for k, v in sorted(q.options.items()))
@@ -100,11 +110,13 @@ def run_baseline(
     limit: int = 0,
     mode: str = "full",
     k: int = 6,
+    k_total: int = 12,
 ) -> tuple[list[dict[str, object]], TokenLedger, ScoreReport, list[str]]:
     """逐题作答；返回逐题明细 / 台账 / 评分报告 / 被跳过的 qid 列表。
 
     full 模式只处理给了 doc_ids 的题（B 榜题检索臂专属，跳过并记录）；
     retrieve 模式处理全部题——A 榜题在给定文档内检索，B 榜题全局盲检。
+    检索为逐选项多查询合并（M2.1）：k 为每查询取多少、k_total 为合并上限。
     """
     if mode not in ("full", "retrieve"):
         raise ValueError(f"mode 必须是 full/retrieve，得到 {mode}")
@@ -122,7 +134,10 @@ def run_baseline(
             messages = build_messages(q, docs)
         else:
             assert index is not None
-            chunks = index.retrieve(query_text(q), k=k, doc_ids=q.doc_ids or None)
+            chunks = index.retrieve_many(
+                option_queries(q), k_per_query=k, total_cap=k_total,
+                doc_ids=q.doc_ids or None,
+            )
             messages = build_messages_from_chunks(q, chunks)
         reply, record = client.chat(q.qid, "answer", messages)
         ledger.add(record)

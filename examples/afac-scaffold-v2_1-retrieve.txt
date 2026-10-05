@@ -1,0 +1,38 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-05T16:23:18
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（20 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：retrieve（k=6）；文档截断：无
+
+## mode=retrieve
+
+- ✗ reg_s_001 [multi] gold=AC pred=ACD | 2646+510
+- ✓ reg_s_002 [mcq] gold=B pred=B | 2685+55
+- ✓ reg_s_003 [tf] gold=A pred=A | 2242+94
+- ✓ reg_s_004 [mcq] gold=C pred=C | 415+94
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 2070+320
+- ✓ reg_s_006 [mcq] gold=D pred=D | 1645+157
+- ✓ reg_s_007 [tf] gold=A pred=A | 1185+36
+- ✓ reg_s_008 [mcq] gold=B pred=B | 1748+57
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 1730+186
+- ✓ reg_s_010 [multi] gold=ABC pred=ABC | 1631+168
+- ✓ reg_s_011 [mcq] gold=B pred=B | 1940+164
+- ✓ fin_s_001 [multi] gold=ABD pred=ABD | 5771+328
+- ✓ fin_s_002 [mcq] gold=B pred=B | 5701+71
+- ✓ fin_s_003 [tf] gold=A pred=A | 5689+181
+- ✓ fin_s_004 [mcq] gold=C pred=C | 6597+77
+- ✓ reg_s_012 [mcq] gold=A pred=A | 2487+128
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 2568+73
+- ✓ reg_s_014 [tf] gold=A pred=A | 1718+93
+- ✓ reg_s_015 [multi] gold=ABD pred=ABD | 6753+254
+- ✓ reg_s_016 [mcq] gold=C pred=C | 2179+37
+
+题目数 20，正确 19，Accuracy 0.9500
+prompt_tokens 59400，completion_tokens 3083，total_tokens 62483
+TokenScore 0.9875（预算 5,000,000）
+FinalScore 94.6438 = 100 × 0.9500 × (0.7 + 0.3 × 0.9875)
+分域：
+  financial_reports: 4/4（100.00%），tokens 24,415
+  regulatory: 15/16（93.75%），tokens 38,068
+

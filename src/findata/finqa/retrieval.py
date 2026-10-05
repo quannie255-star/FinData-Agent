@@ -92,3 +92,45 @@ class BM25Index:
         scores = self._bm25.get_scores(tokenize(query))
         ranked = sorted(pool, key=lambda i: scores[i], reverse=True)
         return [self.chunks[i] for i in ranked[:k]]
+
+    def retrieve_many(
+        self,
+        queries: list[str],
+        k_per_query: int,
+        total_cap: int,
+        doc_ids: list[str] | None = None,
+    ) -> list[Chunk]:
+        """多查询合并检索（M2.1 逐选项）：轮转取各查询的高位命中，去重后截断。
+
+        轮转而非按查询拼接：不让第一个查询的 k 个命中把名额占满——多证据题
+        的证据散在不同查询里（v2 的 reg_s_001/015 就是单查询被单一域占满，
+        第二域证据进不了上下文，模型只能诚实判错）。
+        """
+        if not queries:
+            return []
+        pool = (
+            [i for i, c in enumerate(self.chunks) if c.doc_id in set(doc_ids)]
+            if doc_ids
+            else list(range(len(self.chunks)))
+        )
+        if not pool:
+            return []
+        ranked_lists: list[list[int]] = []
+        for query in queries:
+            scores = self._bm25.get_scores(tokenize(query))
+            ranked_lists.append(sorted(pool, key=lambda i: scores[i], reverse=True))
+        seen: set[int] = set()
+        merged: list[Chunk] = []
+        max_len = max(len(r) for r in ranked_lists)
+        for rank in range(max_len):
+            for ranked in ranked_lists:
+                if rank >= len(ranked):
+                    continue
+                idx = ranked[rank]
+                if idx in seen:
+                    continue
+                seen.add(idx)
+                merged.append(self.chunks[idx])
+                if len(merged) >= total_cap:
+                    return merged
+        return merged

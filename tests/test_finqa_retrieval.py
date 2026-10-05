@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 
 from findata.finqa import fixture as fx
-from findata.finqa.baseline import build_messages_from_chunks, query_text, run_baseline
+from findata.finqa.baseline import (
+    build_messages_from_chunks,
+    option_queries,
+    query_text,
+    run_baseline,
+)
 from findata.finqa.qwen import CallRecord
 from findata.finqa.retrieval import BM25Index, chunk_docs, tokenize
 
@@ -68,6 +73,61 @@ class TestBM25Index:
     def test_empty_pool_returns_empty(self):
         index = BM25Index(chunk_docs({"d": "# 标题\n内容"}))
         assert index.retrieve("任意", k=3, doc_ids=["不存在"]) == []
+
+
+class TestRetrieveMany:
+    """M2.1 逐选项检索的验收：v2 两道错题缺失的证据必须能被召回（离线确定性）。"""
+
+    def _index(self):
+        docs = fx.load_docs(FIXTURE_ROOT)
+        return BM25Index(chunk_docs(docs)), fx.load_questions(FIXTURE_ROOT)
+
+    def test_round_robin_not_first_query_dominant(self):
+        # 两个查询各强命中不同文档时，合并结果必须两头都进，不被第一个查询占满
+        docs = {
+            "a": "# 甲法\n担保 资产负债率 担保 资产负债率 担保",
+            "b": "# 乙法\n独立董事 独立性 独立董事",
+        }
+        index = BM25Index(chunk_docs(docs))
+        merged = index.retrieve_many(
+            ["资产负债率 担保", "独立董事 独立性"], k_per_query=3, total_cap=6
+        )
+        doc_order = [c.doc_id for c in merged]
+        assert doc_order[0] == "a" and "b" in doc_order[:2]
+        assert len(merged) == len({(c.doc_id, c.header) for c in merged})
+
+    def test_cap_truncates(self):
+        index, _ = self._index()
+        merged = index.retrieve_many(["担保 股东会", "独立董事"], k_per_query=6, total_cap=3)
+        assert len(merged) == 3
+
+    def test_v2_wrong_q15_cross_domain_evidence_recalled(self):
+        # v2 错因：选项 A（比亚迪总资产）的财报证据没进上下文 → 逐选项必须召回
+        index, questions = self._index()
+        q15 = next(q for q in questions if q.qid == "reg_s_015")
+        chunks = index.retrieve_many(
+            option_queries(q15), k_per_query=6, total_cap=12
+        )
+        assert any(c.doc_id == "fin_rep_byd_2025" for c in chunks), "跨域财报证据未召回"
+        assert any(
+            c.doc_id == "strict_csrc_035" and c.header == "第八十三条" for c in chunks
+        ), "法规侧证据（83 条）未召回"
+
+    def test_v2_wrong_q001_option_c_evidence_recalled(self):
+        # v2 错因：独立性证据（036 第六条 / 023）没进上下文 → 逐选项必须召回
+        index, questions = self._index()
+        q1 = next(q for q in questions if q.qid == "reg_s_001")
+        chunks = index.retrieve_many(
+            option_queries(q1), k_per_query=6, total_cap=12, doc_ids=q1.doc_ids
+        )
+        headers = {(c.doc_id, c.header) for c in chunks}
+        assert ("strict_csrc_036", "第六条") in headers, "独董办法第六条未召回"
+        assert all(c.doc_id in set(q1.doc_ids) for c in chunks), "A 榜限定失效"
+
+    def test_tf_falls_back_to_single_query(self):
+        index, questions = self._index()
+        q3 = next(q for q in questions if q.qid == "reg_s_003")
+        assert len(option_queries(q3)) == 1
 
 
 class TestRunBaselineModes:
