@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     llm_model: str = "deepseek-chat"
     llm_timeout_seconds: float = 60.0
 
+    # ---- AFAC 赛题四主线：阿里云百炼（DashScope，OpenAI 兼容接口）----
+    # 推理问答只许 Qwen（docs/afac-track4.md §0.1），与上面通用 LLM 配置分开
+    dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    dashscope_api_key: str = ""
+    dashscope_model: str = "qwen-plus"
+    dashscope_timeout_seconds: float = 120.0
+
     # ---- 告警推送（每日管线 scripts/daily_pipeline.py 用）----
     # channel 取 wecom（企业微信机器人）/ dingtalk / feishu / serverchan（Server酱）；
     # 两者任一为空 = 不推送，只写运行日志。
