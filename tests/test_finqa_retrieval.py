@@ -47,6 +47,25 @@ class TestChunkDocs:
         assert "前言说明" in chunks[0].text
         assert "甲内容" in chunks[1].text
 
+    def test_secondary_split_for_long_blocks(self):
+        # v3：报表整节数千字符 → 二级切分，块头带（i/n），行不被切断
+        long_body = "\n".join(f"第{i}行数据 803,964,958,000.00 元" for i in range(120))
+        docs = {"fin": f"# 某摘要\n## 二、公司基本情况\n{long_body}"}
+        chunks = chunk_docs(docs, max_chunk_chars=1000)
+        assert len(chunks) > 1
+        for c in chunks:
+            assert len(c.text) < 1600  # cap + 尾部重叠的余量
+            assert "803,964,958,000.00" not in c.text.replace("803,964,958,000.00 元", "")
+        assert any("（1/" in c.text for c in chunks)
+        # 行级重叠：相邻块共享尾部两行
+        assert chunks[0].text.splitlines()[-1] in chunks[1].text
+
+    def test_short_blocks_untouched(self):
+        docs = {"d": "# 标题\n## 第一条\n短内容"}
+        chunks = chunk_docs(docs, max_chunk_chars=1000)
+        # 标题块无正文被跳过；短条文不做二级切分、不带（i/n）标记
+        assert [(c.header, c.text) for c in chunks] == [("第一条", "短内容")]
+
 
 class TestBM25Index:
     def test_guarantee_query_hits_article_47(self):

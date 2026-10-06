@@ -1,0 +1,50 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-06T12:33:22
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（31 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：isolate（k=6）；文档截断：无
+
+## mode=isolate
+
+- ✓ reg_s_001 [multi] gold=AC pred=AC | 5073+820
+- ✓ reg_s_002 [mcq] gold=B pred=B | 4388+325
+- ✓ reg_s_003 [tf] gold=A pred=A | 2659+41
+- ✓ reg_s_004 [mcq] gold=C pred=C | 1621+604
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 3310+444
+- ✓ reg_s_006 [mcq] gold=D pred=D | 3589+469
+- ✓ reg_s_007 [tf] gold=A pred=A | 1294+36
+- ✓ reg_s_008 [mcq] gold=B pred=B | 2871+266
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 3621+405
+- ✓ reg_s_010 [multi] gold=ABC pred=ABC | 2793+245
+- ✓ reg_s_011 [mcq] gold=B pred=B | 3106+283
+- ✗ fin_s_001 [multi] gold=ABD pred=BD | 14354+415
+- ✓ fin_s_002 [mcq] gold=B pred=B | 15084+414
+- ✓ fin_s_003 [tf] gold=A pred=A | 5923+114
+- ✓ fin_s_004 [mcq] gold=C pred=C | 17797+494
+- ✓ reg_s_012 [mcq] gold=A pred=A | 4062+300
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 4216+241
+- ✓ reg_s_014 [tf] gold=A pred=A | 1791+65
+- ✓ reg_s_015 [multi] gold=ABD pred=ABD | 5718+221
+- ✓ reg_s_016 [mcq] gold=C pred=C | 3064+179
+- ✓ ins_s_001 [mcq] gold=B pred=B | 10139+431
+- ✓ ins_s_002 [mcq] gold=B pred=B | 9226+285
+- ✓ ins_s_003 [tf] gold=A pred=A | 6730+109
+- ✓ ins_s_004 [multi] gold=AB pred=AB | 10112+294
+- ✓ ins_s_005 [multi] gold=ABD pred=ABD | 4580+309
+- ✓ reg_s_017 [mcq] gold=A pred=A | 2274+329
+- ✓ reg_s_018 [multi] gold=ABC pred=ABC | 3283+428
+- ✓ reg_s_019 [mcq] gold=B pred=B | 3076+162
+- ✓ reg_s_020 [multi] gold=ABD pred=ABD | 7832+292
+- ✓ fin_s_005 [mcq] gold=B pred=B | 15210+382
+- ✓ fin_s_006 [multi] gold=ACD pred=ACD | 15119+537
+
+题目数 31，正确 30，Accuracy 0.9677
+prompt_tokens 193915，completion_tokens 9939，total_tokens 203854
+TokenScore 0.9592（预算 5,000,000）
+FinalScore 95.5905 = 100 × 0.9677 × (0.7 + 0.3 × 0.9592)
+分域：
+  financial_reports: 5/6（83.33%），tokens 85,843
+  insurance: 5/5（100.00%），tokens 42,215
+  regulatory: 20/20（100.00%），tokens 75,796
+

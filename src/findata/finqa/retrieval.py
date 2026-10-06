@@ -47,8 +47,49 @@ def tokenize(text: str) -> list[str]:
     return tokens
 
 
-def chunk_docs(docs: dict[str, str]) -> list[Chunk]:
-    """按 `## ` 标题切块；首个标题前的前言并入标题块。"""
+def _split_long(text: str, cap: int) -> list[str]:
+    """超长块按行累积切分，相邻块尾部两行重叠。
+
+    绝不切断行内（财报表格的数值与单位在同一行，行内切分会把
+    「803,964,958,000.00」腰斩）；两行重叠是廉价保险——标签行与数值行
+    相邻时，跨块也能至少有一侧看到完整配对。
+    """
+    lines = text.splitlines()
+    pieces: list[str] = []
+    current: list[str] = []
+    size = 0
+    for line in lines:
+        # 法规模块整条合成单行，可长达 2000+ 字符：超长行按字符硬切
+        # （报表类文档行短，不会走到这条分支，数值完整性不受影响）
+        if len(line) > cap:
+            if current:
+                pieces.append("\n".join(current))
+                current, size = [], 0
+            for i in range(0, len(line), cap):
+                pieces.append(line[i : i + cap])
+            continue
+        if current and size + len(line) > cap:
+            pieces.append("\n".join(current))
+            current = current[-2:]  # 尾部两行带入下一块
+            size = sum(len(x) for x in current)
+        current.append(line)
+        size += len(line)
+    if current:
+        tail = "\n".join(current)
+        # 避免产生过小的尾块：不足 cap/4 并入前一块
+        if pieces and len(tail) < cap // 4:
+            pieces[-1] = pieces[-1] + "\n" + tail
+        else:
+            pieces.append(tail)
+    return pieces
+
+
+def chunk_docs(docs: dict[str, str], max_chunk_chars: int = 0) -> list[Chunk]:
+    """按 `## ` 标题切块；首个标题前的前言并入标题块。
+
+    max_chunk_chars > 0 时，超过该长度的块再做二级切分（报表类文档整节
+    可达数千字符，一个大块会吃掉整个判定上下文——v3 的成本主因）。
+    """
     chunks: list[Chunk] = []
     for doc_id, text in sorted(docs.items()):
         lines = text.splitlines()
@@ -63,7 +104,13 @@ def chunk_docs(docs: dict[str, str]) -> list[Chunk]:
             body_text = "\n".join(body).strip()
             if not body_text:
                 continue
-            chunks.append(Chunk(doc_id=doc_id, header=header, text=body_text))
+            pieces = (
+                _split_long(body_text, max_chunk_chars) if max_chunk_chars else [body_text]
+            )
+            for i, piece in enumerate(pieces, start=1):
+                if len(pieces) > 1:
+                    piece = f"（{i}/{len(pieces)}）\n{piece}"
+                chunks.append(Chunk(doc_id=doc_id, header=header, text=piece))
     return chunks
 
 

@@ -17,6 +17,9 @@ from findata.finqa.qwen import QwenClient, TokenLedger
 from findata.finqa.retrieval import BM25Index, Chunk, chunk_docs
 from findata.finqa.scoring import ScoreReport, is_correct, normalize_answer
 
+# 超长块二级切分阈值：报表整节可达数千字符，不切会吃掉整个判定上下文
+MAX_CHUNK_CHARS = 1200
+
 SYSTEM_PROMPT = (
     "你是严格的金融合规分析师。只能依据提供的文档内容作答，"
     "禁止使用外部知识或常识推测；文档没有依据时也要在文档内找最接近的条款判断。"
@@ -121,7 +124,11 @@ def run_baseline(
     if mode not in ("full", "retrieve"):
         raise ValueError(f"mode 必须是 full/retrieve，得到 {mode}")
     selected = questions[: limit or None]
-    index = BM25Index(chunk_docs(docs)) if mode == "retrieve" else None
+    index = (
+        BM25Index(chunk_docs(docs, max_chunk_chars=MAX_CHUNK_CHARS))
+        if mode == "retrieve"
+        else None
+    )
     skipped: list[str] = []
     ledger = TokenLedger()
     report = ScoreReport()

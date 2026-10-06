@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 
 from findata.finqa.baseline import (
+    MAX_CHUNK_CHARS,
     build_messages_from_chunks,
     extract_answer,
     option_queries,
@@ -96,7 +97,7 @@ def run_isolate(
     k_option 是每选项召回的片段数（M2.3：12 → 4——聚焦判定不需要大片池，
     token ×3.1 的主因就是它）；k_total 只作用于回退仲裁的合并检索。
     """
-    index = BM25Index(chunk_docs(docs))
+    index = BM25Index(chunk_docs(docs, max_chunk_chars=MAX_CHUNK_CHARS))
     ledger = TokenLedger()
     report = ScoreReport()
     details: list[dict[str, object]] = []

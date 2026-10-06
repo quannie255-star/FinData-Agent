@@ -1,0 +1,532 @@
+{
+  "generated_at": "2026-10-06T12:33:22",
+  "model": "qwen-plus",
+  "params": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 20261005,
+    "max_tokens": 1024
+  },
+  "fixture": "eval/fixtures/afac_scaffold",
+  "mode": "isolate",
+  "k": 6,
+  "runs": {
+    "isolate": {
+      "report": {
+        "total": 31,
+        "correct": 30,
+        "accuracy": 0.967741935483871,
+        "prompt_tokens": 193915,
+        "completion_tokens": 9939,
+        "total_tokens": 203854,
+        "token_score": 0.9592292,
+        "final_score": 95.59052516129033
+      },
+      "skipped": [],
+      "details": [
+        {
+          "qid": "reg_s_001",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AC",
+          "pred": "AC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 5073,
+          "completion_tokens": 820
+        },
+        {
+          "qid": "reg_s_002",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4388,
+          "completion_tokens": 325
+        },
+        {
+          "qid": "reg_s_003",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "used_fallback": true,
+          "prompt_tokens": 2659,
+          "completion_tokens": 41
+        },
+        {
+          "qid": "reg_s_004",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 1621,
+          "completion_tokens": 604
+        },
+        {
+          "qid": "reg_s_005",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AB",
+          "pred": "AB",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3310,
+          "completion_tokens": 444
+        },
+        {
+          "qid": "reg_s_006",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "D",
+          "pred": "D",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3589,
+          "completion_tokens": 469
+        },
+        {
+          "qid": "reg_s_007",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "used_fallback": true,
+          "prompt_tokens": 1294,
+          "completion_tokens": 36
+        },
+        {
+          "qid": "reg_s_008",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 2871,
+          "completion_tokens": 266
+        },
+        {
+          "qid": "reg_s_009",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3621,
+          "completion_tokens": 405
+        },
+        {
+          "qid": "reg_s_010",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 2793,
+          "completion_tokens": 245
+        },
+        {
+          "qid": "reg_s_011",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3106,
+          "completion_tokens": 283
+        },
+        {
+          "qid": "fin_s_001",
+          "domain": "financial_reports",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "BD",
+          "correct": false,
+          "verdicts": {
+            "A": "UNCERTAIN",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 14354,
+          "completion_tokens": 415
+        },
+        {
+          "qid": "fin_s_002",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15084,
+          "completion_tokens": 414
+        },
+        {
+          "qid": "fin_s_003",
+          "domain": "financial_reports",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "used_fallback": true,
+          "prompt_tokens": 5923,
+          "completion_tokens": 114
+        },
+        {
+          "qid": "fin_s_004",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "UNCERTAIN",
+            "B": "UNCERTAIN",
+            "C": "UNCERTAIN",
+            "D": "UNCERTAIN"
+          },
+          "used_fallback": true,
+          "prompt_tokens": 17797,
+          "completion_tokens": 494
+        },
+        {
+          "qid": "reg_s_012",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4062,
+          "completion_tokens": 300
+        },
+        {
+          "qid": "reg_s_013",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ACD",
+          "pred": "ACD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4216,
+          "completion_tokens": 241
+        },
+        {
+          "qid": "reg_s_014",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "used_fallback": true,
+          "prompt_tokens": 1791,
+          "completion_tokens": 65
+        },
+        {
+          "qid": "reg_s_015",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 5718,
+          "completion_tokens": 221
+        },
+        {
+          "qid": "reg_s_016",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3064,
+          "completion_tokens": 179
+        },
+        {
+          "qid": "ins_s_001",
+          "domain": "insurance",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 10139,
+          "completion_tokens": 431
+        },
+        {
+          "qid": "ins_s_002",
+          "domain": "insurance",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 9226,
+          "completion_tokens": 285
+        },
+        {
+          "qid": "ins_s_003",
+          "domain": "insurance",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "used_fallback": true,
+          "prompt_tokens": 6730,
+          "completion_tokens": 109
+        },
+        {
+          "qid": "ins_s_004",
+          "domain": "insurance",
+          "answer_format": "multi",
+          "gold": "AB",
+          "pred": "AB",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 10112,
+          "completion_tokens": 294
+        },
+        {
+          "qid": "ins_s_005",
+          "domain": "insurance",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4580,
+          "completion_tokens": 309
+        },
+        {
+          "qid": "reg_s_017",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 2274,
+          "completion_tokens": 329
+        },
+        {
+          "qid": "reg_s_018",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3283,
+          "completion_tokens": 428
+        },
+        {
+          "qid": "reg_s_019",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3076,
+          "completion_tokens": 162
+        },
+        {
+          "qid": "reg_s_020",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 7832,
+          "completion_tokens": 292
+        },
+        {
+          "qid": "fin_s_005",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15210,
+          "completion_tokens": 382
+        },
+        {
+          "qid": "fin_s_006",
+          "domain": "financial_reports",
+          "answer_format": "multi",
+          "gold": "ACD",
+          "pred": "ACD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "TRUE"
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15119,
+          "completion_tokens": 537
+        }
+      ]
+    }
+  }
+}

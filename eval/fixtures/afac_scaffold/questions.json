@@ -388,5 +388,222 @@
     "evidence": [
       {"doc_id": "strict_csrc_035", "clause": "第八十条"}
     ]
+  },
+  {
+    "qid": "ins_s_001",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据《平安附加平安福提前给付重大疾病保险（2015）条款》，自本附加险合同生效（或最后复效）之日起90日内，被保险人因疾病被确诊发生重大疾病或特定轻度重疾的，保险人的处理方式是：",
+    "options": {
+      "A": "承担保险责任，但保险金减半给付",
+      "B": "不承担保险责任，退还本附加险合同的现金价值，本附加险合同终止",
+      "C": "不承担保险责任，且不退还任何款项",
+      "D": "无等待期限制，正常给付重大疾病保险金"
+    },
+    "answer_format": "mcq",
+    "type": "等待期条款判断",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 保险责任·等待期"}
+    ]
+  },
+  {
+    "qid": "ins_s_002",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据条款，特定轻度重疾保险金的给付比例与给付次数限制为：",
+    "options": {
+      "A": "基本保险金额的10%，以一次为限",
+      "B": "基本保险金额的20%，以一次为限",
+      "C": "基本保险金额的20%，以三次为限",
+      "D": "基本保险金额的50%，不限次数"
+    },
+    "answer_format": "mcq",
+    "type": "给付比例定位",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 保险责任·特定轻度重疾保险金（20%、一次为限）"}
+    ]
+  },
+  {
+    "qid": "ins_s_003",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据条款，被保险人因意外伤害发生重大疾病或特定轻度重疾情形的，没有等待期限制。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "等待期例外判断",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 保险责任·等待期（意外伤害无等待期）"}
+    ]
+  },
+  {
+    "qid": "ins_s_004",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据条款，下列说法正确的有：",
+    "options": {
+      "A": "重大疾病保险金按照基本保险金额给付",
+      "B": "给付重大疾病保险金后，主险合同的基本保险金额等额减少",
+      "C": "给付特定轻度重疾保险金后，本附加险合同终止",
+      "D": "分期支付保险费的宽限期为自保险费约定支付日的次日零时起30日"
+    },
+    "answer_format": "multi",
+    "type": "条款综合判断（近似数值干扰：20%/60日）",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "AB",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 保险责任·重大疾病保险金"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "3.2 宽限期（60 日）"}
+    ]
+  },
+  {
+    "qid": "ins_s_005",
+    "domain": "insurance",
+    "split": "B",
+    "question": "根据所提供文档，下列说法正确的有：",
+    "options": {
+      "A": "特定轻度重疾保险金按基本保险金额的20%给付",
+      "B": "自签收本附加险合同次日起有10日的犹豫期，期间解除合同的，无息退还所支付的全部保险费",
+      "C": "本附加险合同效力中止后3年内可以申请恢复合同效力",
+      "D": "公司持有的本公司股份没有表决权，且不计入出席股东会有表决权的股份总数"
+    },
+    "answer_format": "multi",
+    "type": "跨领域综合判断（B 榜口径：保险+法规盲检）",
+    "doc_ids": [],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 特定轻度重疾保险金 20%"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "5.1 犹豫期 10 日"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "3.3 效力中止与恢复（2 年，非 3 年）"},
+      {"doc_id": "strict_csrc_035", "clause": "第八十三条"}
+    ]
+  },
+  {
+    "qid": "reg_s_017",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第八十六条，关于累积投票制，下列判断正确的是：",
+    "options": {
+      "A": "股东会选举两名以上独立董事时，应当实行累积投票制",
+      "B": "累积投票制仅适用于选举监事，不适用于选举董事",
+      "C": "单一股东及其一致行动人拥有权益的股份比例在百分之三十及以上的公司，可以选择不采用累积投票制",
+      "D": "选举一名独立董事时也必须实行累积投票制"
+    },
+    "answer_format": "mcq",
+    "type": "累积投票制判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第八十六条"}
+    ]
+  },
+  {
+    "qid": "reg_s_018",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》，关于股东会会议的召开，下列说法正确的有：",
+    "options": {
+      "A": "年度股东会每年召开一次",
+      "B": "年度股东会应当于上一会计年度结束后的六个月内举行",
+      "C": "临时股东会应当在应当召开的情形事实发生之日起两个月以内召开",
+      "D": "审计委员会提议召开临时股东会时，公司可以自行决定是否召开"
+    },
+    "answer_format": "multi",
+    "type": "会议召开规则综合",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "ABC",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第四十八条"},
+      {"doc_id": "strict_csrc_035", "clause": "第四十九条（五）为应当召开情形"}
+    ]
+  },
+  {
+    "qid": "reg_s_019",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司独立董事管理办法》第七条，担任独立董事应当具有的履行职责所必需的法律、会计或者经济等工作经验年限至少为：",
+    "options": {
+      "A": "三年",
+      "B": "五年",
+      "C": "八年",
+      "D": "十年"
+    },
+    "answer_format": "mcq",
+    "type": "任职条件定位",
+    "doc_ids": ["strict_csrc_036"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "strict_csrc_036", "clause": "第七条（四）"}
+    ]
+  },
+  {
+    "qid": "reg_s_020",
+    "domain": "regulatory",
+    "split": "B",
+    "question": "根据所提供文档，下列说法正确的有：",
+    "options": {
+      "A": "担任独立董事应当具有五年以上法律、会计或者经济等工作经验",
+      "B": "平安附加平安福提前给付重大疾病保险（2015）的等待期为90日，但因意外伤害发生的情形无等待期",
+      "C": "比亚迪2025年归属于上市公司股东的扣除非经常性损益的净利润较2024年实现增长",
+      "D": "上市公司应当在董事会中设置审计委员会，且审计委员会成员中独立董事应当过半数"
+    },
+    "answer_format": "multi",
+    "type": "跨领域综合判断（B 榜口径：法规+保险+财报三域盲检）",
+    "doc_ids": [],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "strict_csrc_036", "clause": "第七条（四）"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 等待期 90 日"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "扣非净利润 -20.38%（下降，非增长）"},
+      {"doc_id": "strict_csrc_036", "clause": "第五条"}
+    ]
+  },
+  {
+    "qid": "fin_s_005",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要，比亚迪2025年基本每股收益为：",
+    "options": {
+      "A": "3.44元/股",
+      "B": "3.58元/股",
+      "C": "4.61元/股",
+      "D": "15.31%"
+    },
+    "answer_format": "mcq",
+    "type": "年报数值定位（干扰项为 2023EPS/2024EPS/ROE）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "基本每股收益 3.58（2024 年 4.61、2023 年 3.44）"}
+    ]
+  },
+  {
+    "qid": "fin_s_006",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要中的分季度主要会计数据，关于比亚迪2025年各季度表现，下列说法正确的有：",
+    "options": {
+      "A": "第四季度营业收入为全年最高",
+      "B": "第一季度归属于上市公司股东的净利润为全年最高",
+      "C": "全年四个季度归属于上市公司股东的净利润均超过60亿元",
+      "D": "第二季度经营活动产生的现金流量净额为全年最高"
+    },
+    "answer_format": "multi",
+    "type": "分季度数据对比（跨行数值比较）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "ACD",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "分季度营业收入（Q4 237,699,412,000 最高）"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "分季度归母净利润（Q4 9,285,849,000 最高，Q1 9,154,985,000）"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "分季度经营现金流（Q2 23,252,510,000 最高）"}
+    ]
   }
 ]
