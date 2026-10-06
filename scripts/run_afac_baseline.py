@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from findata.finqa import fixture as fx
+from findata.finqa.attribution import stats_lines, usage_stats
 from findata.finqa.baseline import run_baseline
 from findata.finqa.isolate import run_isolate
 from findata.finqa.memory import run_memoryqa
@@ -85,6 +86,18 @@ def main() -> int:
             )
         _print_run(f"mode={mode}", details, report, skipped)
         runs[mode] = {"details": details, "report": report, "skipped": skipped}
+        # M4 引用归因读数：从 details 的 attributions 聚合（调用级口径）
+        records = [
+            {"qid": d["qid"], "fed": a["fed"], "used_idx": set(a["used_idx"])}
+            for d in details
+            for a in d.get("attributions", [])
+        ]
+        if records:
+            stats = usage_stats(records)
+            print(f"\n----- mode={mode} 引用归因读数（调用级口径） -----")
+            for line in stats_lines(stats):
+                print(line)
+            runs[mode]["attribution"] = stats
 
     if "full" in runs and "retrieve" in runs:
         f, r = runs["full"]["report"], runs["retrieve"]["report"]
@@ -126,6 +139,10 @@ def main() -> int:
             lines.append("")
             lines.extend(run["report"].summary_lines())
             lines.append("")
+            if "attribution" in run:
+                lines.append("### 引用归因读数（调用级口径）")
+                lines.extend(stats_lines(run["attribution"]))
+                lines.append("")
         out_path = PROJECT_ROOT / args.out
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

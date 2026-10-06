@@ -119,7 +119,7 @@ uv run python scripts/run_trust_filter.py    # 全量 60000 条，约 16 秒
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(661, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(673, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）

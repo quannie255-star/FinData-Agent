@@ -19,6 +19,9 @@
 
 from __future__ import annotations
 
+import re
+
+from findata.finqa.attribution import extract_citations, match_citations
 from findata.finqa.baseline import (
     MAX_CHUNK_CHARS,
     extract_answer,
@@ -79,6 +82,38 @@ def build_answer_from_memory(q: Question, facts: str) -> list[dict[str, str]]:
     ]
 
 
+_FACT_PREFIX = re.compile(r"^【([^【】]+)】")
+
+
+def _facts_units(facts: str) -> tuple[list[tuple[str, str, int]], int]:
+    """把记忆清单切成可归因单元：带【doc·条款号】前缀的行。
+
+    无前缀行计为不可归因字符（不进使用率分母——摘要 prompt 已约束加前缀，
+    无前缀说明压缩环节违规，单独暴露它）。
+    """
+    units: list[tuple[str, str, int]] = []
+    unattributable = 0
+    for line in facts.splitlines():
+        m = _FACT_PREFIX.match(line.strip())
+        if m and "·" in m.group(1):
+            doc, _, header = m.group(1).partition("·")
+            units.append((doc.strip(), header.strip(), len(line)))
+        else:
+            unattributable += len(line)
+    return units, unattributable
+
+
+def _observe_facts(
+    attributions: list, replies: dict, units: list, purpose: str, reply: str
+) -> None:
+    """M4 记忆行级引用观测：判定/作答回复引用了哪些事实行。"""
+    used = match_citations(
+        extract_citations(reply), [(d, h) for d, h, _ in units]
+    )
+    attributions.append({"purpose": purpose, "fed": units, "used_idx": sorted(used)})
+    replies[purpose] = reply[:1200]
+
+
 def run_memoryqa(
     questions: list[Question],
     docs: dict[str, str],
@@ -110,6 +145,9 @@ def run_memoryqa(
             ledger.add(record)
             facts = reply.strip()
             rounds += 1
+        units, unattributable_chars = _facts_units(facts)
+        attributions: list[dict[str, object]] = []
+        replies: dict[str, str] = {}
         verdicts: dict[str, str] = {}
         if q.answer_format != "tf":
             for letter, text in sorted(q.options.items()):
@@ -118,6 +156,7 @@ def run_memoryqa(
                     build_judge_messages(q.question, letter, text, facts, q.format_label()),
                 )
                 ledger.add(record)
+                _observe_facts(attributions, replies, units, f"judge:{letter}", reply)
                 verdicts[letter] = extract_verdict(reply) or "UNCERTAIN"
         if q.answer_format == "multi":
             pred = assemble_multi(verdicts)
@@ -132,6 +171,7 @@ def run_memoryqa(
                 q.qid, "answer", build_answer_from_memory(q, facts)
             )
             ledger.add(record)
+            _observe_facts(attributions, replies, units, "answer", reply)
             pred = normalize_answer(extract_answer(reply), q.answer_format)
         prompt_sum = sum(r.prompt_tokens for r in ledger.records if r.qid == q.qid)
         completion_sum = sum(r.completion_tokens for r in ledger.records if r.qid == q.qid)
@@ -151,6 +191,10 @@ def run_memoryqa(
                 "pool_chars": pool_chars,
                 "memory_chars": len(facts),
                 "compression_ratio": round(pool_chars / max(len(facts), 1), 2),
+                "unattributable_chars": unattributable_chars,
+                "facts": facts[:1500],
+                "attributions": attributions,
+                "replies": replies,
                 "prompt_tokens": prompt_sum,
                 "completion_tokens": completion_sum,
             }

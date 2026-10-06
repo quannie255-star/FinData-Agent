@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 
+from findata.finqa.attribution import extract_citations, match_citations
 from findata.finqa.baseline import (
     MAX_CHUNK_CHARS,
     build_messages_from_chunks,
@@ -101,9 +102,27 @@ def run_isolate(
     ledger = TokenLedger()
     report = ScoreReport()
     details: list[dict[str, object]] = []
+
+    def _observe(attributions: list, replies: dict, purpose: str, reply: str, chunks):
+        """M4 引用观测：记录该次调用喂了什么、回复实际引用了什么。
+
+        只有匹配到在场片段的引用才记 used——不在场条款的引用（复述/幻觉）
+        不产生使用记录。
+        """
+        units = [(c.doc_id, c.header, len(c.text)) for c in chunks]
+        used = match_citations(
+            extract_citations(reply), [(d, h) for d, h, _ in units]
+        )
+        attributions.append(
+            {"purpose": purpose, "fed": units, "used_idx": sorted(used)}
+        )
+        replies[purpose] = reply[:1200]
+
     for q in questions[: limit or None]:
         verdicts: dict[str, str] = {}
         retried: dict[str, bool] = {}
+        attributions: list[dict[str, object]] = []
+        replies: dict[str, str] = {}
         prompt_sum = completion_sum = 0
         if q.answer_format != "tf":
             # tf 的选项只是「正确/错误」，无信息量——不逐选项判定
@@ -122,6 +141,7 @@ def run_isolate(
                 ledger.add(record)
                 prompt_sum += record.prompt_tokens
                 completion_sum += record.completion_tokens
+                _observe(attributions, replies, f"judge:{letter}", reply, chunks)
                 verdict = extract_verdict(reply) or "UNCERTAIN"
                 retried[letter] = False
                 if verdict == "UNCERTAIN":
@@ -145,6 +165,7 @@ def run_isolate(
                     ledger.add(record2)
                     prompt_sum += record2.prompt_tokens
                     completion_sum += record2.completion_tokens
+                    _observe(attributions, replies, f"judge:{letter}:retry", reply2, wider)
                     if extract_verdict(reply2).upper() == "TRUE":
                         verdict = "TRUE"
                     retried[letter] = True
@@ -168,6 +189,7 @@ def run_isolate(
             ledger.add(record)
             prompt_sum += record.prompt_tokens
             completion_sum += record.completion_tokens
+            _observe(attributions, replies, "answer", fallback_reply, chunks)
             pred = normalize_answer(extract_answer(fallback_reply), q.answer_format)
         ok = is_correct(pred, q.gold, q.answer_format)
         report.add(q.qid, q.domain, ok, prompt_sum, completion_sum)
@@ -182,6 +204,8 @@ def run_isolate(
                 "verdicts": verdicts,
                 "retried": retried,
                 "used_fallback": bool(fallback_reply),
+                "attributions": attributions,
+                "replies": replies,
                 "prompt_tokens": prompt_sum,
                 "completion_tokens": completion_sum,
             }
