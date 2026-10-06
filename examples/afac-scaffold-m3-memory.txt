@@ -1,0 +1,50 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-06T14:58:09
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（31 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：memory（k=6）；文档截断：无
+
+## mode=memory
+
+- ✗ reg_s_001 [multi] gold=AC pred=ABC | 6632+1357
+- ✓ reg_s_002 [mcq] gold=B pred=B | 4971+806
+- ✓ reg_s_003 [tf] gold=A pred=A | 3390+865
+- ✓ reg_s_004 [mcq] gold=C pred=C | 1635+274
+- ✗ reg_s_005 [multi] gold=AB pred=A | 5141+1367
+- ✓ reg_s_006 [mcq] gold=D pred=D | 5323+1632
+- ✓ reg_s_007 [tf] gold=A pred=A | 2186+585
+- ✓ reg_s_008 [mcq] gold=B pred=B | 4181+896
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 4532+1150
+- ✗ reg_s_010 [multi] gold=ABC pred=AC | 5511+1476
+- ✓ reg_s_011 [mcq] gold=B pred=B | 5479+1474
+- ✗ fin_s_001 [multi] gold=ABD pred=AB | 10381+1735
+- ✓ fin_s_002 [mcq] gold=B pred=B | 8670+1016
+- ✓ fin_s_003 [tf] gold=A pred=A | 6934+880
+- ✓ fin_s_004 [mcq] gold=C pred=C | 8704+1171
+- ✓ reg_s_012 [mcq] gold=A pred=A | 5144+1148
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 4646+685
+- ✓ reg_s_014 [tf] gold=A pred=A | 2800+761
+- ✗ reg_s_015 [multi] gold=ABD pred= | 8597+1936
+- ✓ reg_s_016 [mcq] gold=C pred=C | 4309+826
+- ✓ ins_s_001 [mcq] gold=B pred=B | 5230+899
+- ✓ ins_s_002 [mcq] gold=B pred=B | 6919+1383
+- ✓ ins_s_003 [tf] gold=A pred=A | 5007+937
+- ✗ ins_s_004 [multi] gold=AB pred=A | 8486+1890
+- ✗ ins_s_005 [multi] gold=ABD pred=AB | 8365+1890
+- ✓ reg_s_017 [mcq] gold=A pred=A | 4017+641
+- ✓ reg_s_018 [multi] gold=ABC pred=ABC | 5712+1521
+- ✓ reg_s_019 [mcq] gold=B pred=B | 2967+255
+- ✗ reg_s_020 [multi] gold=ABD pred=AD | 7337+1454
+- ✓ fin_s_005 [mcq] gold=B pred=B | 8185+654
+- ✓ fin_s_006 [multi] gold=ACD pred=ACD | 9424+1531
+
+题目数 31，正确 23，Accuracy 0.7419
+prompt_tokens 180815，completion_tokens 35095，total_tokens 215910
+TokenScore 0.9568（预算 5,000,000）
+FinalScore 73.2324 = 100 × 0.7419 × (0.7 + 0.3 × 0.9568)
+分域：
+  financial_reports: 5/6（83.33%），tokens 59,285
+  insurance: 3/5（60.00%），tokens 41,006
+  regulatory: 15/20（75.00%），tokens 115,619
+

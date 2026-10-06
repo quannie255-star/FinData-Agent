@@ -19,10 +19,11 @@ from pathlib import Path
 from findata.finqa import fixture as fx
 from findata.finqa.baseline import run_baseline
 from findata.finqa.isolate import run_isolate
+from findata.finqa.memory import run_memoryqa
 from findata.finqa.qwen import DecodingParams, QwenClient
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODES = ("full", "retrieve", "isolate", "both")
+MODES = ("full", "retrieve", "isolate", "memory", "both")
 
 
 def _print_run(title: str, details, report, skipped) -> None:
@@ -49,6 +50,9 @@ def main() -> int:
     parser.add_argument(
         "--k-option", type=int, default=4, help="隔离臂每选项片段数（M2.3 起默认 4）"
     )
+    parser.add_argument("--k-pool", type=int, default=10, help="记忆臂证据池片段数")
+    parser.add_argument("--batch", type=int, default=4, help="记忆臂每轮读入片段数")
+    parser.add_argument("--max-facts", type=int, default=400, help="记忆臂事实清单字数上限")
     parser.add_argument("--limit", type=int, default=0, help="只跑前 N 题（0=全部）")
     parser.add_argument("--max-doc-chars", type=int, default=0, help="文档截断上限（0=不截断）")
     parser.add_argument("--out", default=None, help="报告输出路径（txt）；同目录写同名 .json")
@@ -68,6 +72,11 @@ def main() -> int:
             details, ledger, report, skipped = run_isolate(
                 questions, docs, client, limit=args.limit,
                 k=args.k, k_total=args.k_total, k_option=args.k_option,
+            )
+        elif mode == "memory":
+            details, ledger, report, skipped = run_memoryqa(
+                questions, docs, client, limit=args.limit,
+                k_pool=args.k_pool, batch=args.batch, max_facts=args.max_facts,
             )
         else:
             details, ledger, report, skipped = run_baseline(
