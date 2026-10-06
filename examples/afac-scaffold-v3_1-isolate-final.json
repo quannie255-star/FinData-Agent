@@ -1,0 +1,693 @@
+{
+  "generated_at": "2026-10-06T14:09:10",
+  "model": "qwen-plus",
+  "params": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 20261005,
+    "max_tokens": 1024
+  },
+  "fixture": "eval/fixtures/afac_scaffold",
+  "mode": "isolate",
+  "k": 6,
+  "runs": {
+    "isolate": {
+      "report": {
+        "total": 31,
+        "correct": 31,
+        "accuracy": 1.0,
+        "prompt_tokens": 183031,
+        "completion_tokens": 10245,
+        "total_tokens": 193276,
+        "token_score": 0.9613448,
+        "final_score": 98.84034399999999
+      },
+      "skipped": [],
+      "details": [
+        {
+          "qid": "reg_s_001",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AC",
+          "pred": "AC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 5073,
+          "completion_tokens": 779
+        },
+        {
+          "qid": "reg_s_002",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4537,
+          "completion_tokens": 534
+        },
+        {
+          "qid": "reg_s_003",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "retried": {},
+          "used_fallback": true,
+          "prompt_tokens": 2659,
+          "completion_tokens": 42
+        },
+        {
+          "qid": "reg_s_004",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 1273,
+          "completion_tokens": 404
+        },
+        {
+          "qid": "reg_s_005",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "AB",
+          "pred": "AB",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3255,
+          "completion_tokens": 431
+        },
+        {
+          "qid": "reg_s_006",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "D",
+          "pred": "D",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3794,
+          "completion_tokens": 544
+        },
+        {
+          "qid": "reg_s_007",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "retried": {},
+          "used_fallback": true,
+          "prompt_tokens": 1386,
+          "completion_tokens": 36
+        },
+        {
+          "qid": "reg_s_008",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3228,
+          "completion_tokens": 286
+        },
+        {
+          "qid": "reg_s_009",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3623,
+          "completion_tokens": 402
+        },
+        {
+          "qid": "reg_s_010",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 2738,
+          "completion_tokens": 227
+        },
+        {
+          "qid": "reg_s_011",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3106,
+          "completion_tokens": 239
+        },
+        {
+          "qid": "fin_s_001",
+          "domain": "financial_reports",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15267,
+          "completion_tokens": 419
+        },
+        {
+          "qid": "fin_s_002",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15084,
+          "completion_tokens": 291
+        },
+        {
+          "qid": "fin_s_003",
+          "domain": "financial_reports",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "retried": {},
+          "used_fallback": true,
+          "prompt_tokens": 5768,
+          "completion_tokens": 111
+        },
+        {
+          "qid": "fin_s_004",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15673,
+          "completion_tokens": 430
+        },
+        {
+          "qid": "reg_s_012",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3768,
+          "completion_tokens": 307
+        },
+        {
+          "qid": "reg_s_013",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ACD",
+          "pred": "ACD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 4342,
+          "completion_tokens": 242
+        },
+        {
+          "qid": "reg_s_014",
+          "domain": "regulatory",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "retried": {},
+          "used_fallback": true,
+          "prompt_tokens": 1772,
+          "completion_tokens": 93
+        },
+        {
+          "qid": "reg_s_015",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 6604,
+          "completion_tokens": 225
+        },
+        {
+          "qid": "reg_s_016",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3581,
+          "completion_tokens": 177
+        },
+        {
+          "qid": "ins_s_001",
+          "domain": "insurance",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 6774,
+          "completion_tokens": 616
+        },
+        {
+          "qid": "ins_s_002",
+          "domain": "insurance",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 6554,
+          "completion_tokens": 405
+        },
+        {
+          "qid": "ins_s_003",
+          "domain": "insurance",
+          "answer_format": "tf",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {},
+          "retried": {},
+          "used_fallback": true,
+          "prompt_tokens": 5052,
+          "completion_tokens": 129
+        },
+        {
+          "qid": "ins_s_004",
+          "domain": "insurance",
+          "answer_format": "multi",
+          "gold": "AB",
+          "pred": "AB",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 6509,
+          "completion_tokens": 236
+        },
+        {
+          "qid": "ins_s_005",
+          "domain": "insurance",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 5122,
+          "completion_tokens": 298
+        },
+        {
+          "qid": "reg_s_017",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "A",
+          "pred": "A",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 2970,
+          "completion_tokens": 329
+        },
+        {
+          "qid": "reg_s_018",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3401,
+          "completion_tokens": 392
+        },
+        {
+          "qid": "reg_s_019",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 3076,
+          "completion_tokens": 162
+        },
+        {
+          "qid": "reg_s_020",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 6713,
+          "completion_tokens": 325
+        },
+        {
+          "qid": "fin_s_005",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15210,
+          "completion_tokens": 541
+        },
+        {
+          "qid": "fin_s_006",
+          "domain": "financial_reports",
+          "answer_format": "multi",
+          "gold": "ACD",
+          "pred": "ACD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "FALSE",
+            "C": "TRUE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "prompt_tokens": 15119,
+          "completion_tokens": 593
+        }
+      ]
+    }
+  }
+}

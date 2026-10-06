@@ -143,6 +143,40 @@ class TestRetrieveMany:
         assert ("strict_csrc_036", "第六条") in headers, "独董办法第六条未召回"
         assert all(c.doc_id in set(q1.doc_ids) for c in chunks), "A 榜限定失效"
 
+    def test_v3_wrong_fin_table_chunk_recalled(self):
+        # M2.4 验收：v3 错因是营收对比表块被散文词频挤出 top-4——
+        # 字段加权后表格块必须进 fin_s_001 选项 A 的 top-4
+        index, questions = self._index()
+        q = next(x for x in questions if x.qid == "fin_s_001")
+        chunks = index.retrieve_many(
+            [f"{q.question} {q.options['A']}"], k_per_query=4, total_cap=4,
+            doc_ids=q.doc_ids,
+        )
+        joined = "\n".join(c.text for c in chunks)
+        assert "803,964" in joined, "2025 年营收值未召回"
+        assert "777,102" in joined, "2024 年营收值未召回"
+
+    def test_preamble_chunks_excluded_from_index(self):
+        # M2.4 教训：前言/来源块的标题跟 query 高频词重合，字段加权后被顶进
+        # 召回挤掉真证据——前言块（含法规文档的 blockquote 发布信息）不进索引
+        index, questions = self._index()
+        assert all(not c.is_preamble for c in index.chunks)
+        assert all(c.header != "说明" for c in index.chunks)
+
+    def test_field_weight_zero_keeps_body_ranking(self):
+        # 字段权重关掉时应退回纯正文排序（对照口径，供调参时复核）
+        docs = fx.load_docs(FIXTURE_ROOT)
+        import findata.finqa.retrieval as R
+
+        old = R.FIELD_WEIGHT
+        R.FIELD_WEIGHT = 0.0
+        try:
+            index = R.BM25Index(R.chunk_docs(docs, max_chunk_chars=1200))
+            hits = index.retrieve("担保 资产负债率", k=2, doc_ids=["strict_csrc_035"])
+            assert hits and hits[0].header == "第四十七条"
+        finally:
+            R.FIELD_WEIGHT = old
+
     def test_tf_falls_back_to_single_query(self):
         index, questions = self._index()
         q3 = next(q for q in questions if q.qid == "reg_s_003")

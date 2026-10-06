@@ -103,6 +103,7 @@ def run_isolate(
     details: list[dict[str, object]] = []
     for q in questions[: limit or None]:
         verdicts: dict[str, str] = {}
+        retried: dict[str, bool] = {}
         prompt_sum = completion_sum = 0
         if q.answer_format != "tf":
             # tf 的选项只是「正确/错误」，无信息量——不逐选项判定
@@ -121,7 +122,33 @@ def run_isolate(
                 ledger.add(record)
                 prompt_sum += record.prompt_tokens
                 completion_sum += record.completion_tokens
-                verdicts[letter] = extract_verdict(reply) or "UNCERTAIN"
+                verdict = extract_verdict(reply) or "UNCERTAIN"
+                retried[letter] = False
+                if verdict == "UNCERTAIN":
+                    # M2.4 复审：证据加倍重判一次——只对不确定的选项付费。
+                    # 单向升级（只许 UNCERTAIN→TRUE）：更宽的证据可能补齐
+                    # 依据，也可能引入干扰——实测复审判 FALSE 是干扰所致
+                    # （v3.1 的 reg_s_001 选项 C），不许把不确定变成否决
+                    wider = index.retrieve_many(
+                        [f"{q.question} {text}"],
+                        k_per_query=k_option * 2, total_cap=k_option * 2,
+                        doc_ids=q.doc_ids or None,
+                    )
+                    reply2, record2 = client.chat(
+                        q.qid, f"judge:{letter}:retry",
+                        build_judge_messages(
+                            q.question, letter, text,
+                            "\n\n".join(c.block() for c in wider),
+                            q.format_label(),
+                        ),
+                    )
+                    ledger.add(record2)
+                    prompt_sum += record2.prompt_tokens
+                    completion_sum += record2.completion_tokens
+                    if extract_verdict(reply2).upper() == "TRUE":
+                        verdict = "TRUE"
+                    retried[letter] = True
+                verdicts[letter] = verdict
         if q.answer_format == "multi":
             pred = assemble_multi(verdicts)
         elif q.answer_format == "mcq":
@@ -153,6 +180,7 @@ def run_isolate(
                 "pred": pred,
                 "correct": ok,
                 "verdicts": verdicts,
+                "retried": retried,
                 "used_fallback": bool(fallback_reply),
                 "prompt_tokens": prompt_sum,
                 "completion_tokens": completion_sum,

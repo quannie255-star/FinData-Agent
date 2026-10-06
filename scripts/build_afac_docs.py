@@ -69,7 +69,9 @@ def to_markdown(doc_id: str, title: str, pdf_path: Path, pages: int) -> str:
     ]
     preamble = "\n".join(blocks[0][1]).strip()
     if preamble:
-        parts += ["", "## 说明", "", preamble]
+        # 发布信息/审议通过行是元数据不是条文：进顶部 blockquote（前言块），
+        # 检索层按 is_preamble 排除——写成 ## 节会被字段加权顶进召回（M2.4 教训）
+        parts += ["", f"> {preamble}"]
     for header, body in blocks[1:]:
         body_text = "".join(body).strip()  # 中文条文：行间无空格重组
         if not body_text:

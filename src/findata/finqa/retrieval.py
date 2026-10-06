@@ -29,6 +29,7 @@ class Chunk:
     doc_id: str
     header: str  # 形如「第四十七条」或文档标题（前言块）
     text: str  # header + 正文
+    is_preamble: bool = False  # 首个 ## 前的前言/来源说明块——不进检索索引
 
     def block(self) -> str:
         return f"【{self.doc_id} · {self.header}】\n{self.text}"
@@ -100,7 +101,7 @@ def chunk_docs(docs: dict[str, str], max_chunk_chars: int = 0) -> list[Chunk]:
                 blocks.append((line[3:].strip(), []))
             else:
                 blocks[-1][1].append(line)
-        for header, body in blocks:
+        for block_index, (header, body) in enumerate(blocks):
             body_text = "\n".join(body).strip()
             if not body_text:
                 continue
@@ -110,19 +111,58 @@ def chunk_docs(docs: dict[str, str], max_chunk_chars: int = 0) -> list[Chunk]:
             for i, piece in enumerate(pieces, start=1):
                 if len(pieces) > 1:
                     piece = f"（{i}/{len(pieces)}）\n{piece}"
-                chunks.append(Chunk(doc_id=doc_id, header=header, text=piece))
+                chunks.append(
+                    Chunk(
+                        doc_id=doc_id, header=header, text=piece,
+                        is_preamble=block_index == 0,
+                    )
+                )
     return chunks
 
 
+_SHORT_LABEL = re.compile(r"^[\u4e00-\u9fffA-Za-z0-9，、（）()\s%．.]{1,14}$")
+
+# 字段权重：v3 的失败证据是营收对比表块被「增长」等散文高频词挤出 top-4，
+# 而表格标签行（营业收入 / 2025 年）是低频高信号——正文统计压不过散文，
+# 需要独立字段通道抬一手
+FIELD_WEIGHT = 2.0
+
+
+def _field_tokens(chunk: Chunk) -> list[str]:
+    """字段通道：节标题 + 块内短标签行（表格指标名 / 年份行）。
+
+    与正文分开建索引再线性组合（BM25F 的形态）——若把加权 token 直接注入
+    正文语料，BM25 的长度归一化会反噬多标签块（实测：表格块不升反降）。
+    """
+    tokens = tokenize(chunk.header)
+    for line in chunk.text.splitlines():
+        stripped = line.strip()
+        if _SHORT_LABEL.match(stripped) and _CJK.search(stripped):
+            tokens.extend(tokenize(stripped))
+    return tokens
+
+
 class BM25Index:
-    """检索接口固定为 retrieve(query, k, doc_ids)；换实现只动这里。"""
+    """检索接口固定为 retrieve(query, k, doc_ids)；换实现只动这里。
+
+    前言/来源说明块不进索引（M2.4 教训：其标题与来源行跟 query 的高频词
+    重合，字段加权后被顶到 #1-#4，把真证据挤出召回——它们从来不是答题
+    证据）。整份文档只有前言块的极端情况保留索引，否则空索引不可用。
+    """
 
     def __init__(self, chunks: list[Chunk]) -> None:
         if not chunks:
             raise ValueError("chunk 列表为空，无法建索引")
-        self.chunks = chunks
-        self._corpus = [tokenize(c.text) for c in chunks]
-        self._bm25 = BM25Okapi(self._corpus)
+        indexed = [c for c in chunks if not c.is_preamble] or chunks
+        self.chunks = indexed
+        self._body_bm25 = BM25Okapi([tokenize(c.text) for c in indexed])
+        self._field_bm25 = BM25Okapi([_field_tokens(c) for c in indexed])
+
+    def _scores(self, query: str) -> list[float]:
+        toks = tokenize(query)
+        body = self._body_bm25.get_scores(toks)
+        field = self._field_bm25.get_scores(toks)
+        return [b + FIELD_WEIGHT * f for b, f in zip(body, field, strict=True)]
 
     def retrieve(
         self, query: str, k: int = 6, doc_ids: list[str] | None = None
@@ -136,7 +176,7 @@ class BM25Index:
         pool = list(pool)
         if not pool:
             return []
-        scores = self._bm25.get_scores(tokenize(query))
+        scores = self._scores(query)
         ranked = sorted(pool, key=lambda i: scores[i], reverse=True)
         return [self.chunks[i] for i in ranked[:k]]
 
@@ -164,7 +204,7 @@ class BM25Index:
             return []
         ranked_lists: list[list[int]] = []
         for query in queries:
-            scores = self._bm25.get_scores(tokenize(query))
+            scores = self._scores(query)
             ranked_lists.append(sorted(pool, key=lambda i: scores[i], reverse=True))
         seen: set[int] = set()
         merged: list[Chunk] = []

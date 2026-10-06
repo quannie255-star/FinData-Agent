@@ -76,7 +76,8 @@ class _ScriptedClient:
 
     def chat(self, qid, purpose, messages):
         self.calls.append((qid, purpose))
-        reply = self.replies.get((qid, purpose), "依据不足。\nVERDICT: UNCERTAIN")
+        # 默认 FALSE：不触发复审路径，让各用例聚焦自己的断言
+        reply = self.replies.get((qid, purpose), "依据不足。\nVERDICT: FALSE")
         usage = (50, 5) if purpose.startswith("judge") else (80, 8)
         return reply, CallRecord(
             qid=qid, purpose=purpose, model="fake",
@@ -122,6 +123,22 @@ class TestRunIsolate:
         # tf 选项无信息量：不逐选项判定，直接单次作答
         assert [p for _, p in client.calls] == ["answer"]
         assert details[0]["pred"] == "A"
+
+    def test_uncertain_retry_flips_verdict(self):
+        questions, docs = self._load()
+        q = next(x for x in questions if x.qid == "reg_s_002")  # mcq, gold B
+        client = _ScriptedClient({
+            ("reg_s_002", "judge:A"): "证据不足。\nVERDICT: UNCERTAIN",
+            ("reg_s_002", "judge:A:retry"): "复审加宽证据后：47 条不支持 A。\nVERDICT: FALSE",
+            ("reg_s_002", "judge:B"): "VERDICT: TRUE",
+        })
+        details, ledger, _report, _ = run_isolate([q], docs, client)
+        assert details[0]["pred"] == "B"
+        assert details[0]["retried"] == {"A": True, "B": False, "C": False, "D": False}
+        # 复审调用进台账（token 统计覆盖全过程，题面要求）
+        assert ("reg_s_002", "judge:A:retry") in client.calls
+        p, c, _t = ledger.totals()
+        assert p == 5 * 50 and c == 5 * 5
 
     def test_ledger_covers_all_calls(self):
         questions, docs = self._load()
