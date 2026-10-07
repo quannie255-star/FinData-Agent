@@ -67,9 +67,10 @@ class TestRealFixture:
         questions = fx.load_questions(FIXTURE_ROOT)
         docs = fx.load_docs(FIXTURE_ROOT)
         fx.check_docs(questions, docs)
-        assert len(questions) >= 20
+        assert len(questions) >= 50
         expected_docs = {
             "strict_csrc_035", "strict_csrc_023", "strict_csrc_036", "fin_rep_byd_2025",
+            "ins_pingan_ci_2015", "fc_lhxc_cb_2026", "res_dwzf_300059_2026q1",
         }
         assert set(docs) >= expected_docs
         # B 榜题（无 doc_ids）必须存在且证据字段仍指向真实文档

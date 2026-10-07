@@ -1,0 +1,88 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-07T23:28:56
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（50 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：isolate（k=6）；文档截断：无
+
+## mode=isolate
+
+- ✗ reg_s_001 [multi] gold=AC pred=A | 4526+718
+- ✓ reg_s_002 [mcq] gold=B pred=B | 2947+351
+- ✓ reg_s_003 [tf] gold=A pred=A | 2890+55
+- ✓ reg_s_004 [mcq] gold=C pred=C | 1273+322
+- ✓ reg_s_005 [multi] gold=AB pred=AB | 3163+467
+- ✓ reg_s_006 [mcq] gold=D pred=D | 2713+433
+- ✓ reg_s_007 [tf] gold=A pred=A | 1505+36
+- ✓ reg_s_008 [mcq] gold=B pred=B | 1879+249
+- ✓ reg_s_009 [multi] gold=ABD pred=ABD | 2773+421
+- ✓ reg_s_010 [multi] gold=ABC pred=ABC | 2586+244
+- ✓ reg_s_011 [mcq] gold=B pred=B | 1755+209
+- ✓ fin_s_001 [multi] gold=ABD pred=ABD | 15841+598
+- ✓ fin_s_002 [mcq] gold=B pred=B | 8696+369
+- ✓ fin_s_003 [tf] gold=A pred=A | 5768+111
+- ✗ fin_s_004 [mcq] gold=C pred= | 31354+915
+- ✓ reg_s_012 [mcq] gold=A pred=A | 2589+252
+- ✓ reg_s_013 [multi] gold=ACD pred=ACD | 2383+233
+- ✓ reg_s_014 [tf] gold=A pred=A | 1772+57
+- ✓ reg_s_015 [multi] gold=ABD pred=ABD | 4464+240
+- ✓ reg_s_016 [mcq] gold=C pred=C | 2201+177
+- ✓ ins_s_001 [mcq] gold=B pred=B | 5102+593
+- ✓ ins_s_002 [mcq] gold=B pred=B | 4902+324
+- ✓ ins_s_003 [tf] gold=A pred=A | 5328+109
+- ✓ ins_s_004 [multi] gold=AB pred=AB | 4483+229
+- ✓ ins_s_005 [multi] gold=ABD pred=ABD | 3671+306
+- ✓ reg_s_017 [mcq] gold=A pred=A | 1695+313
+- ✓ reg_s_018 [multi] gold=ABC pred=ABC | 2147+370
+- ✓ reg_s_019 [mcq] gold=B pred=B | 2062+165
+- ✓ reg_s_020 [multi] gold=ABD pred=ABD | 4696+376
+- ✓ fin_s_005 [mcq] gold=B pred=B | 22288+818
+- ✓ fin_s_006 [multi] gold=ACD pred=ACD | 8731+602
+- ✓ res_s_001 [mcq] gold=A pred=A | 8629+279
+- ✓ res_s_002 [mcq] gold=B pred=B | 10468+167
+- ✓ res_s_003 [tf] gold=A pred=A | 4476+108
+- ✓ res_s_004 [mcq] gold=A pred=A | 14080+1363
+- ✓ res_s_005 [multi] gold=ABD pred=ABD | 6929+258
+- ✓ fc_s_001 [mcq] gold=C pred=C | 7520+260
+- ✓ fc_s_002 [mcq] gold=D pred=D | 7520+315
+- ✓ fc_s_003 [tf] gold=A pred=A | 7407+64
+- ✓ fc_s_004 [multi] gold=ABC pred=ABC | 5479+232
+- ✓ fc_s_005 [mcq] gold=C pred=C | 7696+511
+- ✓ ins_s_006 [mcq] gold=B pred=B | 6822+331
+- ✓ ins_s_007 [multi] gold=ABD pred=ABD | 4898+453
+- ✓ fin_s_007 [mcq] gold=C pred=C | 8692+725
+- ✓ fin_s_008 [tf] gold=A pred=A | 5773+122
+- ✓ fin_s_009 [mcq] gold=C pred=C | 22312+684
+- ✓ reg_s_021 [mcq] gold=A pred=A | 2368+288
+- ✓ reg_s_022 [multi] gold=ABC pred=ABC | 2581+214
+- ✓ reg_s_023 [multi] gold=ABC pred=ABC | 1928+183
+- ✓ reg_s_024 [tf] gold=A pred=A | 3286+69
+
+题目数 50，正确 48，Accuracy 0.9600
+prompt_tokens 307047，completion_tokens 17288，total_tokens 324335
+TokenScore 0.9351（预算 5,000,000）
+FinalScore 94.1318 = 100 × 0.9600 × (0.7 + 0.3 × 0.9351)
+分域：
+  financial_contracts: 5/5（100.00%），tokens 37,004
+  financial_reports: 8/9（88.89%），tokens 134,399
+  insurance: 7/7（100.00%），tokens 37,551
+  regulatory: 23/24（95.83%），tokens 68,624
+  research: 5/5（100.00%），tokens 46,757
+
+### 引用归因读数（调用级口径）
+证据使用率：151/494（30.57%）
+浪费字符：263,311 / 358,165（73.52%）
+按喂入位次：
+  第 1 位：104/191（54%）
+  第 2 位：22/187（12%）
+  第 3 位：12/27（44%）
+  第 4 位：9/27（33%）
+  第 5 位：1/9（11%）
+  第 6 位：0/9（0%）
+  第 7 位：2/9（22%）
+  第 8 位：1/7（14%）
+  第 9 位：0/7（0%）
+  第 10 位：0/7（0%）
+  第 11 位：0/7（0%）
+  第 12 位：0/7（0%）
+

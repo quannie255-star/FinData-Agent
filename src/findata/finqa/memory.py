@@ -83,6 +83,20 @@ def build_answer_from_memory(q: Question, facts: str) -> list[dict[str, str]]:
 
 
 _FACT_PREFIX = re.compile(r"^【([^【】]+)】")
+_ARTICLE_HEADER = re.compile(r"^第[一二三四五六七八九十百千]+条$")
+_DIGIT = re.compile(r"\d")
+
+
+def _is_verbatim(header: str, text: str) -> bool:
+    """M3.1 分层判据：该片段是否进「逐字层」（不可逆信息，不参与压缩）。
+
+    法条（条款号标题）与高数字密度片段（表格/利率/费率）的数值与条款结构
+    是 M3 证明的最易被摘要丢失的部分——「加信息可逆、删信息不可逆」，
+    这类内容逐字保留，只压叙述。
+    """
+    if _ARTICLE_HEADER.match(header):
+        return True
+    return len(_DIGIT.findall(text)) / max(len(text), 1) >= 0.04
 
 
 def _facts_units(facts: str) -> tuple[list[tuple[str, str, int]], int]:
@@ -122,8 +136,16 @@ def run_memoryqa(
     k_pool: int = 10,
     batch: int = 4,
     max_facts: int = 400,
+    layered: bool = False,
+    verbatim_cap: int = 6,
 ) -> tuple[list[dict[str, object]], TokenLedger, ScoreReport, list[str]]:
-    """记忆臂作答；返回结构与 run_baseline/run_isolate 一致（skipped 恒为空）。"""
+    """记忆臂作答；返回结构与 run_baseline/run_isolate 一致（skipped 恒为空）。
+
+    layered=True 为 M3.1 分层压缩：证据池切成「逐字层」（法条与高数字密度
+    片段，原样进判定上下文）与「叙述层」（滚动摘要成事实清单）——判定
+    上下文 = 事实清单 + 逐字层，验证「数值/条款逐字保留、只压叙述」能否
+    换回 M3 丢掉的准确率。
+    """
     index = BM25Index(chunk_docs(docs, max_chunk_chars=MAX_CHUNK_CHARS))
     ledger = TokenLedger()
     report = ScoreReport()
@@ -133,11 +155,18 @@ def run_memoryqa(
             option_queries(q), k_per_query=6, total_cap=k_pool,
             doc_ids=q.doc_ids or None,
         )
+        if layered:
+            # 逐字层按检索位次取前 verbatim_cap 个符合判据的片段，其余进叙述层
+            verbatim = [c for c in pool if _is_verbatim(c.header, c.text)][:verbatim_cap]
+            kept = {id(c) for c in verbatim}
+            narrative = [c for c in pool if id(c) not in kept]
+        else:
+            verbatim, narrative = [], pool
         pool_chars = sum(len(c.text) for c in pool)
         facts = ""
         rounds = 0
-        for i in range(0, len(pool), batch):
-            blocks = [c.block() for c in pool[i : i + batch]]
+        for i in range(0, len(narrative), batch):
+            blocks = [c.block() for c in narrative[i : i + batch]]
             reply, record = client.chat(
                 q.qid, f"memorize:{rounds + 1}",
                 summarize_messages(q.question, facts, blocks, max_facts),
@@ -145,7 +174,17 @@ def run_memoryqa(
             ledger.add(record)
             facts = reply.strip()
             rounds += 1
+        if verbatim:
+            context_text = (
+                facts
+                + "\n\n【原文片段（数值/条款，逐字保留，不参与压缩）】\n"
+                + "\n\n".join(c.block() for c in verbatim)
+            )
+        else:
+            context_text = facts
         units, unattributable_chars = _facts_units(facts)
+        verbatim_units = [(c.doc_id, c.header, len(c.text)) for c in verbatim]
+        all_units = units + verbatim_units
         attributions: list[dict[str, object]] = []
         replies: dict[str, str] = {}
         verdicts: dict[str, str] = {}
@@ -153,10 +192,12 @@ def run_memoryqa(
             for letter, text in sorted(q.options.items()):
                 reply, record = client.chat(
                     q.qid, f"judge:{letter}",
-                    build_judge_messages(q.question, letter, text, facts, q.format_label()),
+                    build_judge_messages(
+                        q.question, letter, text, context_text, q.format_label()
+                    ),
                 )
                 ledger.add(record)
-                _observe_facts(attributions, replies, units, f"judge:{letter}", reply)
+                _observe_facts(attributions, replies, all_units, f"judge:{letter}", reply)
                 verdicts[letter] = extract_verdict(reply) or "UNCERTAIN"
         if q.answer_format == "multi":
             pred = assemble_multi(verdicts)
@@ -168,10 +209,10 @@ def run_memoryqa(
         if not pred:
             used_fallback = True
             reply, record = client.chat(
-                q.qid, "answer", build_answer_from_memory(q, facts)
+                q.qid, "answer", build_answer_from_memory(q, context_text)
             )
             ledger.add(record)
-            _observe_facts(attributions, replies, units, "answer", reply)
+            _observe_facts(attributions, replies, all_units, "answer", reply)
             pred = normalize_answer(extract_answer(reply), q.answer_format)
         prompt_sum = sum(r.prompt_tokens for r in ledger.records if r.qid == q.qid)
         completion_sum = sum(r.completion_tokens for r in ledger.records if r.qid == q.qid)
@@ -192,7 +233,9 @@ def run_memoryqa(
                 "memory_chars": len(facts),
                 "compression_ratio": round(pool_chars / max(len(facts), 1), 2),
                 "unattributable_chars": unattributable_chars,
-                "facts": facts[:1500],
+                "layered": layered,
+                "verbatim_count": len(verbatim),
+                "facts": context_text[:1500],
                 "attributions": attributions,
                 "replies": replies,
                 "prompt_tokens": prompt_sum,

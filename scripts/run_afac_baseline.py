@@ -54,6 +54,10 @@ def main() -> int:
     parser.add_argument("--k-pool", type=int, default=10, help="记忆臂证据池片段数")
     parser.add_argument("--batch", type=int, default=4, help="记忆臂每轮读入片段数")
     parser.add_argument("--max-facts", type=int, default=400, help="记忆臂事实清单字数上限")
+    parser.add_argument(
+        "--layered", action="store_true",
+        help="M3.1 分层压缩：数值/条款片段逐字保留，只压叙述",
+    )
     parser.add_argument("--limit", type=int, default=0, help="只跑前 N 题（0=全部）")
     parser.add_argument("--max-doc-chars", type=int, default=0, help="文档截断上限（0=不截断）")
     parser.add_argument("--out", default=None, help="报告输出路径（txt）；同目录写同名 .json")
@@ -78,6 +82,7 @@ def main() -> int:
             details, ledger, report, skipped = run_memoryqa(
                 questions, docs, client, limit=args.limit,
                 k_pool=args.k_pool, batch=args.batch, max_facts=args.max_facts,
+                layered=args.layered,
             )
         else:
             details, ledger, report, skipped = run_baseline(

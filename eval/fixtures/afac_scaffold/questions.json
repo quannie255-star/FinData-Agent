@@ -605,5 +605,366 @@
       {"doc_id": "fin_rep_byd_2025", "clause": "分季度归母净利润（Q4 9,285,849,000 最高，Q1 9,154,985,000）"},
       {"doc_id": "fin_rep_byd_2025", "clause": "分季度经营现金流（Q2 23,252,510,000 最高）"}
     ]
+  },
+  {
+    "qid": "res_s_001",
+    "domain": "research",
+    "split": "A",
+    "question": "根据东吴证券研究所对东方财富（300059）的这篇一季报点评，研报给予的投资评级为：",
+    "options": {
+      "A": "买入（维持）",
+      "B": "增持（维持）",
+      "C": "中性",
+      "D": "卖出"
+    },
+    "answer_format": "mcq",
+    "type": "研报结论核验",
+    "doc_ids": ["res_dwzf_300059_2026q1"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "res_dwzf_300059_2026q1", "clause": "评级：买入（维持）"}
+    ]
+  },
+  {
+    "qid": "res_s_002",
+    "domain": "research",
+    "split": "A",
+    "question": "根据研报的盈利预测与估值表，东方财富2026E（预测）营业总收入为：",
+    "options": {
+      "A": "16,068百万元",
+      "B": "19,435百万元",
+      "C": "22,966百万元",
+      "D": "27,471百万元"
+    },
+    "answer_format": "mcq",
+    "type": "预测数值定位（干扰项为 2025A/2027E/2028E）",
+    "doc_ids": ["res_dwzf_300059_2026q1"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "res_dwzf_300059_2026q1", "clause": "营业总收入 2026E 19,435 百万元"}
+    ]
+  },
+  {
+    "qid": "res_s_003",
+    "domain": "research",
+    "split": "A",
+    "question": "根据研报的盈利预测表，归母净利润从2024A到2028E逐年增长。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "预测趋势核验（9,610→12,085→15,559→18,886→23,040 百万元）",
+    "doc_ids": ["res_dwzf_300059_2026q1"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "res_dwzf_300059_2026q1", "clause": "归母净利润 2024A~2028E 逐年递增"}
+    ]
+  },
+  {
+    "qid": "res_s_004",
+    "domain": "research",
+    "split": "A",
+    "question": "根据研报，2026年一季度东方财富基金代销业务（金融电子商务服务）的营业收入同比变化为：",
+    "options": {
+      "A": "同比增长31%，至11亿元",
+      "B": "同比增长44%，至50亿元",
+      "C": "同比下降15%，至9亿元",
+      "D": "同比增长20%，至15亿元"
+    },
+    "answer_format": "mcq",
+    "type": "研报事实核验（干扰项含外部流传错误数字）",
+    "doc_ids": ["res_dwzf_300059_2026q1"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "res_dwzf_300059_2026q1", "clause": "基金代销收入同比+31%至11亿元"}
+    ]
+  },
+  {
+    "qid": "res_s_005",
+    "domain": "research",
+    "split": "B",
+    "question": "根据所提供文档，下列说法正确的有：",
+    "options": {
+      "A": "东吴证券研报对东方财富维持买入评级",
+      "B": "隆华新材本次发行的可转换公司债券期限为六年",
+      "C": "比亚迪2025年归属于上市公司股东的净利润较2024年实现增长",
+      "D": "独立董事原则上最多在三家境内上市公司担任独立董事"
+    },
+    "answer_format": "multi",
+    "type": "跨领域综合判断（B 榜口径：研报+合同+财报+法规四域盲检）",
+    "doc_ids": [],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "res_dwzf_300059_2026q1", "clause": "买入（维持）"},
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "债券期限六年"},
+      {"doc_id": "fin_rep_byd_2025", "clause": "归母净利润 -18.97%（下降，非增长）"},
+      {"doc_id": "strict_csrc_036", "clause": "第八条"}
+    ]
+  },
+  {
+    "qid": "fc_s_001",
+    "domain": "financial_contracts",
+    "split": "A",
+    "question": "根据募集说明书摘要，隆华新材本次发行的可转换公司债券的期限为：",
+    "options": {
+      "A": "三年",
+      "B": "五年",
+      "C": "六年",
+      "D": "十年"
+    },
+    "answer_format": "mcq",
+    "type": "债券基本条款定位",
+    "doc_ids": ["fc_lhxc_cb_2026"],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "债券期限：自发行之日起六年"}
+    ]
+  },
+  {
+    "qid": "fc_s_002",
+    "domain": "financial_contracts",
+    "split": "A",
+    "question": "根据募集说明书摘要，本次可转换公司债券第六年的票面利率为：",
+    "options": {
+      "A": "0.10%",
+      "B": "1.00%",
+      "C": "1.50%",
+      "D": "2.00%"
+    },
+    "answer_format": "mcq",
+    "type": "阶梯利率定位",
+    "doc_ids": ["fc_lhxc_cb_2026"],
+    "gold": "D",
+    "evidence": [
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "票面利率：第一年0.10%至第六年2.00%"}
+    ]
+  },
+  {
+    "qid": "fc_s_003",
+    "domain": "financial_contracts",
+    "split": "A",
+    "question": "根据募集说明书摘要，本次发行的可转换公司债券的初始转股价格为9.16元/股。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "转股价格核验",
+    "doc_ids": ["fc_lhxc_cb_2026"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "初始转股价格 9.16 元/股"}
+    ]
+  },
+  {
+    "qid": "fc_s_004",
+    "domain": "financial_contracts",
+    "split": "A",
+    "question": "根据募集说明书摘要，关于本次发行，下列说法正确的有：",
+    "options": {
+      "A": "发行总额为96,000万元",
+      "B": "可转换公司债券按面值发行，每张面值为人民币100元",
+      "C": "本次发行可转债的转股来源全部为新增股份",
+      "D": "本次发行的可转换公司债券期限为八年"
+    },
+    "answer_format": "multi",
+    "type": "发行要素综合判断",
+    "doc_ids": ["fc_lhxc_cb_2026"],
+    "gold": "ABC",
+    "evidence": [
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "发行总额 96,000 万元"},
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "每张面值 100 元"},
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "转股来源全部为新增股份"},
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "期限六年（非八年）"}
+    ]
+  },
+  {
+    "qid": "fc_s_005",
+    "domain": "financial_contracts",
+    "split": "A",
+    "question": "根据募集说明书摘要，本次可转换公司债券的转股期起算方式为：",
+    "options": {
+      "A": "自发行结束之日起即可转股",
+      "B": "自发行结束之日起满三个月后的第一个交易日起",
+      "C": "自发行结束之日起满六个月后的第一个交易日起",
+      "D": "自发行结束之日起满十二个月后的第一个交易日起"
+    },
+    "answer_format": "mcq",
+    "type": "转股期限判断（近似时限干扰）",
+    "doc_ids": ["fc_lhxc_cb_2026"],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "fc_lhxc_cb_2026", "clause": "转股期：发行结束之日起满六个月后的第一个交易日起"}
+    ]
+  },
+  {
+    "qid": "ins_s_006",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据条款，本附加险提供保障的特定轻度重疾（如早期恶性病变、原位癌等）共有：",
+    "options": {
+      "A": "5种",
+      "B": "8种",
+      "C": "12种",
+      "D": "45种"
+    },
+    "answer_format": "mcq",
+    "type": "保障范围定位（干扰项为重疾 45 种）",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "B",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "特定轻度重疾共 8 种；重大疾病共 45 种"}
+    ]
+  },
+  {
+    "qid": "ins_s_007",
+    "domain": "insurance",
+    "split": "A",
+    "question": "根据条款，下列说法正确的有：",
+    "options": {
+      "A": "给付重大疾病保险金后，主险合同基本保险金额等额减少，减少至零时主险合同终止",
+      "B": "给付特定轻度重疾保险金后，本附加险合同继续有效，基本保险金额不变",
+      "C": "等待期内因疾病确诊特定轻度重疾的，公司退还部分保险费并继续承保",
+      "D": "被保险人因意外伤害发生重大疾病或特定轻度重疾情形的，无等待期"
+    },
+    "answer_format": "multi",
+    "type": "条款机制综合判断",
+    "doc_ids": ["ins_pingan_ci_2015"],
+    "gold": "ABD",
+    "evidence": [
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 重大疾病保险金（主险保额等额减少）"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 特定轻度重疾保险金（合同继续有效）"},
+      {"doc_id": "ins_pingan_ci_2015", "clause": "1.1 等待期（退还现金价值并终止，非部分退费）"}
+    ]
+  },
+  {
+    "qid": "fin_s_007",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要，比亚迪2025年末归属于上市公司股东的净资产约为：",
+    "options": {
+      "A": "1,388.10亿元",
+      "B": "1,852.51亿元",
+      "C": "2,462.75亿元",
+      "D": "8,837.30亿元"
+    },
+    "answer_format": "mcq",
+    "type": "年报数值定位（干扰项为 2023/2024 净资产与 2025 总资产）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "归母净资产 246,274,606,000.00 元（+32.94%）"}
+    ]
+  },
+  {
+    "qid": "fin_s_008",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要，比亚迪2025年归属于上市公司股东的扣除非经常性损益的净利润较2024年出现下滑。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "年报数值判断（扣非口径 -20.38%）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "扣非净利润 -20.38%"}
+    ]
+  },
+  {
+    "qid": "fin_s_009",
+    "domain": "financial_reports",
+    "split": "A",
+    "question": "根据摘要，比亚迪2024年（上年）基本每股收益为：",
+    "options": {
+      "A": "3.44元/股",
+      "B": "3.58元/股",
+      "C": "4.61元/股",
+      "D": "15.31%"
+    },
+    "answer_format": "mcq",
+    "type": "年报数值定位（上年口径，干扰为 2023/2025 EPS 与 ROE）",
+    "doc_ids": ["fin_rep_byd_2025"],
+    "gold": "C",
+    "evidence": [
+      {"doc_id": "fin_rep_byd_2025", "clause": "基本每股收益 2024 年 4.61（2025 年 3.58、2023 年 3.44）"}
+    ]
+  },
+  {
+    "qid": "reg_s_021",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第八十四条，关于关联交易的表决，下列判断正确的是：",
+    "options": {
+      "A": "关联股东不应当参与投票表决，其所代表的有表决权的股份数不计入有效表决总数",
+      "B": "关联股东可以正常参与表决，仅需在决议中说明",
+      "C": "关联股东的表决权按二分之一计算",
+      "D": "关联交易事项一律无须提交股东会审议"
+    },
+    "answer_format": "mcq",
+    "type": "关联交易回避判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第八十四条"}
+    ]
+  },
+  {
+    "qid": "reg_s_022",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第四十条，公司股东承担的义务包括：",
+    "options": {
+      "A": "遵守法律、行政法规和本章程",
+      "B": "依其所认购的股份和入股方式缴纳股款",
+      "C": "除法律、法规规定的情形外，不得抽回其股本",
+      "D": "可以随时请求公司回购其持有的全部股份"
+    },
+    "answer_format": "multi",
+    "type": "股东义务清单判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "ABC",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第四十条（一）（二）（三）"}
+    ]
+  },
+  {
+    "qid": "reg_s_023",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司独立董事管理办法》第九条，有权提出独立董事候选人的主体包括：",
+    "options": {
+      "A": "上市公司董事会",
+      "B": "上市公司监事会",
+      "C": "单独或者合计持有上市公司已发行股份百分之一以上的股东",
+      "D": "单独持有上市公司已发行股份百分之零点五的股东"
+    },
+    "answer_format": "multi",
+    "type": "提名权主体判断（近似门槛干扰）",
+    "doc_ids": ["strict_csrc_036"],
+    "gold": "ABC",
+    "evidence": [
+      {"doc_id": "strict_csrc_036", "clause": "第九条（1% 提名门槛）"}
+    ]
+  },
+  {
+    "qid": "reg_s_024",
+    "domain": "regulatory",
+    "split": "A",
+    "question": "根据《上市公司章程指引》第八十五条，除公司处于危机等特殊情况外，非经股东会以特别决议批准，公司将不与董事、高级管理人员以外的人订立将公司全部或者重要业务的管理交予该人负责的合同。",
+    "options": {
+      "A": "正确",
+      "B": "错误"
+    },
+    "answer_format": "tf",
+    "type": "重要业务托管门槛判断",
+    "doc_ids": ["strict_csrc_035"],
+    "gold": "A",
+    "evidence": [
+      {"doc_id": "strict_csrc_035", "clause": "第八十五条"}
+    ]
   }
 ]

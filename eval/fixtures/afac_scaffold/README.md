@@ -1,82 +1,57 @@
-# AFAC 赛题四脚手架题集（开发用口径，v2）
+# AFAC 赛题四脚手架题集（开发用口径，v4）
 
 ## 这是什么
 
 官方评测数据未开放下载（比赛已收官），本目录是**自建脚手架题集**，
-用于 M1（harness + 评分器 + baseline）、M2（检索层 + B 榜盲检）的开发测试。
-**它不是官方评测集，跑出来的数字不得对外声称为评测成绩。**
+用于 M1-M5 全链（harness / 评分器 / 检索 / 判定 / 记忆 / 归因 / 配对验证）
+的开发测试。**它不是官方评测集，跑出来的数字不得对外声称为评测成绩。**
 
-## 口径声明（v2，2026-10-06）
+## 口径声明（v4，2026-10-07）
 
-- **规模**：20 题（regulatory 16 + financial_reports 4）、4 份文档、
-  其中 **4 题 B 榜口径**（`reg_s_010/011`、`fin_s_004`、`reg_s_015`——
-  不给 doc_ids，走检索臂全局盲检，含一道法规+财报跨域题）；
-- **文档来源**：
-  - `strict_csrc_035`：证监会《上市公司章程指引》（2023 修订）官方 PDF
-    **全文**（32.8K 字符 / 192 条文块，`scripts/build_afac_docs.py` 确定性
-    生成，锚点条文人工抽查）；
-  - `strict_csrc_036`：证监会令第220号《上市公司独立董事管理办法》官方
-    PDF **全文**（9.5K / 49 块，同上）；该办法已有 2025 修正版（令第227号），
-    以 220 号原文为准；
-  - `strict_csrc_023`：治理准则节选（第四十一条为题面逐字引用原文）；
-  - `fin_rep_byd_2025`：巨潮资讯网《比亚迪 2025 年年度报告摘要》官方 PDF
-    （6 页，披露 2026-03-28），近三年对比数据齐全；
+- **规模**：50 题 / 7 文档 / **五域全齐**（regulatory 24 / financial_reports 9 /
+  insurance 7 / financial_contracts 5 / research 5），其中 **7 题 B 榜口径**
+  （不给 doc_ids，含一道四域混合盲检 `res_s_005`）；
+- **文档来源**（全部官方公开 PDF 确定性提取）：
+  - `strict_csrc_035` 章程指引全文（32.8K/192 条文块）、`strict_csrc_036`
+    独董办法全文（9.5K）、`strict_csrc_023` 治理准则节选；
+  - `fin_rep_byd_2025` 比亚迪 2025 年报摘要（巨潮，近三年对比数据）；
+  - `ins_pingan_ci_2015` 平安附加平安福重疾条款（平安官网，16 页）；
+  - `fc_lhxc_cb_2026` 隆华新材可转债募集说明书摘要（巨潮，**193 页 / 163.6K
+    字符——本集首份真实长文档**，第X节/一、二、锚点 + 二级切分）；
+  - `res_dwzf_300059_2026q1` 东吴证券东方财富 2026 一季报点评
+    （东方财富研报库，4 页，含盈利预测表）；
   - 原始 PDF 均存 `data/raw/afac/`（gitignore），生成方式见各文档头部；
-- **题目来源**：`reg_s_001` 是赛题官方样例原题（标准答案 AC）；`fin_s_001`
-  复刻题面「比亚迪连续两年年报对比」题型（gold 由摘要数据算出）；
-  其余为自建，gold 均可由文档文本严格推出，`evidence` 记录锚点；
-- **已知出入（如实记录）**：① 官方样例选项 D 的「第77条」在 2023 版原文
-  对不上；② 官方样例 doc 集仅两份，v1 起把 036 加进该题 doc_ids 使选项 C
-  证据完备（独董办法第六条（六）（七）有确定性负面清单）；
-- **难度边界**：v2 已产生两臂分辨力（见下），但仍远易于真实赛题
-  （官方 baseline A 榜 49% / B 榜 13% 的口径不可比）。
+- **题目来源**：`reg_s_001` 为赛题官方样例原题；其余 49 题自建，gold 均由
+  文档文本严格推出（新启用的条款/数字先 grep 验证原文再出题），
+  `evidence` 记录锚点；
+- **难度边界**：五域全但 regulatory 占比仍高（48%）；长文档只有 1 份；
+  B 榜 7 道。距离真实赛题（A 榜 100 题 / B 榜 100 题盲检 + 86 文档）
+  仍有量级差距，读数不外推。
 
-## v2 读数（examples/afac-scaffold-v2-full-vs-retrieve.txt，qwen-plus）
+## v3 → v4 修订记录
 
-```
-full 臂（16 道 A 榜题）：16/16 = 100%，188,068 token
-retrieve 臂（全部 20 题）：18/20 = 90%，44,572 token
-共同 16 题：100% vs 90%，token 省 76%
-```
+- 新增 research / financial_contracts 两域（五域全齐）；
+- 新增首份 193 页真实长文档（募集说明书全文）；
+- 题量 31 → 50（+19：res 5 / fc 5 / reg 4 / ins 2 / fin 3）；
+- B 榜题 6 → 7（含四域混合盲检）。
 
-**两处错题（reg_s_001、reg_s_015）同根因**：多证据/跨域题单查询 k=6
-召回不足——模型只引到被召回的法规条款，财报/独董证据没进上下文，模型
-「片段中没有就判错」（行为诚实，不编造）。处置：M2.1 逐选项检索（官方
-推荐流程原文「根据题目和选项分别检索证据」），见 afac-track4 §7。
+## v0 → v3 修订记录（摘要）
 
-**M2.1 后读数**（v2.1，逐选项检索 + 轮转合并，`examples/afac-scaffold-v2_1-retrieve.txt`）：
-
-```
-retrieve 臂：19/20 = 95%（token 62,483，较单查询 +40%）
-reg_s_015 跨域翻正；reg_s_001 的 C 证据到位、但错误类型迁移为多选 D
-（上下文变大后跨选项干扰）→ M2.2 选项级证据隔离
-```
-
-## v1 → v2 修订记录
-
-- 法规文档从节选升级为**全文**（确定性脚本生成，修掉一个「条款号被剥出
-  标题」的 bug——锚点曾整体丢失）；
-- 新增 `fin_rep_byd_2025`（financial_reports 域第一份真实文档）；
-- 题量 11 → 20（fin_s_001~004 + reg_s_012~016），B 榜题 2 → 4。
-
-## v0 → v1 修订记录
-
-- 新增 `strict_csrc_036` 节选，`reg_s_001` doc_ids 扩至三文档（修 M1 发现
-  的「证据欠定」：双模型同错 C，定性为文档过薄而非模型失误）；
-- 题量 5 → 11，新增 2 道 B 榜口径题。
+- v1：+独董办法（修 reg_s_001 证据欠定），5 → 11 题；
+- v2：法规全文化 + 比亚迪摘要（跨域第一份财报），11 → 20 题；
+- v3：+平安重疾条款（insurance 域）+ 财报二级切分，20 → 31 题。
 
 ## 文件
 
 - `questions.json`：题目数组，字段对齐赛题题面 + `gold` + `evidence`；
-- `docs/<doc_id>.md`：文档文本，首行 `# <标题>`，`## 第X条` / `## 一、…`
-  分块（检索层的 chunk 以此为界）。
+- `docs/<doc_id>.md`：文档文本，首行 `# <标题>`，`## ` 分节。
 
 ## 复现
 
 ```bash
-# 两臂对照（全文直入 vs BM25 检索；含 B 榜盲检）
-uv run python scripts/run_afac_baseline.py --mode both \
-    --out examples/afac-scaffold-v2-full-vs-retrieve.txt
+uv run python scripts/run_afac_baseline.py --mode isolate --out examples/afac-v4-isolate-k4.txt
+uv run python scripts/run_afac_baseline.py --mode isolate --k-option 2 --out examples/afac-v4-isolate-k2.txt
+uv run python scripts/run_afac_baseline.py --mode memory --layered --out examples/afac-v4-memory-layered.txt
 ```
 
 需要 `.env` 里配置 `FINDATA_DASHSCOPE_API_KEY`（付费 API，不进 CI）。

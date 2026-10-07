@@ -153,7 +153,13 @@ class BM25Index:
     def __init__(self, chunks: list[Chunk]) -> None:
         if not chunks:
             raise ValueError("chunk 列表为空，无法建索引")
-        indexed = [c for c in chunks if not c.is_preamble] or chunks
+        indexed = [c for c in chunks if not c.is_preamble]
+        # v4 修的边界：整份文档没有任何 ## 分节时（如研报整文转换），
+        # 全文就是那一个「前言块」——若照常排除，该文档的受限检索池为空，
+        # 判定只能拿到「检索未命中」。只在该文档存在正文分节时才排除前言。
+        covered = {c.doc_id for c in indexed}
+        indexed += [c for c in chunks if c.is_preamble and c.doc_id not in covered]
+        indexed = indexed or chunks
         self.chunks = indexed
         self._body_bm25 = BM25Okapi([tokenize(c.text) for c in indexed])
         self._field_bm25 = BM25Okapi([_field_tokens(c) for c in indexed])

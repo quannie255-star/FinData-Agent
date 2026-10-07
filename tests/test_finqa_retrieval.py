@@ -158,10 +158,26 @@ class TestRetrieveMany:
 
     def test_preamble_chunks_excluded_from_index(self):
         # M2.4 教训：前言/来源块的标题跟 query 高频词重合，字段加权后被顶进
-        # 召回挤掉真证据——前言块（含法规文档的 blockquote 发布信息）不进索引
+        # 召回挤掉真证据——**有分节的文档**其前言块不进索引；无分节文档的
+        # 前言块是全文，保留（见下一条用例）
         index, questions = self._index()
-        assert all(not c.is_preamble for c in index.chunks)
+        multi_section_docs = {
+            c.doc_id for c in index.chunks if not c.is_preamble
+        }
+        stray = [
+            c for c in index.chunks
+            if c.is_preamble and c.doc_id in multi_section_docs
+        ]
+        assert not stray, f"有分节文档的前言块不应进索引：{[(c.doc_id, c.header) for c in stray]}"
         assert all(c.header != "说明" for c in index.chunks)
+
+    def test_single_section_doc_keeps_preamble_indexed(self):
+        # v4 修的边界：整份文档无 ## 分节（研报整文）时，唯一的前言块必须
+        # 保留索引——否则该文档的受限检索池为空，判定拿到「检索未命中」
+        docs = {"res": "# 某研报\n买入（维持）\n营业总收入 2026E 19,435 百万元"}
+        index = BM25Index(chunk_docs(docs))
+        hits = index.retrieve("2026E 营业总收入 预测", k=2, doc_ids=["res"])
+        assert hits, "无分节文档的受限检索不应为空"
 
     def test_field_weight_zero_keeps_body_ranking(self):
         # 字段权重关掉时应退回纯正文排序（对照口径，供调参时复核）
