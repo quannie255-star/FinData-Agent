@@ -98,8 +98,15 @@ class TestRetrieveMany:
     """M2.1 逐选项检索的验收：v2 两道错题缺失的证据必须能被召回（离线确定性）。"""
 
     def _index(self):
+        # 必须与生产同配置（含二级切分）——曾经漏掉 max_chunk_chars，
+        # 验收测试测的是另一套分块，表格块排名失真（v4 抓出的测试分叉）
+        from findata.finqa.baseline import MAX_CHUNK_CHARS
+
         docs = fx.load_docs(FIXTURE_ROOT)
-        return BM25Index(chunk_docs(docs)), fx.load_questions(FIXTURE_ROOT)
+        return (
+            BM25Index(chunk_docs(docs, max_chunk_chars=MAX_CHUNK_CHARS)),
+            fx.load_questions(FIXTURE_ROOT),
+        )
 
     def test_round_robin_not_first_query_dominant(self):
         # 两个查询各强命中不同文档时，合并结果必须两头都进，不被第一个查询占满
@@ -178,6 +185,26 @@ class TestRetrieveMany:
         index = BM25Index(chunk_docs(docs))
         hits = index.retrieve("2026E 营业总收入 预测", k=2, doc_ids=["res"])
         assert hits, "无分节文档的受限检索不应为空"
+
+    def test_two_stage_recalls_fin_table_for_b_split(self):
+        # v4 fin_s_004 病根：B 榜全局池里 193 页合同文档挤占财报表块——
+        # 两阶段（文档级粗筛 top-3）后，比亚迪营收表必须回到 top-4
+        index, questions = self._index()
+        q = next(x for x in questions if x.qid == "fin_s_004")
+        chunks = index.retrieve_many(
+            [f"{q.question} {q.options['C']}"], k_per_query=4, total_cap=4, docs_top=1
+        )
+        assert any("803,964" in c.text for c in chunks), "两阶段后营收表块仍未召回"
+
+    def test_doc_ids_override_docs_top(self):
+        # A 榜显式 doc_ids 优先于粗筛（docs_top 被忽略）
+        index, questions = self._index()
+        q = next(x for x in questions if x.qid == "reg_s_002")
+        chunks = index.retrieve_many(
+            [f"{q.question} {q.options['B']}"], k_per_query=4, total_cap=4,
+            doc_ids=q.doc_ids, docs_top=1,
+        )
+        assert all(c.doc_id in set(q.doc_ids) for c in chunks)
 
     def test_field_weight_zero_keeps_body_ranking(self):
         # 字段权重关掉时应退回纯正文排序（对照口径，供调参时复核）

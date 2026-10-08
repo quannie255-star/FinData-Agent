@@ -58,6 +58,13 @@ def main() -> int:
         "--layered", action="store_true",
         help="M3.1 分层压缩：数值/条款片段逐字保留，只压叙述",
     )
+    parser.add_argument(
+        "--docs-top", type=int, default=1,
+        help="B 榜两阶段检索的文档级粗筛数（默认 1，见 isolate.py 注释）",
+    )
+    parser.add_argument(
+        "--split", default=None, choices=("A", "B"), help="只跑指定 split 的题目（省复测成本）"
+    )
     parser.add_argument("--limit", type=int, default=0, help="只跑前 N 题（0=全部）")
     parser.add_argument("--max-doc-chars", type=int, default=0, help="文档截断上限（0=不截断）")
     parser.add_argument("--out", default=None, help="报告输出路径（txt）；同目录写同名 .json")
@@ -65,6 +72,8 @@ def main() -> int:
 
     root = PROJECT_ROOT / args.fixture
     questions = fx.load_questions(root)
+    if args.split:
+        questions = [q for q in questions if q.split == args.split]
     docs = fx.load_docs(root, max_chars=args.max_doc_chars)
     fx.check_docs(questions, docs)
 
@@ -77,6 +86,7 @@ def main() -> int:
             details, ledger, report, skipped = run_isolate(
                 questions, docs, client, limit=args.limit,
                 k=args.k, k_total=args.k_total, k_option=args.k_option,
+                docs_top=args.docs_top,
             )
         elif mode == "memory":
             details, ledger, report, skipped = run_memoryqa(

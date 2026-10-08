@@ -1,0 +1,1221 @@
+{
+  "generated_at": "2026-10-08T12:22:47",
+  "model": "qwen-plus",
+  "params": {
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "seed": 20261005,
+    "max_tokens": 1024
+  },
+  "fixture": "eval/fixtures/afac_scaffold",
+  "mode": "isolate",
+  "k": 6,
+  "runs": {
+    "isolate": {
+      "report": {
+        "total": 7,
+        "correct": 7,
+        "accuracy": 1.0,
+        "prompt_tokens": 78088,
+        "completion_tokens": 2556,
+        "total_tokens": 80644,
+        "token_score": 0.9838712,
+        "final_score": 99.516136
+      },
+      "skipped": [],
+      "details": [
+        {
+          "qid": "reg_s_010",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABC",
+          "pred": "ABC",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "TRUE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ],
+                [
+                  "strict_csrc_036",
+                  "第六条",
+                  623
+                ],
+                [
+                  "strict_csrc_036",
+                  "第九条",
+                  154
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第八十二条",
+                  359
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十一条",
+                  109
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十五条",
+                  71
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百条",
+                  1206
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第四十七条",
+                  282
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百七十九条",
+                  139
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十二条",
+                  359
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百七十八条",
+                  74
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第二十条",
+                  139
+                ],
+                [
+                  "strict_csrc_036",
+                  "第二十五条",
+                  291
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ],
+                [
+                  "strict_csrc_036",
+                  "第九条",
+                  154
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "【依据】《strict_csrc_036 · 第五条》明确规定：“上市公司独立董事占董事会成员的比例不得低于三分之一，且至少包括一名会计专业人士。”\n\nVERDICT: TRUE",
+            "judge:B": "【依据】《strict_csrc_035 · 第八十二条》第一款第（三）项明确规定：“下列事项由股东会以特别决议通过：……（三）本章程的修改；……”\n\nVERDICT: TRUE",
+            "judge:C": "依据【strict_csrc_035 · 第四十七条】第（四）项：“为资产负债率超过百分之七十的担保对象提供的担保”属于须经股东会审议通过的对外担保行为。  \nVERDICT: TRUE",
+            "judge:D": "【strict_csrc_036 · 第二十条】规定：“独立董事连续两次未能亲自出席董事会会议，也不委托其他独立董事代为出席的，董事会应当在该事实发生之日起三十日内提议召开股东大会解除该独立董事职务。”\n\n该条文明确将“解除职务”的程序设定为“董事会提议召开股东大会”，即需经股东大会决议方可解除，而非自动丧失资格；“自动丧失董事资格”无任何条文依据，且与“提议召开股东大会解除”这一法定程序相矛盾。\n\nVERDICT: FALSE"
+          },
+          "prompt_tokens": 3667,
+          "completion_tokens": 252
+        },
+        {
+          "qid": "reg_s_011",
+          "domain": "regulatory",
+          "answer_format": "mcq",
+          "gold": "B",
+          "pred": "B",
+          "correct": true,
+          "verdicts": {
+            "A": "FALSE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "FALSE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第八条",
+                  52
+                ],
+                [
+                  "strict_csrc_036",
+                  "第二条",
+                  126
+                ],
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第一百三十四条",
+                  112
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百三十六条",
+                  218
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百三十七条",
+                  218
+                ],
+                [
+                  "strict_csrc_035",
+                  "第七十二条",
+                  284
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第四十七条",
+                  282
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十二条",
+                  359
+                ],
+                [
+                  "strict_csrc_035",
+                  "第四十六条",
+                  517
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百七十八条",
+                  74
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第八十条",
+                  114
+                ],
+                [
+                  "strict_csrc_035",
+                  "第一百八十九条",
+                  109
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十二条",
+                  359
+                ],
+                [
+                  "strict_csrc_035",
+                  "第二十二条",
+                  262
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "依据【strict_csrc_036 · 第八条】：“独立董事原则上最多在三家境内上市公司担任独立董事……”\n\nVERDICT: FALSE",
+            "judge:B": "依据【strict_csrc_035 · 第一百三十四条】注释：“审计委员会成员应为三名以上，其中独立董事应过半数。”\n\nVERDICT: TRUE",
+            "judge:C": "依据【strict_csrc_035 · 第四十七条】第（五）项：“单笔担保额超过最近一期经审计净资产百分之十的担保”须经股东会审议通过。\n\n该条文明确设定的阈值为“百分之十”，而非“百分之五”；文档中无任何条款规定“百分之五”需股东会审议，亦无条款支持将该比例下调至5%。\n\nVERDICT: FALSE",
+            "judge:D": "【strict_csrc_035 · 第八十条】明确指出：“股东会作出普通决议，应当由出席股东会的股东所持表决权的过半数通过。”\n\nVERDICT: FALSE"
+          },
+          "prompt_tokens": 3130,
+          "completion_tokens": 206
+        },
+        {
+          "qid": "fin_s_004",
+          "domain": "financial_reports",
+          "answer_format": "mcq",
+          "gold": "C",
+          "pred": "C",
+          "correct": true,
+          "verdicts": {
+            "A": "UNCERTAIN",
+            "B": "UNCERTAIN",
+            "C": "FALSE",
+            "D": "UNCERTAIN"
+          },
+          "retried": {
+            "A": true,
+            "B": true,
+            "C": false,
+            "D": true
+          },
+          "used_fallback": true,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1305
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:A:retry",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1351
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "三、文件查阅地址",
+                  209
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1347
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "八、发行人所处行业情况",
+                  1297
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "一、一般性词语释义",
+                  1166
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1325
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1305
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:B:retry",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1351
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "三、文件查阅地址",
+                  209
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1347
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "八、发行人所处行业情况",
+                  1297
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、发行人主要业务情况",
+                  1358
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1325
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1305
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1302
+                ]
+              ],
+              "used_idx": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1305
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:D:retry",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1351
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "三、文件查阅地址",
+                  209
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1347
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "八、发行人所处行业情况",
+                  1297
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、发行人主要业务情况",
+                  1358
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "九、财务状况分析",
+                  1325
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "answer",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1305
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1302
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  1166
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "一、重要提示",
+                  277
+                ]
+              ],
+              "used_idx": [
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "文档中未提供比亚迪股份有限公司2025年营业收入的具体数值或可推算出该数值的足够信息（如营业收入增长率基数、同比增速对应的实际值等）。虽提及“2025年员工持股计划业绩考核要求为考核期内每年营业收入同比上一年度增长不低于10%”，但未披露2024年营业收入金额，亦无2025年营业收入的直接数据或间接计算路径。\n\nVERDICT: UNCERTAIN",
+            "judge:A:retry": "文档中未提供比亚迪股份有限公司2025年营业收入的具体数值。  \nVERDICT: UNCERTAIN",
+            "judge:B": "文档中未提供比亚迪股份有限公司2025年营业收入的具体数值，亦无任何关于2025年营业收入的金额、估算、同比增速基数或可推算依据（如“同比增长10%”所对应的2024年营收值未披露）。虽提及员工持股计划业绩考核要求为“每年营业收入同比上一年度增长不低于10%”，但该表述仅说明考核标准，未给出2025年实际营收数据或2024年营收基数，无法验证或推导出“7,771亿元”这一具体数值。\n\nVERDICT: UNCERTAIN",
+            "judge:B:retry": "文档中未提供比亚迪股份有限公司2025年营业收入的具体数值。所有检索片段中，仅提及“2025年员工持股计划业绩考核要求为考核期内每年营业收入同比上一年度增长不低于10%”，但未给出2025年或2024年营业收入的绝对金额；财务指标表中列示了“资产负债率”“扣除非经常性损益后净利润”“EBITDA全部债务比”“利息保障倍数”等，但**未包含营业收入数据**；债券信息、持股计划、高管增持等内容亦不涉及营业收入总额。\n\n因此，无法从所提供片段验证“7,771亿元”是否为比亚迪2025年营业收入。\n\nVERDICT: UNCERTAIN",
+            "judge:C": "依据：【fin_rep_byd_2025 · 二、公司基本情况】（2/4）表格中明确列示：“营业收入”项下“2025 年”数值为“803,964,958,000.00”元，即约803.96亿元。\n\nVERDICT: FALSE",
+            "judge:D": "文档片段中未提供比亚迪股份有限公司2025年营业收入的具体数值或可推算出该数值的足够信息（如营业收入增长率的基数、同比增速对应的实际值、或任何含营业收入金额的财务报表数据）。虽提及“2025年员工持股计划业绩考核要求为考核期内每年营业收入同比上一年度增长不低于10%”，但该表述仅为考核目标，未披露2025年实际营业收入金额或2024年营业收入基数，亦无其他表格或文字列示营业收入数据。\n\nVERDICT: UNCERTAIN",
+            "judge:D:retry": "文档中未提供比亚迪股份有限公司2025年营业收入的具体数值。所有提及的财务数据包括：资产负债率（70.74%）、扣除非经常性损益后净利润（2,944,570.00万元）、EBITDA全部债务比、利息保障倍数等，但**无任何一处列示或可推算出2025年营业收入总额**。选项D“13,345亿元”在全部检索片段中既未直接出现，也无法通过所给数据（如员工持股计划业绩考核要求“每年营业收入同比上一年度增长不低于10%”）反向推导得出——因缺乏2024年营业收入基数，该增长率无法支撑具体金额计算。\n\nVERDICT: UNCERTAIN",
+            "answer": "依据【fin_rep_byd_2025 · 二、公司基本情况】（3/4）中“（1）近三年主要会计数据和财务指标”表格，2025年营业收入为803,964,958,000.00元，即约8,040亿元。  \nANSWER: C"
+          },
+          "prompt_tokens": 42091,
+          "completion_tokens": 870
+        },
+        {
+          "qid": "reg_s_015",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  1166
+                ]
+              ],
+              "used_idx": [
+                0,
+                1
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第八条",
+                  52
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ],
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ],
+                [
+                  "strict_csrc_036",
+                  "第七条",
+                  201
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第四十九条",
+                  209
+                ],
+                [
+                  "strict_csrc_035",
+                  "第五十四条",
+                  429
+                ],
+                [
+                  "strict_csrc_035",
+                  "第五十二条",
+                  187
+                ],
+                [
+                  "strict_csrc_035",
+                  "第五十三条",
+                  221
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第八十三条",
+                  400
+                ],
+                [
+                  "strict_csrc_035",
+                  "第七十七条",
+                  418
+                ],
+                [
+                  "strict_csrc_035",
+                  "第九十五条",
+                  164
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十四条",
+                  113
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "依据文档【fin_rep_byd_2025 · 二、公司基本情况】（1/4）中“3、主要会计数据和财务指标”表格明确列示：“2025 年末总资产 883,729,883,000.00 元，2024 年末总资产 783,355,855,000.00 元，本年末比上年末增减 12.83%”。\n\nVERDICT: TRUE",
+            "judge:B": "【strict_csrc_036 · 第八条】明确规定：“独立董事原则上最多在三家境内上市公司担任独立董事，并应当确保有足够的时间和精力有效地履行独立董事的职责。”\n\nVERDICT: TRUE",
+            "judge:C": "【strict_csrc_035 · 第四十九条】规定：“有下列情形之一的，公司在事实发生之日起两个月以内召开临时股东会”。\n\n该条文明确将法定期限设定为“两个月以内”，而非“三个月以内”。\n\nVERDICT: FALSE",
+            "judge:D": "【strict_csrc_035 · 第八十三条】明确指出：“公司持有的本公司股份没有表决权，且该部分股份不计入出席股东会有表决权的股份总数。”\n\nVERDICT: TRUE"
+          },
+          "prompt_tokens": 5945,
+          "completion_tokens": 262
+        },
+        {
+          "qid": "ins_s_005",
+          "domain": "insurance",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "ins_pingan_ci_2015",
+                  "4.2 保险金申请",
+                  204
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "1.1 保险责任             在本附",
+                  1254
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "4.3 保险金的给付",
+                  525
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "3.3 效力中止与恢复       在本附加险合",
+                  220
+                ]
+              ],
+              "used_idx": [
+                1
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "ins_pingan_ci_2015",
+                  "5.1 犹豫期               自您",
+                  221
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "5.2 您解除合同的手续及",
+                  224
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "3.3 效力中止与恢复       在本附加险合",
+                  220
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "3.1 保险费的支付         本附加险合",
+                  681
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "ins_pingan_ci_2015",
+                  "3.3 效力中止与恢复       在本附加险合",
+                  220
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "9.5 效力终止",
+                  51
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "9.2 合同生效             本附加",
+                  58
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "5.2 您解除合同的手续及",
+                  224
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_035",
+                  "第八十三条",
+                  400
+                ],
+                [
+                  "strict_csrc_035",
+                  "第七十七条",
+                  418
+                ],
+                [
+                  "strict_csrc_035",
+                  "第八十四条",
+                  113
+                ],
+                [
+                  "strict_csrc_035",
+                  "第九十五条",
+                  164
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "依据【ins_pingan_ci_2015 · 1.1 保险责任】中明确载明：“特定轻度重疾保险金：被保险人经医院确诊初次发生‘特定轻度重疾’但此前未发生‘重大疾病’，且确诊28 日后仍生存的，我们按照基本保险金额的20%给付特定轻度重疾保险金。”\n\nVERDICT: TRUE",
+            "judge:B": "【ins_pingan_ci_2015 · 5.1 犹豫期】：“自您签收本附加险合同次日起，有10 日的犹豫期。在此期间请您认真审视本附加险合同，如果您认为本附加险合同与您的需求不相符，您可以在此期间提出解除本附加险合同，我们将无息退还您所支付的全部保险费。”\n\nVERDICT: TRUE",
+            "judge:C": "依据【ins_pingan_ci_2015 · 3.3 效力中止与恢复】：“本附加险合同效力中止后2 年内，您可以申请恢复合同效力。”\n\n该条文明确限定申请复效的期限为“2 年内”，而选项C称“3年内可以申请恢复合同效力”，与文档明确规定的“2年内”相矛盾。\n\nVERDICT: FALSE",
+            "judge:D": "【依据】《strict_csrc_035 · 第八十三条》明确规定：“公司持有的本公司股份没有表决权，且该部分股份不计入出席股东会有表决权的股份总数。”\n\nVERDICT: TRUE"
+          },
+          "prompt_tokens": 4632,
+          "completion_tokens": 317
+        },
+        {
+          "qid": "reg_s_020",
+          "domain": "regulatory",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第七条",
+                  201
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十条",
+                  131
+                ],
+                [
+                  "strict_csrc_036",
+                  "第六条",
+                  623
+                ],
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "ins_pingan_ci_2015",
+                  "1.1 保险责任             在本附",
+                  1254
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "9.1 合同订立",
+                  48
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "4.2 保险金申请",
+                  204
+                ],
+                [
+                  "ins_pingan_ci_2015",
+                  "2.1 责任免除             因下列",
+                  399
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "fc_lhxc_cb_2026",
+                  "六、主要财务指标",
+                  1257
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "六、主要财务指标",
+                  1332
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "六、主要财务指标",
+                  611
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "四、净利润",
+                  311
+                ]
+              ],
+              "used_idx": [
+                0,
+                1,
+                2
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ],
+                [
+                  "strict_csrc_036",
+                  "第二十六条",
+                  296
+                ],
+                [
+                  "strict_csrc_036",
+                  "第二十九条",
+                  94
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "【strict_csrc_036 · 第七条】（四）具有五年以上履行独立董事职责所必需的法律、会计或者经济等工作经验；  \nVERDICT: TRUE",
+            "judge:B": "依据文档【ins_pingan_ci_2015 · 1.1 保险责任】：“从本附加险合同生效（或最后复效）之日起90 日内，被保险人因疾病发生下列情形之一的：（一）‘重大疾病’或‘特定轻度重疾’，（二）因导致‘重大疾病’或‘特定轻度重疾’的相关疾病就诊，我们不承担保险责任……这90 日的时间称为等待期；被保险人因意外伤害发生上述两项情形之一的，无等待期。”\n\nVERDICT: TRUE",
+            "judge:C": "依据文档中【fc_lhxc_cb_2026 · 六、主要财务指标】（1/3）表格数据：“归属于公司股东扣除非经常性损益后的净利润（万元）”在2025年度为13,064.35万元，2024年度为15,443.63万元，13,064.35 < 15,443.63，即2025年该指标较2024年下降。\n\nVERDICT: FALSE",
+            "judge:D": "【strict_csrc_036 · 第五条】明确指出：“上市公司应当在董事会中设置审计委员会。审计委员会成员应当为不在上市公司担任高级管理人员的董事，其中独立董事应当过半数……”\n\nVERDICT: TRUE"
+          },
+          "prompt_tokens": 6224,
+          "completion_tokens": 337
+        },
+        {
+          "qid": "res_s_005",
+          "domain": "research",
+          "answer_format": "multi",
+          "gold": "ABD",
+          "pred": "ABD",
+          "correct": true,
+          "verdicts": {
+            "A": "TRUE",
+            "B": "TRUE",
+            "C": "FALSE",
+            "D": "TRUE"
+          },
+          "retried": {
+            "A": false,
+            "B": false,
+            "C": false,
+            "D": false
+          },
+          "used_fallback": false,
+          "attributions": [
+            {
+              "purpose": "judge:A",
+              "fed": [
+                [
+                  "res_dwzf_300059_2026q1",
+                  "东吴证券点评：东方财富（300059）2026年一季报点评",
+                  1244
+                ],
+                [
+                  "res_dwzf_300059_2026q1",
+                  "东吴证券点评：东方财富（300059）2026年一季报点评",
+                  1272
+                ],
+                [
+                  "res_dwzf_300059_2026q1",
+                  "东吴证券点评：东方财富（300059）2026年一季报点评",
+                  1352
+                ],
+                [
+                  "res_dwzf_300059_2026q1",
+                  "东吴证券点评：东方财富（300059）2026年一季报点评",
+                  1418
+                ]
+              ],
+              "used_idx": [
+                0,
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "purpose": "judge:B",
+              "fed": [
+                [
+                  "fc_lhxc_cb_2026",
+                  "二、本次发行可转债的基本条款",
+                  1239
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "一、一般性词语释义",
+                  1166
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "一、本次发行的基本情况",
+                  1218
+                ],
+                [
+                  "fc_lhxc_cb_2026",
+                  "二、本次发行可转债的基本条款",
+                  1250
+                ]
+              ],
+              "used_idx": []
+            },
+            {
+              "purpose": "judge:C",
+              "fed": [
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1302
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1250
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "三、重要事项",
+                  850
+                ],
+                [
+                  "fin_rep_byd_2025",
+                  "二、公司基本情况",
+                  1243
+                ]
+              ],
+              "used_idx": [
+                0,
+                1,
+                3
+              ]
+            },
+            {
+              "purpose": "judge:D",
+              "fed": [
+                [
+                  "strict_csrc_036",
+                  "第八条",
+                  52
+                ],
+                [
+                  "strict_csrc_036",
+                  "第十一条",
+                  215
+                ],
+                [
+                  "strict_csrc_036",
+                  "第五条",
+                  194
+                ],
+                [
+                  "strict_csrc_036",
+                  "第七条",
+                  201
+                ]
+              ],
+              "used_idx": [
+                0
+              ]
+            }
+          ],
+          "replies": {
+            "judge:A": "依据：“我们看好公司不断巩固零售券商龙头地位，并借助金融AI 优势重构传统证券业务存量份额，维持‘买入’评级。”（出自【res_dwzf_300059_2026q1 · 东吴证券点评：东方财富（300059）2026年一季报点评】（1/4）末段“盈利预测与投资评级”部分）\n\nVERDICT: TRUE",
+            "judge:B": "依据：“（一）债券期限 本次发行的可转换公司债券的期限为自发行之日起六年。即自2026年9月29日（T日）至2032年9月28日……”\n\nVERDICT: TRUE",
+            "judge:C": "依据：【fin_rep_byd_2025 · 二、公司基本情况】（1/4）中“（1）近三年主要会计数据和财务指标”表格显示：“归属于上市公司股东的净利润”2025年为32,619,022,000.00元，2024年为40,254,346,000.00元，本年比上年增减为-18.97%。\n\nVERDICT: FALSE",
+            "judge:D": "【strict_csrc_036 · 第八条】明确规定：“独立董事原则上最多在三家境内上市公司担任独立董事，并应当确保有足够的时间和精力有效地履行独立董事的职责。”\n\nVERDICT: TRUE"
+          },
+          "prompt_tokens": 12399,
+          "completion_tokens": 312
+        }
+      ]
+    }
+  }
+}

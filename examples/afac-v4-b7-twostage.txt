@@ -1,0 +1,44 @@
+# AFAC 赛题四 M1/M2 报告（脚手架口径）
+
+生成时间：2026-10-08T12:18:29
+模型：qwen-plus（temperature=0.0, top_p=1.0, seed=20261005, max_tokens=1024）
+题集：eval/fixtures/afac_scaffold（7 题，自建脚手架，非官方评测集，数字不得对外声称为评测成绩）
+模式：isolate（k=6）；文档截断：无
+
+## mode=isolate
+
+- ✓ reg_s_010 [multi] gold=ABC pred=ABC | 6979+314
+- ✓ reg_s_011 [mcq] gold=B pred=B | 3779+230
+- ✗ fin_s_004 [mcq] gold=C pred= | 52888+1042
+- ✓ reg_s_015 [multi] gold=ABD pred=ABD | 7909+242
+- ✓ ins_s_005 [multi] gold=ABD pred=ABD | 6300+317
+- ✓ reg_s_020 [multi] gold=ABD pred=ABD | 8025+455
+- ✓ res_s_005 [multi] gold=ABD pred=ABD | 13487+314
+
+题目数 7，正确 6，Accuracy 0.8571
+prompt_tokens 99367，completion_tokens 2914，total_tokens 102281
+TokenScore 0.9795（预算 5,000,000）
+FinalScore 85.1883 = 100 × 0.8571 × (0.7 + 0.3 × 0.9795)
+分域：
+  financial_reports: 0/1（0.00%），tokens 53,930
+  insurance: 1/1（100.00%），tokens 6,617
+  regulatory: 4/4（100.00%），tokens 27,933
+  research: 1/1（100.00%），tokens 13,801
+
+### 引用归因读数（调用级口径）
+证据使用率：28/156（17.95%）
+浪费字符：102,886 / 120,499（85.38%）
+按喂入位次：
+  第 1 位：20/33（61%）
+  第 2 位：5/33（15%）
+  第 3 位：2/33（6%）
+  第 4 位：1/33（3%）
+  第 5 位：0/5（0%）
+  第 6 位：0/5（0%）
+  第 7 位：0/5（0%）
+  第 8 位：0/5（0%）
+  第 9 位：0/1（0%）
+  第 10 位：0/1（0%）
+  第 11 位：0/1（0%）
+  第 12 位：0/1（0%）
+

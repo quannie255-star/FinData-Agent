@@ -92,11 +92,16 @@ def run_isolate(
     k: int = 6,
     k_total: int = 12,
     k_option: int = 4,
+    docs_top: int = 1,
 ) -> tuple[list[dict[str, object]], TokenLedger, ScoreReport, list[str]]:
     """选项级隔离作答；返回结构与 run_baseline 一致（skipped 恒为空）。
 
     k_option 是每选项召回的片段数（M2.3：12 → 4——聚焦判定不需要大片池，
     token ×3.1 的主因就是它）；k_total 只作用于回退仲裁的合并检索。
+    B 榜题（无 doc_ids）启用两阶段检索：docs_top=1——每选项查询只进文档级
+    top-1（该选项的证据通常集中于一个文档；多文档题靠逐选项并集覆盖，
+    fin_s_004/reg_s_015/res_s_005 三题离线验证）。docs_top=3 会把合同
+    财报块放进第二级池，重新挤占目标表格。
     """
     index = BM25Index(chunk_docs(docs, max_chunk_chars=MAX_CHUNK_CHARS))
     ledger = TokenLedger()
@@ -130,6 +135,7 @@ def run_isolate(
                 chunks = index.retrieve_many(
                     [f"{q.question} {text}"], k_per_query=k_option, total_cap=k_option,
                     doc_ids=q.doc_ids or None,
+                    docs_top=0 if q.doc_ids else docs_top,
                 )
                 chunks_text = (
                     "\n\n".join(c.block() for c in chunks) or "（检索未命中任何片段）"
@@ -182,6 +188,7 @@ def run_isolate(
             chunks = index.retrieve_many(
                 option_queries(q), k_per_query=k, total_cap=max(k_total, 12),
                 doc_ids=q.doc_ids or None,
+                docs_top=0 if q.doc_ids else docs_top,
             )
             fallback_reply, record = client.chat(
                 q.qid, "answer", build_messages_from_chunks(q, chunks)

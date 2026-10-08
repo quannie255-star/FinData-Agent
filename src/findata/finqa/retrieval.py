@@ -170,6 +170,17 @@ class BM25Index:
         field = self._field_bm25.get_scores(toks)
         return [b + FIELD_WEIGHT * f for b, f in zip(body, field, strict=True)]
 
+    def doc_scores(self, query: str) -> dict[str, float]:
+        """文档级得分：该文档 top-3 片段得分之和（B 榜两阶段检索的粗筛信号）。"""
+        by_doc: dict[str, list[float]] = {}
+        for chunk, score in zip(self.chunks, self._scores(query), strict=True):
+            by_doc.setdefault(chunk.doc_id, []).append(score)
+        return {d: sum(sorted(ss, reverse=True)[:3]) for d, ss in by_doc.items()}
+
+    def _top_docs(self, query: str, docs_top: int) -> list[str]:
+        ranked = sorted(self.doc_scores(query).items(), key=lambda kv: kv[1], reverse=True)
+        return [doc_id for doc_id, _ in ranked[:docs_top]]
+
     def retrieve(
         self, query: str, k: int = 6, doc_ids: list[str] | None = None
     ) -> list[Chunk]:
@@ -192,12 +203,18 @@ class BM25Index:
         k_per_query: int,
         total_cap: int,
         doc_ids: list[str] | None = None,
+        docs_top: int = 0,
     ) -> list[Chunk]:
         """多查询合并检索（M2.1 逐选项）：轮转取各查询的高位命中，去重后截断。
 
         轮转而非按查询拼接：不让第一个查询的 k 个命中把名额占满——多证据题
         的证据散在不同查询里（v2 的 reg_s_001/015 就是单查询被单一域占满，
         第二域证据进不了上下文，模型只能诚实判错）。
+
+        docs_top > 0 时启用**两阶段**（B 榜）：每个查询先按文档级得分粗筛
+        top-N 文档，再在选中文档内做片段检索——治 v4 的 fin_s_004 病根：
+        193 页合同文档在全局池用片段级打分挤占了财报表格块。doc_ids 显式
+        给定时以它为准（A 榜限定强于粗筛），docs_top 被忽略。
         """
         if not queries:
             return []
@@ -210,8 +227,16 @@ class BM25Index:
             return []
         ranked_lists: list[list[int]] = []
         for query in queries:
+            pool_q = pool
+            if docs_top and not doc_ids:
+                allowed = set(self._top_docs(query, docs_top))
+                pool_q = [i for i in pool if self.chunks[i].doc_id in allowed]
+            if not pool_q:
+                continue
             scores = self._scores(query)
-            ranked_lists.append(sorted(pool, key=lambda i: scores[i], reverse=True))
+            ranked_lists.append(sorted(pool_q, key=lambda i: scores[i], reverse=True))
+        if not ranked_lists:
+            return []
         seen: set[int] = set()
         merged: list[Chunk] = []
         max_len = max(len(r) for r in ranked_lists)
