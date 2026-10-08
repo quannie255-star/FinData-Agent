@@ -1,0 +1,54 @@
+{
+  "label": "examples/finqa-cost-audit",
+  "inputs": {
+    "runs": "examples/finqa-cost-audit/runs-finqa-k4.jsonl",
+    "spans": "examples/finqa-cost-audit/spans-finqa-k4.jsonl",
+    "n_tasks": 50,
+    "n_tool_calls": 0,
+    "n_tool_spans": 0,
+    "n_distinct_trace_ids": 0,
+    "models": [
+      "qwen-plus"
+    ],
+    "semconv": "",
+    "gaps": [
+      "trace 里不含**系统提示**与模型的中间推理文本 ⇒ 重建的 `before` 缺系统提示（可能把「本就在系统提示里」的值误判成新信息），`after` 只含最终答复与后续调用参数（**会漏判**引用，方向单一）"
+    ],
+    "tool_list_match": "trace 里没有 tools_chars ⇒ 无法识别工具清单，定义侧提案未生成"
+  },
+  "reconstruct": {
+    "corpus_root": "",
+    "n_calls": 0,
+    "n_reconstructed_ok": 0,
+    "n_mismatch": 0,
+    "n_skipped_no_corpus_root": 0,
+    "n_skipped_unparsable_args": 0,
+    "n_skipped_has_native_fields": 0,
+    "coverage": 0.0,
+    "note": "重建 = 用 trace 里记录的参数重放工具，再把结果的字符数与记录的 payload_chars 对照。**对照通过的调用才进入字段级归因**；不一致或无参数的一律退出统计，不计分子也不计分母。",
+    "mismatch_examples": []
+  },
+  "chars_to_tokens": {
+    "n_turns": 0,
+    "total_prompt_tokens": 0,
+    "total_chars": 0,
+    "tokens_per_char": 0.0,
+    "median_tokens_per_char": 0.0,
+    "p10": 0.0,
+    "p90": 0.0,
+    "note": "分子是 provider usage 的 prompt_tokens（实测），分母是 messages_chars + tools_chars（本项目数的，确定性）。比值含 chat 模板与特殊 token 的开销，且随文本语言/代码占比变化，**用它换算出来的 token 是估算值，不许与实测 token 混用**。"
+  },
+  "tools": [],
+  "flows": [],
+  "proposals": [],
+  "saving_chars_upper_bound": 0,
+  "saving_tokens_est": 0,
+  "usd_per_mtok": 0.0,
+  "usd_est": null,
+  "verification": null,
+  "unobserved": [
+    "工具返回内容与字段级归因（未提供语料根，无法重建）",
+    "改后重跑的成功率（除非 §7 给出了对照）",
+    "重试造成的浪费（本 loop 不重试，`retry_count` 恒为 0 ⇒ 未观测）"
+  ]
+}
