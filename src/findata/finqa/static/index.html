@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Findata · 金融长文本智能问答系统</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --ink: #1c2330; --muted: #66707f;
+    --line: #e3e7ec; --accent: #2456d6; --ok: #177245; --bad: #b3261e;
+    --warn: #9a6700; --chip: #eef2fb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 18px 24px 0; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+  nav { display: flex; gap: 4px; }
+  nav button { border: none; background: none; padding: 10px 16px; font-size: 14px;
+               cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; }
+  nav button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  main { max-width: 980px; margin: 20px auto; padding: 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px 20px; margin-bottom: 16px; }
+  .chip { display: inline-block; background: var(--chip); color: var(--accent);
+          border-radius: 999px; padding: 1px 10px; font-size: 12px; margin-right: 6px; }
+  select, button.act { font: inherit; padding: 8px 14px; border-radius: 8px;
+          border: 1px solid var(--line); background: var(--card); }
+  button.act { background: var(--accent); color: #fff; border: none; cursor: pointer; }
+  button.act:disabled { opacity: .5; cursor: wait; }
+  .verdict { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0;
+             border-bottom: 1px dashed var(--line); }
+  .badge { min-width: 74px; text-align: center; border-radius: 6px; color: #fff;
+           font-size: 12px; padding: 2px 0; font-weight: 600; }
+  .TRUE { background: var(--ok); } .FALSE { background: var(--bad); }
+  .UNCERTAIN { background: var(--warn); }
+  .ans { font-size: 26px; font-weight: 700; letter-spacing: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar { height: 14px; background: var(--accent); border-radius: 3px; min-width: 2px; }
+  .barrow { display: grid; grid-template-columns: 170px 1fr 74px; gap: 10px;
+            align-items: center; margin: 5px 0; font-size: 13px; }
+  .muted { color: var(--muted); }
+  .hidden { display: none; }
+  .warnbox { background: #fff7e6; border: 1px solid #f0d9a8; border-radius: 8px;
+             padding: 10px 14px; font-size: 13px; color: #7a5b00; }
+  a { color: var(--accent); text-decoration: none; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Findata · 金融长文本智能问答系统</h1>
+  <div class="sub">检索（BM25F 双通道 + 两阶段）· 判定（选项级证据隔离）· 记忆（分层压缩）· 引用归因
+    ｜ 演示调用真实 Qwen API，不预置答案</div>
+  <nav>
+    <button data-tab="demo" class="on">在线演示</button>
+    <button data-tab="runs">运行归档</button>
+    <button data-tab="about">系统说明</button>
+  </nav>
+</header>
+<main>
+
+<section id="tab-demo">
+  <div class="card">
+    <div class="warnbox">⚠️ 点「开始作答」会发起<b>真实的 Qwen API 调用</b>（逐选项独立判定，
+      约 1–2 分钟、约数千 token）。题目来自自建五域评测集；标准答案不出后端——
+      作答依据（引用了哪些条款）随结果一并展示。</div>
+    <p style="margin:14px 0 8px">
+      <select id="qsel" style="min-width:70%"></select>
+      <button class="act" id="go">开始作答</button>
+    </p>
+    <div id="qtext" class="muted"></div>
+    <div id="qopts" style="margin-top:8px"></div>
+  </div>
+  <div class="card hidden" id="result">
+    <h2 style="font-size:16px;margin:0 0 8px">系统作答</h2>
+    <div>最终答案：<span class="ans" id="ans">—</span>
+      <span class="muted" id="ansmeta"></span></div>
+    <div id="verdicts" style="margin-top:10px"></div>
+    <h2 style="font-size:16px;margin:14px 0 6px">证据链（引用条款）</h2>
+    <div id="evidence" class="muted">（无）</div>
+    <div class="muted" id="tokens" style="margin-top:10px;font-size:13px"></div>
+  </div>
+</section>
+
+<section id="tab-runs" class="hidden">
+  <div class="card">
+    <h2 style="font-size:16px;margin:0 0 10px">运行归档（examples/，全部可复现）</h2>
+    <div id="runlist">加载中……</div>
+  </div>
+  <div class="card hidden" id="rundetail"></div>
+</section>
+
+<section id="tab-about" class="hidden">
+  <div class="card">
+    <h2 style="font-size:16px;margin-top:0">系统是什么</h2>
+    <p>金融长文档（法规 / 财报 / 保险条款 / 债券募集说明书 / 研报）问答系统，
+       四层全链：<b>检索</b>（条款级分块 + BM25F 双通道字段加权 + B 榜两阶段）→
+       <b>判定</b>（每个选项只用自己召回的证据独立三态判定，代码确定性拼装答案）→
+       <b>记忆</b>（朴素滚动摘要 / 分层压缩双臂）→
+       <b>归因</b>（引用观测：只统计匹配到在场内容的引用，防幻觉虚增）。</p>
+    <p class="muted">评测集：50 题 / 7 份官方原文文档（含 193 页募集说明书）/ 五域；685+ 例测试。
+      当前读数：隔离判定臂 98%–100%，token 全程台账。</p>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;margin-top:0">错题形态迭代链（核心资产）</h2>
+    <div id="chain"></div>
+    <p class="muted">每一环：错题形态 → 机制根因 → 修法 → 归档读数 → 回归测试。
+      另有三次「走错又折返」同样留档（长度归一化反噬 / 复审干扰 / 测试配置分叉）。</p>
+  </div>
+</section>
+
+</main>
+<script>
+const CHAIN = [
+  ["漏证据（跨域题漏选）", "单查询被单一文档占满", "逐选项检索"],
+  ["过包含（多选了干扰项）", "四选项同锅，互相干扰", "选项级证据隔离 + 三态判定"],
+  ["「陈述真 ≠ 该选」", "隔离判定的语义丢了题干集合边界", "判定标准改「应选入本题答案」"],
+  ["表格召回丢失", "散文高频词压制表格标签", "BM25F 双通道字段加权"],
+  ["B 榜挤占（长文档挤出证据）", "全局片段池被 193 页文档占据", "两阶段检索：文档级粗筛"],
+];
+const $ = (id) => document.getElementById(id);
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  ["demo", "runs", "about"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+  if (b.dataset.tab === "runs") loadRuns();
+});
+
+// ── 演示 ──
+let questions = [];
+fetch("/api/meta").then(r => r.json()).then(m => {
+  $("qsel").innerHTML = "<option value=''>加载中…</option>";
+});
+fetch("/api/questions").then(r => r.json()).then(qs => {
+  questions = qs;
+  $("qsel").innerHTML = qs.map(q =>
+    `<option value="${q.qid}">[${q.split}·${q.domain}] ${q.type || q.qid}</option>`).join("");
+  showQ();
+});
+$("qsel").onchange = showQ;
+function showQ() {
+  const q = questions.find(x => x.qid === $("qsel").value);
+  if (!q) return;
+  $("qtext").textContent = q.question;
+  $("qopts").innerHTML = Object.entries(q.options)
+    .map(([k, v]) => `<div><b>${k}.</b> ${v}</div>`).join("");
+  $("result").classList.add("hidden");
+}
+$("go").onclick = async () => {
+  const qid = $("qsel").value;
+  if (!qid) return;
+  $("go").disabled = true; $("go").textContent = "判定中…（约 1–2 分钟）";
+  $("result").classList.add("hidden");
+  try {
+    const r = await fetch("/api/answer/" + qid, {method: "POST"});
+    if (!r.ok) { alert((await r.json()).detail || "调用失败"); return; }
+    const d = await r.json();
+    renderResult(d);
+  } finally {
+    $("go").disabled = false; $("go").textContent = "开始作答";
+  }
+};
+function renderResult(d) {
+  $("ans").textContent = d.answer || "（空：判定均不确定且回退未解析）";
+  $("ansmeta").textContent = `｜ 模型 ${d.model} ｜ token ${d.tokens.total.toLocaleString()}` +
+    (d.used_fallback ? " ｜ 触发回退仲裁" : "");
+  $("verdicts").innerHTML = Object.entries(d.verdicts).map(([k, v]) =>
+    `<div class="verdict"><span class="badge ${v}">${v}</span><span>选项 ${k}</span></div>`).join("");
+  $("evidence").innerHTML = d.evidence.length
+    ? d.evidence.map(e => `<div>【${e.doc_id} · ${e.clause}】</div>`).join("")
+    : "（判定未引用在场条款）";
+  $("result").classList.remove("hidden");
+}
+
+// ── 运行归档 ──
+async function loadRuns() {
+  const runs = await (await fetch("/api/runs")).json();
+  runs.sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
+  $("runlist").innerHTML = "<table><tr><th>归档</th><th>臂</th><th class='num'>正确/总</th>" +
+    "<th class='num'>准确率</th><th class='num'>token</th></tr>" + runs.map(r =>
+    `<tr><td><a href="#" onclick="showRun('${r.file}');return false">${r.file.replace('.json','')}</a></td>` +
+    `<td>${r.mode}</td><td class='num'>${r.correct}/${r.total}</td>` +
+    `<td class='num'>${(r.accuracy * 100).toFixed(1)}%</td>` +
+    `<td class='num'>${(r.total_tokens || 0).toLocaleString()}</td></tr>`).join("") + "</table>";
+}
+async function showRun(file) {
+  const data = (await (await fetch("/api/runs/" + file)).json());
+  const mode = Object.keys(data.runs)[0];
+  const run = data.runs[mode];
+  const byRank = (run.attribution || {}).by_rank || {};
+  const maxRate = 1;
+  $("rundetail").innerHTML =
+    `<h2 style="font-size:16px;margin-top:0">${file}（${mode}）</h2>` +
+    `<p>准确率 <b>${(run.report.accuracy * 100).toFixed(1)}%</b>，` +
+    `token ${run.report.total_tokens.toLocaleString()}</p>` +
+    (Object.keys(byRank).length ? "<h2 style='font-size:15px'>证据使用率·按喂入位次</h2>" +
+      Object.entries(byRank).map(([rank, s]) =>
+        `<div class="barrow"><span>第 ${rank} 位</span>` +
+        `<div class="bar" style="width:${Math.max(s.rate / maxRate * 100, 1)}%"></div>` +
+        `<span class="muted">${(s.rate * 100).toFixed(0)}%</span></div>`).join("") : "") +
+    `<h2 style="font-size:15px;margin-top:14px">错题</h2>` +
+    (run.details.filter(d => !d.correct).map(d =>
+      `<div>✗ ${d.qid}｜gold=${d.gold}｜pred=${d.pred || "空"}</div>`).join("") ||
+      "<div class='muted'>无</div>");
+  $("rundetail").classList.remove("hidden");
+  $("rundetail").scrollIntoView({behavior: "smooth"});
+}
+
+// ── 说明 ──
+$("chain").innerHTML = CHAIN.map(([a, b, c]) =>
+  `<div class="verdict"><span class="chip">${a}</span><span class="muted">${b} → <b>${c}</b></span></div>`).join("");
+</script>
+</body>
+</html>
