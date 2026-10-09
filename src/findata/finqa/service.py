@@ -18,12 +18,14 @@ import json
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from findata.finqa import fixture as fx
 from findata.finqa.isolate import run_isolate
+from findata.finqa.personal import ask_free, convert_file, safe_stem
 from findata.finqa.qwen import QwenClient
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -31,7 +33,14 @@ FIXTURE_ROOT = PROJECT_ROOT / "eval" / "fixtures" / "afac_scaffold"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 RUNS_DIR = PROJECT_ROOT / "examples"
 
+# 个人文档库（用户私有数据，gitignore）：documents/ 原件，converted/ 转换后 markdown
+USERDATA_DIR = PROJECT_ROOT / "findata_userdata"
+USER_DOCS_DIR = USERDATA_DIR / "documents"
+USER_CONVERTED_DIR = USERDATA_DIR / "converted"
+UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024
+
 _RUN_NAME = re.compile(r"^[A-Za-z0-9._-]+\.json$")
+_DOC_ID = re.compile(r"^[A-Za-z0-9_\-\u4e00-\u9fff]{1,80}$")
 
 
 def build_client() -> QwenClient:
@@ -162,6 +171,105 @@ def run_detail(name: str) -> dict:
     if not path.exists():
         raise HTTPException(404, f"归档不存在：{name}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+# ── 个人文档库（自由问答；用户私有数据，findata_userdata/）──
+
+
+def _load_user_docs() -> dict[str, str]:
+    return {
+        p.stem: p.read_text(encoding="utf-8")
+        for p in sorted(USER_CONVERTED_DIR.glob("*.md"))
+    }
+
+
+@app.get("/api/library")
+def list_library() -> list[dict]:
+    USER_CONVERTED_DIR.mkdir(parents=True, exist_ok=True)
+    out = []
+    for path in sorted(USER_CONVERTED_DIR.glob("*.md")):
+        original = USER_DOCS_DIR / (path.stem + _original_suffix(path.stem))
+        out.append(
+            {
+                "doc_id": path.stem,
+                "chars": path.stat().st_size,
+                "has_original": original.exists(),
+            }
+        )
+    return out
+
+
+def _original_suffix(stem: str) -> str:
+    """找回原件扩展名（同一 stem 可能多格式，取先命中者）。"""
+    for suffix in (".pdf", ".docx", ".txt", ".md"):
+        if (USER_DOCS_DIR / (stem + suffix)).exists():
+            return suffix
+    return ""
+
+
+@app.post("/api/library/upload")
+def upload(file: Annotated[UploadFile, File()] = None) -> dict:
+    if file is None:
+        raise HTTPException(400, '缺少文件')
+
+    if not file.filename:
+        raise HTTPException(400, "缺少文件名")
+    stem = safe_stem(file.filename)
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in (".pdf", ".docx", ".txt", ".md"):
+        raise HTTPException(400, f"不支持的格式：{suffix}（支持 pdf/docx/txt/md）")
+    content = file.file.read()
+    if len(content) > UPLOAD_LIMIT_BYTES:
+        raise HTTPException(413, "文件超过 50MB 上限")
+    USER_DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    original = USER_DOCS_DIR / f"{stem}{suffix}"
+    original.write_bytes(content)
+    try:
+        converted = convert_file(original, USER_DOCS_DIR, USER_CONVERTED_DIR)
+    except ValueError as exc:
+        original.unlink(missing_ok=True)
+        raise HTTPException(400, str(exc)) from exc
+    return {
+        "doc_id": converted.stem,
+        "chars": converted.stat().st_size,
+        "status": "converted",
+    }
+
+
+@app.delete("/api/library/{doc_id}")
+def delete_doc(doc_id: str) -> dict:
+    if not _DOC_ID.match(doc_id):
+        raise HTTPException(400, "非法文档编号")
+    removed = []
+    converted = USER_CONVERTED_DIR / f"{doc_id}.md"
+    if converted.exists():
+        converted.unlink()
+        removed.append("converted")
+    original = USER_DOCS_DIR / (doc_id + _original_suffix(doc_id))
+    if original.exists():
+        original.unlink()
+        removed.append("original")
+    if not removed:
+        raise HTTPException(404, f"文档不存在：{doc_id}")
+    return {"doc_id": doc_id, "removed": removed}
+
+
+@app.post("/api/ask-free")
+def ask_free_endpoint(payload: dict) -> dict:
+    """自由问答：对个人文档库检索并作答（真实 Qwen 调用，约 10-30 秒）。"""
+    question = str(payload.get("question", "")).strip()
+    if not question:
+        raise HTTPException(400, "问题不能为空")
+    if len(question) > 2000:
+        raise HTTPException(400, "问题过长（上限 2000 字符）")
+    docs = _load_user_docs()
+    if not docs:
+        raise HTTPException(400, "文档库为空：先在「我的文档」上传文件")
+    try:
+        client = build_client()
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return ask_free(question, docs, client)
 
 
 def main() -> int:

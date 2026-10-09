@@ -3,7 +3,7 @@
 [![test](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/test.yml)
 [![release](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)](https://github.com/quannie255-star/FinData-Agent/actions/workflows/release.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-[![tests](https://img.shields.io/badge/tests-701-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-716-brightgreen)]()
 
 > **定位（2026-10-07）**：面向金融科技 / 大模型应用岗的**求职作品**。问题场景
 > 与评测口径借用 **AFAC2026 赛题四**（金融长文本 Agent 的动态记忆压缩与高效
@@ -12,8 +12,24 @@
 > 优化都有失败证据、根因分析和配对验证**（见下方迭代链）。
 
 **一句话**：从证监会法规到 193 页债券募集说明书，长金融文档问答 = 检索给证据、
-判定做裁决、记忆管成本；本系统四层全链自研（701 例测试），并在自建五域评测集上
+判定做裁决、记忆管成本；本系统四层全链自研（716 例测试），并在自建五域评测集上
 把「准确率 - token」曲线的每个拐点都归因到了具体机制。
+
+## 个人可用版：上传自己的文档，直接提问
+
+```bash
+uv sync                      # Python 3.11+；uv 安装见 uv 文档
+# 在 .env 写入 FINDATA_DASHSCOPE_API_KEY=...（阿里云百炼控制台获取）
+uv run findata-finqa-app     # 打开 http://127.0.0.1:8100
+```
+
+「**我的文档**」标签页：上传 PDF / Word(docx) / TXT / Markdown（≤50MB）→
+自动转换建索引 → 自由提问。答案只依据你的文档、带出处引用；文档里没有的
+会明说，不编造。文档仅存本机 `findata_userdata/`（gitignore），不进 git。
+
+⚠️ 如实边界：仅限本机使用（无鉴权，**不要暴露到公网**）；每次提问是真实
+API 调用（约数千 token，几分钱）；英文 10-K 检索弱于中文条款域（外部基准
+实测，见下）。
 
 ## 当前读数（自建五域评测集：50 题 / 7 文档 / 737K 字符官方原文，qwen-plus）
 
@@ -47,7 +63,7 @@ B 榜挤占（长文档挤掉目标域）    → 两阶段检索（文档级粗�
 线性组合）；复审批量翻错（改单向升级 UNCERTAIN→TRUE）；验收测试与生产配置
 分叉导致假通过（修测试对齐二级切分）。
 
-## 架构（`src/findata/finqa/`，701 例测试全绿）
+## 架构（`src/findata/finqa/`，716 例测试全绿）
 
 ```
 题面/评分     scoring.py    题面公式逐字实现（多选无部分分、TokenScore 截断）
@@ -142,7 +158,7 @@ uv run python scripts/run_trust_filter.py    # 全量 60000 条，约 16 秒
 ## 评测门禁（声明与代码一致的全部底气）
 
 ```
-CI: lint → pytest(701, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
+CI: lint → pytest(716, py3.11/3.12) → e2e smoke → eval-gate → ci-gate
 eval-gate = 语义 golden（5 case 数值钉死）
           + 归因质量下限（合成语料召回/精确/抑制 ≥0.9）
           + 真实回放 golden（2026-09-15 快照 9 case：根因/抑制/证据链逐条断言）

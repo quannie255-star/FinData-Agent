@@ -58,14 +58,42 @@
   <div class="sub">检索（BM25F 双通道 + 两阶段）· 判定（选项级证据隔离）· 记忆（分层压缩）· 引用归因
     ｜ 演示调用真实 Qwen API，不预置答案</div>
   <nav>
-    <button data-tab="demo" class="on">在线演示</button>
+    <button data-tab="mydocs" class="on">我的文档</button>
+    <button data-tab="demo">评测演示</button>
     <button data-tab="runs">运行归档</button>
     <button data-tab="about">系统说明</button>
   </nav>
 </header>
 <main>
 
-<section id="tab-demo">
+<section id="tab-mydocs">
+  <div class="card">
+    <h2 style="font-size:16px;margin:0 0 8px">我的文档库</h2>
+    <p class="muted" style="margin-top:0">上传你自己的 PDF / Word(docx) / TXT / Markdown
+      （≤50MB，仅存本机 <code>findata_userdata/</code>，不进 git），系统自动转换并建立检索索引。</p>
+    <input type="file" id="upfile" accept=".pdf,.docx,.txt,.md">
+    <button class="act" id="upbtn">上传</button>
+    <span id="upstatus" class="muted"></span>
+    <div id="liblist" style="margin-top:12px">加载中……</div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;margin:0 0 8px">向自己的文档提问</h2>
+    <textarea id="freeq" rows="3" style="width:100%;font:inherit;padding:8px"
+      placeholder="例如：这份文件里约定的违约金比例是多少？"></textarea>
+    <div style="margin-top:8px">
+      <button class="act" id="freego">提问</button>
+      <span class="muted">真实 Qwen 调用（约 10–30 秒）；只依据你的文档作答，没有依据会明说。</span>
+    </div>
+    <div id="freeresult" class="hidden" style="margin-top:12px">
+      <div style="font-size:17px;font-weight:600" id="freeans"></div>
+      <h2 style="font-size:14px;margin:12px 0 4px">出处</h2>
+      <div id="freecites" class="muted"></div>
+      <div class="muted" id="freetokens" style="margin-top:8px;font-size:13px"></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-demo" class="hidden">
   <div class="card">
     <div class="warnbox">⚠️ 点「开始作答」会发起<b>真实的 Qwen API 调用</b>（逐选项独立判定，
       约 1–2 分钟、约数千 token）。题目来自自建五域评测集；标准答案不出后端——
@@ -127,11 +155,62 @@ const CHAIN = [
 const $ = (id) => document.getElementById(id);
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
-  ["demo", "runs", "about"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
+  ["mydocs", "demo", "runs", "about"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
   if (b.dataset.tab === "runs") loadRuns();
+  if (b.dataset.tab === "mydocs") loadLib();
 });
 
-// ── 演示 ──
+// ── 我的文档 ──
+async function loadLib() {
+  const lib = await (await fetch("/api/library")).json();
+  $("liblist").innerHTML = lib.length
+    ? "<table><tr><th>文档</th><th class='num'>字符数</th><th></th></tr>" +
+      lib.map(x => `<tr><td>${x.doc_id}</td><td class='num'>${x.chars.toLocaleString()}</td>` +
+        `<td><a href="#" onclick="delDoc('${x.doc_id}');return false">删除</a></td></tr>`).join("") +
+      "</table>"
+    : "<span class='muted'>（空——先上传文件）</span>";
+}
+async function delDoc(id) {
+  await fetch("/api/library/" + encodeURIComponent(id), {method: "DELETE"});
+  loadLib();
+}
+$("upbtn").onclick = async () => {
+  const f = $("upfile").files[0];
+  if (!f) { $("upstatus").textContent = "先选择文件"; return; }
+  const fd = new FormData(); fd.append("file", f);
+  $("upbtn").disabled = true; $("upstatus").textContent = "上传并转换中……";
+  try {
+    const r = await fetch("/api/library/upload", {method: "POST", body: fd});
+    const d = await r.json();
+    $("upstatus").textContent = r.ok
+      ? `已转换：${d.doc_id}（${d.chars.toLocaleString()} 字符）`
+      : (d.detail || "失败");
+    if (r.ok) loadLib();
+  } finally { $("upbtn").disabled = false; }
+};
+$("freego").onclick = async () => {
+  const q = $("freeq").value.trim();
+  if (!q) return;
+  $("freego").disabled = true; $("freego").textContent = "检索并作答中…";
+  $("freeresult").classList.add("hidden");
+  try {
+    const r = await fetch("/api/ask-free", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({question: q}),
+    });
+    if (!r.ok) { alert((await r.json()).detail || "调用失败"); return; }
+    const d = await r.json();
+    $("freeans").textContent = d.answer;
+    $("freecites").innerHTML = d.citations.length
+      ? d.citations.map(c => `<div>【${c.doc_id} · ${c.section}】</div>`).join("")
+      : "（未引用具体章节）";
+    $("freetokens").textContent =
+      `token ${d.total_tokens.toLocaleString()}（检索片段 ${d.retrieved_sections} 段）`;
+    $("freeresult").classList.remove("hidden");
+  } finally { $("freego").disabled = false; $("freego").textContent = "提问"; }
+};
+
+// ── 评测演示 ──
 let questions = [];
 fetch("/api/meta").then(r => r.json()).then(m => {
   $("qsel").innerHTML = "<option value=''>加载中…</option>";

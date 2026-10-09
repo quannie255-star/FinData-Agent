@@ -40,3 +40,6 @@ Thumbs.db
 logs/*
 !logs/daily/
 reports/daily/
+
+# 个人文档库（用户私有数据，不入库）
+findata_userdata/
