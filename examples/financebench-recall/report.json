@@ -1,0 +1,934 @@
+{
+  "threshold": 0.8,
+  "evaluated": 99,
+  "skipped_no_doc": 51,
+  "skipped_no_evidence": 0,
+  "skipped_no_answer": 0,
+  "recall_at_k": {
+    "4": {
+      "hits": 5,
+      "evaluated": 99,
+      "rate": 0.0505
+    },
+    "8": {
+      "hits": 8,
+      "evaluated": 99,
+      "rate": 0.0808
+    },
+    "16": {
+      "hits": 13,
+      "evaluated": 99,
+      "rate": 0.1313
+    }
+  },
+  "answer_at_k": {
+    "4": {
+      "hits": 29,
+      "evaluated": 99,
+      "rate": 0.2929
+    },
+    "8": {
+      "hits": 33,
+      "evaluated": 99,
+      "rate": 0.3333
+    },
+    "16": {
+      "hits": 35,
+      "evaluated": 99,
+      "rate": 0.3535
+    }
+  },
+  "per_question": [
+    {
+      "financebench_id": "financebench_id_03029",
+      "doc_name": "3M_2018_10K",
+      "coverages": {
+        "4": 0.3023,
+        "8": 0.4419,
+        "16": 0.5023
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04672",
+      "doc_name": "3M_2018_10K",
+      "coverages": {
+        "4": 0.2347,
+        "8": 0.352,
+        "16": 0.4337
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00499",
+      "doc_name": "3M_2022_10K",
+      "coverages": {
+        "4": 0.198,
+        "8": 0.302,
+        "16": 0.3911
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01226",
+      "doc_name": "3M_2022_10K",
+      "coverages": {
+        "4": 0.4675,
+        "8": 0.5714,
+        "16": 0.7792
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01865",
+      "doc_name": "3M_2022_10K",
+      "coverages": {
+        "4": 0.6897,
+        "8": 0.931,
+        "16": 0.9655
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04735",
+      "doc_name": "ADOBE_2015_10K",
+      "coverages": {
+        "4": 0.1833,
+        "8": 0.267,
+        "16": 0.3462
+      }
+    },
+    {
+      "financebench_id": "financebench_id_07507",
+      "doc_name": "ADOBE_2016_10K",
+      "coverages": {
+        "4": 0.1198,
+        "8": 0.1889,
+        "16": 0.2673
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03856",
+      "doc_name": "ADOBE_2017_10K",
+      "coverages": {
+        "4": 0.2512,
+        "8": 0.4384,
+        "16": 0.6161
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00438",
+      "doc_name": "ADOBE_2022_10K",
+      "coverages": {
+        "4": 0.1717,
+        "8": 0.2323,
+        "16": 0.3434
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00591",
+      "doc_name": "ADOBE_2022_10K",
+      "coverages": {
+        "4": 0.1511,
+        "8": 0.1871,
+        "16": 0.2518
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01319",
+      "doc_name": "AES_2022_10K",
+      "coverages": {
+        "4": 0.5649,
+        "8": 0.6104,
+        "16": 0.7597
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00540",
+      "doc_name": "AES_2022_10K",
+      "coverages": {
+        "4": 0.3659,
+        "8": 0.5,
+        "16": 0.622
+      }
+    },
+    {
+      "financebench_id": "financebench_id_10420",
+      "doc_name": "AES_2022_10K",
+      "coverages": {
+        "4": 0.1944,
+        "8": 0.293,
+        "16": 0.3577
+      }
+    },
+    {
+      "financebench_id": "financebench_id_06655",
+      "doc_name": "AMAZON_2017_10K",
+      "coverages": {
+        "4": 0.293,
+        "8": 0.3555,
+        "16": 0.4727
+      }
+    },
+    {
+      "financebench_id": "financebench_id_08135",
+      "doc_name": "AMAZON_2017_10K",
+      "coverages": {
+        "4": 0.3462,
+        "8": 0.391,
+        "16": 0.4615
+      }
+    },
+    {
+      "financebench_id": "financebench_id_08286",
+      "doc_name": "AMAZON_2019_10K",
+      "coverages": {
+        "4": 0.3804,
+        "8": 0.411,
+        "16": 0.4663
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03882",
+      "doc_name": "AMCOR_2020_10K",
+      "coverages": {
+        "4": 0.2616,
+        "8": 0.436,
+        "16": 0.5233
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00799",
+      "doc_name": "AMCOR_2023_10K",
+      "coverages": {
+        "4": 0.2742,
+        "8": 0.3817,
+        "16": 0.4409
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01079",
+      "doc_name": "AMCOR_2023_10K",
+      "coverages": {
+        "4": 0.3769,
+        "8": 0.5154,
+        "16": 0.6077
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01148",
+      "doc_name": "AMCOR_2023_10K",
+      "coverages": {
+        "4": 0.5,
+        "8": 0.5909,
+        "16": 1.0
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00684",
+      "doc_name": "AMCOR_2023_10K",
+      "coverages": {
+        "4": 0.619,
+        "8": 0.7381,
+        "16": 0.7857
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00476",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.5349,
+        "8": 0.9767,
+        "16": 0.9767
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01028",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.1806,
+        "8": 0.25,
+        "16": 0.3889
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00723",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.1765,
+        "8": 0.2513,
+        "16": 0.4011
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00720",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.1925,
+        "8": 0.3209,
+        "16": 0.3743
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01351",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.234,
+        "8": 0.3457,
+        "16": 0.4149
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01964",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.288,
+        "8": 0.356,
+        "16": 0.4869
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01981",
+      "doc_name": "AMERICANEXPRESS_2022_10K",
+      "coverages": {
+        "4": 0.4545,
+        "8": 0.5455,
+        "16": 0.6364
+      }
+    },
+    {
+      "financebench_id": "financebench_id_05718",
+      "doc_name": "AMERICANWATERWORKS_2020_10K",
+      "coverages": {
+        "4": 0.2951,
+        "8": 0.5451,
+        "16": 0.8975
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04254",
+      "doc_name": "AMERICANWATERWORKS_2021_10K",
+      "coverages": {
+        "4": 0.4226,
+        "8": 0.6226,
+        "16": 0.6968
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00070",
+      "doc_name": "AMERICANWATERWORKS_2022_10K",
+      "coverages": {
+        "4": 0.2952,
+        "8": 0.3554,
+        "16": 0.5181
+      }
+    },
+    {
+      "financebench_id": "financebench_id_02608",
+      "doc_name": "BESTBUY_2017_10K",
+      "coverages": {
+        "4": 0.2,
+        "8": 0.2615,
+        "16": 0.2923
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04417",
+      "doc_name": "BESTBUY_2019_10K",
+      "coverages": {
+        "4": 0.1769,
+        "8": 0.2245,
+        "16": 0.2721
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00685",
+      "doc_name": "BESTBUY_2023_10K",
+      "coverages": {
+        "4": 0.2809,
+        "8": 0.3371,
+        "16": 0.7303
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01077",
+      "doc_name": "BESTBUY_2023_10K",
+      "coverages": {
+        "4": 0.4762,
+        "8": 0.8857,
+        "16": 0.9238
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01275",
+      "doc_name": "BESTBUY_2023_10K",
+      "coverages": {
+        "4": 0.3836,
+        "8": 0.4088,
+        "16": 0.434
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04660",
+      "doc_name": "BLOCK_2016_10K",
+      "coverages": {
+        "4": 0.2873,
+        "8": 0.3039,
+        "16": 0.4144
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03838",
+      "doc_name": "BLOCK_2020_10K",
+      "coverages": {
+        "4": 0.0829,
+        "8": 0.1122,
+        "16": 0.161
+      }
+    },
+    {
+      "financebench_id": "financebench_id_07661",
+      "doc_name": "BLOCK_2020_10K",
+      "coverages": {
+        "4": 0.2145,
+        "8": 0.2699,
+        "16": 0.2907
+      }
+    },
+    {
+      "financebench_id": "financebench_id_10285",
+      "doc_name": "BOEING_2018_10K",
+      "coverages": {
+        "4": 0.2917,
+        "8": 0.4115,
+        "16": 0.4896
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00517",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.2727,
+        "8": 0.5,
+        "16": 0.6061
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01091",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.3214,
+        "8": 0.5357,
+        "16": 0.9286
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00678",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.3649,
+        "8": 0.4054,
+        "16": 0.5
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01290",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.4815,
+        "8": 0.5926,
+        "16": 0.6296
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00464",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.15,
+        "8": 0.5,
+        "16": 0.55
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00494",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.5224,
+        "8": 0.6866,
+        "16": 0.806
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00585",
+      "doc_name": "BOEING_2022_10K",
+      "coverages": {
+        "4": 0.4918,
+        "8": 0.5984,
+        "16": 0.7951
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03473",
+      "doc_name": "COCACOLA_2017_10K",
+      "coverages": {
+        "4": 0.3253,
+        "8": 0.3904,
+        "16": 0.4384
+      }
+    },
+    {
+      "financebench_id": "financebench_id_09724",
+      "doc_name": "COCACOLA_2021_10K",
+      "coverages": {
+        "4": 0.4015,
+        "8": 0.5255,
+        "16": 0.5766
+      }
+    },
+    {
+      "financebench_id": "financebench_id_06272",
+      "doc_name": "COCACOLA_2022_10K",
+      "coverages": {
+        "4": 0.412,
+        "8": 0.4754,
+        "16": 0.6092
+      }
+    },
+    {
+      "financebench_id": "financebench_id_10130",
+      "doc_name": "CORNING_2020_10K",
+      "coverages": {
+        "4": 0.1632,
+        "8": 0.2176,
+        "16": 0.251
+      }
+    },
+    {
+      "financebench_id": "financebench_id_02981",
+      "doc_name": "CORNING_2021_10K",
+      "coverages": {
+        "4": 0.2857,
+        "8": 0.373,
+        "16": 0.4524
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01346",
+      "doc_name": "CORNING_2022_10K",
+      "coverages": {
+        "4": 0.5667,
+        "8": 0.6333,
+        "16": 0.6889
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00005",
+      "doc_name": "CORNING_2022_10K",
+      "coverages": {
+        "4": 0.4248,
+        "8": 0.4956,
+        "16": 0.5664
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04209",
+      "doc_name": "COSTCO_2021_10K",
+      "coverages": {
+        "4": 0.3018,
+        "8": 0.3964,
+        "16": 0.5148
+      }
+    },
+    {
+      "financebench_id": "financebench_id_05915",
+      "doc_name": "CVSHEALTH_2018_10K",
+      "coverages": {
+        "4": 0.054,
+        "8": 0.0755,
+        "16": 0.1151
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00790",
+      "doc_name": "CVSHEALTH_2022_10K",
+      "coverages": {
+        "4": 0.206,
+        "8": 0.2462,
+        "16": 0.3317
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01107",
+      "doc_name": "CVSHEALTH_2022_10K",
+      "coverages": {
+        "4": 0.36,
+        "8": 0.472,
+        "16": 0.552
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01244",
+      "doc_name": "CVSHEALTH_2022_10K",
+      "coverages": {
+        "4": 1.0,
+        "8": 1.0,
+        "16": 1.0
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04103",
+      "doc_name": "GENERALMILLS_2019_10K",
+      "coverages": {
+        "4": 0.2533,
+        "8": 0.2889,
+        "16": 0.4
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03471",
+      "doc_name": "GENERALMILLS_2020_10K",
+      "coverages": {
+        "4": 0.3129,
+        "8": 0.4082,
+        "16": 0.5102
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04854",
+      "doc_name": "GENERALMILLS_2020_10K",
+      "coverages": {
+        "4": 0.3488,
+        "8": 0.4233,
+        "16": 0.5256
+      }
+    },
+    {
+      "financebench_id": "financebench_id_10136",
+      "doc_name": "GENERALMILLS_2022_10K",
+      "coverages": {
+        "4": 0.2664,
+        "8": 0.3613,
+        "16": 0.4745
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00206",
+      "doc_name": "JPMORGAN_2022_10K",
+      "coverages": {
+        "4": 0.4133,
+        "8": 0.52,
+        "16": 0.5733
+      }
+    },
+    {
+      "financebench_id": "financebench_id_10499",
+      "doc_name": "KRAFTHEINZ_2019_10K",
+      "coverages": {
+        "4": 0.2852,
+        "8": 0.3438,
+        "16": 0.4023
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04412",
+      "doc_name": "LOCKHEEDMARTIN_2020_10K",
+      "coverages": {
+        "4": 0.219,
+        "8": 0.2893,
+        "16": 0.3512
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03031",
+      "doc_name": "LOCKHEEDMARTIN_2021_10K",
+      "coverages": {
+        "4": 0.3087,
+        "8": 0.4027,
+        "16": 0.4497
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03718",
+      "doc_name": "LOCKHEEDMARTIN_2022_10K",
+      "coverages": {
+        "4": 0.2624,
+        "8": 0.3475,
+        "16": 0.4539
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04171",
+      "doc_name": "MGMRESORTS_2018_10K",
+      "coverages": {
+        "4": 0.201,
+        "8": 0.2632,
+        "16": 0.3493
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03849",
+      "doc_name": "MGMRESORTS_2020_10K",
+      "coverages": {
+        "4": 0.106,
+        "8": 0.1559,
+        "16": 0.1996
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01254",
+      "doc_name": "MGMRESORTS_2022_10K",
+      "coverages": {
+        "4": 1.0,
+        "8": 1.0,
+        "16": 1.0
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04700",
+      "doc_name": "MICROSOFT_2016_10K",
+      "coverages": {
+        "4": 0.2581,
+        "8": 0.3613,
+        "16": 0.3935
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00552",
+      "doc_name": "MICROSOFT_2023_10K",
+      "coverages": {
+        "4": 0.1547,
+        "8": 0.221,
+        "16": 0.3094
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04458",
+      "doc_name": "NETFLIX_2015_10K",
+      "coverages": {
+        "4": 0.1526,
+        "8": 0.2507,
+        "16": 0.3351
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03282",
+      "doc_name": "NETFLIX_2017_10K",
+      "coverages": {
+        "4": 0.3543,
+        "8": 0.3714,
+        "16": 0.4457
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04302",
+      "doc_name": "NIKE_2018_10K",
+      "coverages": {
+        "4": 0.3772,
+        "8": 0.4474,
+        "16": 0.5088
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03531",
+      "doc_name": "NIKE_2019_10K",
+      "coverages": {
+        "4": 0.3901,
+        "8": 0.4894,
+        "16": 0.5745
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04080",
+      "doc_name": "NIKE_2021_10K",
+      "coverages": {
+        "4": 0.265,
+        "8": 0.3333,
+        "16": 0.4615
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01163",
+      "doc_name": "NIKE_2023_10K",
+      "coverages": {
+        "4": 0.2994,
+        "8": 0.3898,
+        "16": 0.4407
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00080",
+      "doc_name": "PAYPAL_2022_10K",
+      "coverages": {
+        "4": 0.1886,
+        "8": 0.3086,
+        "16": 0.4514
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04980",
+      "doc_name": "PEPSICO_2021_10K",
+      "coverages": {
+        "4": 0.3226,
+        "8": 0.4462,
+        "16": 0.5054
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01009",
+      "doc_name": "PEPSICO_2022_10K",
+      "coverages": {
+        "4": 0.2692,
+        "8": 0.3731,
+        "16": 0.4923
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00735",
+      "doc_name": "PEPSICO_2022_10K",
+      "coverages": {
+        "4": 0.9818,
+        "8": 0.9818,
+        "16": 1.0
+      }
+    },
+    {
+      "financebench_id": "financebench_id_01328",
+      "doc_name": "PEPSICO_2022_10K",
+      "coverages": {
+        "4": 0.5329,
+        "8": 0.7697,
+        "16": 0.8355
+      }
+    },
+    {
+      "financebench_id": "financebench_id_03620",
+      "doc_name": "PEPSICO_2022_10K",
+      "coverages": {
+        "4": 0.4926,
+        "8": 0.5294,
+        "16": 0.6581
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04481",
+      "doc_name": "PEPSICO_2022_10K",
+      "coverages": {
+        "4": 0.3346,
+        "8": 0.4007,
+        "16": 0.4963
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00302",
+      "doc_name": "PFIZER_2021_10K",
+      "coverages": {
+        "4": 0.2297,
+        "8": 0.3243,
+        "16": 0.3919
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00702",
+      "doc_name": "PFIZER_2021_10K",
+      "coverages": {
+        "4": 0.2266,
+        "8": 0.4688,
+        "16": 0.6953
+      }
+    },
+    {
+      "financebench_id": "financebench_id_02416",
+      "doc_name": "PFIZER_2021_10K",
+      "coverages": {
+        "4": 0.2977,
+        "8": 0.5349,
+        "16": 0.5907
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00746",
+      "doc_name": "ULTABEAUTY_2023_10K",
+      "coverages": {
+        "4": 0.9725,
+        "8": 0.9817,
+        "16": 0.9817
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00521",
+      "doc_name": "ULTABEAUTY_2023_10K",
+      "coverages": {
+        "4": 0.1494,
+        "8": 0.1954,
+        "16": 0.2586
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00859",
+      "doc_name": "VERIZON_2021_10K",
+      "coverages": {
+        "4": 0.8026,
+        "8": 0.8816,
+        "16": 0.9211
+      }
+    },
+    {
+      "financebench_id": "financebench_id_02024",
+      "doc_name": "VERIZON_2021_10K",
+      "coverages": {
+        "4": 0.3818,
+        "8": 0.4364,
+        "16": 0.5818
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00216",
+      "doc_name": "VERIZON_2022_10K",
+      "coverages": {
+        "4": 0.2014,
+        "8": 0.2518,
+        "16": 0.3813
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00215",
+      "doc_name": "VERIZON_2022_10K",
+      "coverages": {
+        "4": 0.2013,
+        "8": 0.2617,
+        "16": 0.349
+      }
+    },
+    {
+      "financebench_id": "financebench_id_00566",
+      "doc_name": "VERIZON_2022_10K",
+      "coverages": {
+        "4": 0.2966,
+        "8": 0.3898,
+        "16": 0.4407
+      }
+    },
+    {
+      "financebench_id": "financebench_id_06247",
+      "doc_name": "WALMART_2018_10K",
+      "coverages": {
+        "4": 0.2096,
+        "8": 0.2904,
+        "16": 0.3934
+      }
+    },
+    {
+      "financebench_id": "financebench_id_04784",
+      "doc_name": "WALMART_2019_10K",
+      "coverages": {
+        "4": 0.2041,
+        "8": 0.2449,
+        "16": 0.3878
+      }
+    },
+    {
+      "financebench_id": "financebench_id_06741",
+      "doc_name": "WALMART_2020_10K",
+      "coverages": {
+        "4": 0.2244,
+        "8": 0.3663,
+        "16": 0.4455
+      }
+    }
+  ]
+}

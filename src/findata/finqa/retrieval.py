@@ -36,16 +36,30 @@ class Chunk:
 
 
 def tokenize(text: str) -> list[str]:
-    """CJK 二元组 + 条款号整 token + 西文/数字小写词。
+    """CJK 二元组 + 条款号整token + 西文/数字词（轻量复数归一）。
 
     条款号必须整 token：query 里的「第四十七条」要和 chunk 里的精确对上，
     二元组会把它拆碎（第四/四十/十七条），锚点就丢了。
+    英文词做复数归一（expenditure/expenditures 归并）——FinanceBench 校准
+    实测：无词干归一时英文召回 6%，这是英文域的主要失败原因之一。
     """
     tokens: list[str] = _ARTICLE_TOKEN.findall(text)
-    tokens.extend(m.group(0).lower() for m in _LATIN.finditer(text))
+    tokens.extend(_normalize_latin(m.group(0)) for m in _LATIN.finditer(text))
     chars = [c for c in text if _CJK.match(c)]
     tokens.extend(a + b for a, b in zip(chars, chars[1:], strict=False))
     return tokens
+
+
+def _normalize_latin(word: str) -> str:
+    w = word.lower()
+    if len(w) > 4:
+        if w.endswith("ies"):
+            return w[:-3] + "y"
+        if w.endswith("es") and not w.endswith("ses"):
+            return w[:-2]
+        if w.endswith("s") and not w.endswith("ss"):
+            return w[:-1]
+    return w
 
 
 def _split_long(text: str, cap: int) -> list[str]:

@@ -1,0 +1,340 @@
+[
+  {
+    "doc_name": "3M_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "3M_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "3M_2023Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "ACTIVISIONBLIZZARD_2019_10K",
+    "status": "unknown_company"
+  },
+  {
+    "doc_name": "ADOBE_2015_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "ADOBE_2016_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "ADOBE_2017_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "ADOBE_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AES_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMAZON_2017_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMAZON_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMCOR_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMCOR_2022_8K_dated-2022-07-01",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "AMCOR_2023Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "AMCOR_2023Q4_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "AMCOR_2023_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMD_2015_10K",
+    "status": "mapping_unresolved",
+    "attempts": []
+  },
+  {
+    "doc_name": "AMD_2022_10K",
+    "status": "mapping_unresolved",
+    "attempts": []
+  },
+  {
+    "doc_name": "AMERICANEXPRESS_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMERICANWATERWORKS_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMERICANWATERWORKS_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "AMERICANWATERWORKS_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BESTBUY_2017_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BESTBUY_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BESTBUY_2023_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BESTBUY_2024Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "BLOCK_2016_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BLOCK_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BOEING_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "BOEING_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "COCACOLA_2017_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "COCACOLA_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "COCACOLA_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "CORNING_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "CORNING_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "CORNING_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "COSTCO_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "CVSHEALTH_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "CVSHEALTH_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "FOOTLOCKER_2022_8K_dated-2022-05-20",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "FOOTLOCKER_2022_8K_dated_2022-08-19",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "GENERALMILLS_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "GENERALMILLS_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "GENERALMILLS_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "JOHNSON_JOHNSON_2022Q4_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JOHNSON_JOHNSON_2022_10K",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JOHNSON_JOHNSON_2023Q2_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JOHNSON_JOHNSON_2023_8K_dated-2023-08-30",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JPMORGAN_2021Q1_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JPMORGAN_2022Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "JPMORGAN_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "JPMORGAN_2023Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "KRAFTHEINZ_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "LOCKHEEDMARTIN_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "LOCKHEEDMARTIN_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "LOCKHEEDMARTIN_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "MGMRESORTS_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "MGMRESORTS_2020_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "MGMRESORTS_2022Q4_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "MGMRESORTS_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "MGMRESORTS_2023Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "MICROSOFT_2016_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "MICROSOFT_2023_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NETFLIX_2015_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NETFLIX_2017_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NIKE_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NIKE_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NIKE_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "NIKE_2023_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "PAYPAL_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "PEPSICO_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "PEPSICO_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "PEPSICO_2023Q1_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "PEPSICO_2023_8K_dated-2023-05-05",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "PEPSICO_2023_8K_dated-2023-05-30",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "PFIZER_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "Pfizer_2023Q2_10Q",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "ULTABEAUTY_2023Q4_EARNINGS",
+    "status": "unsupported_form"
+  },
+  {
+    "doc_name": "ULTABEAUTY_2023_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "VERIZON_2021_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "VERIZON_2022_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "WALMART_2018_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "WALMART_2019_10K",
+    "status": "already_fetched"
+  },
+  {
+    "doc_name": "WALMART_2020_10K",
+    "status": "already_fetched"
+  }
+]

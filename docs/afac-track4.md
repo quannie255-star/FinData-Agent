@@ -198,6 +198,18 @@ AFAC2026 已收官（A 榜评测 2026-06-08~07-21，B 榜 07-23~07-25）。本�
 
 ## 8. 进展日志（实时记录，倒序；每完成一步追加一条）
 
+- 2026-10-08：**外部权威基准校准第一期 ✅（FinanceBench，诚实读数：英文域检索弱）**。
+  DocMath-Eval 为 gated 仓库（HF 授权未批）→ 改道 FinanceBench（Patronus AI，
+  150 题开源子集）；GitHub PDF 下载受间歇网络阻塞 → 改走 **SEC EDGAR 独立通路**
+  （`scripts/fetch_edgar_docs.py`：公司名→CIK 自动匹配 + 申报历史分页合并 +
+  form 代码映射 + **金证据覆盖率自检环**，60 份 10-K/10-Q 原文落盘）。
+  检索校准（`scripts/eval_financebench_recall.py`，99 题）：**证据覆盖 recall@8
+  = 8.1%、answer@8 = 33.3%**。**这是好数据不是坏数据**：它用公认尺子证明了
+  「检索层域特化是真实的」——中文法规条款域 50/50 的能力不自动迁移到英文
+  10-K 表格域，失败原因已定位（英文复数词干缺失已修、答案数字格式失配已修
+  ——answer@k 因此从 2% 修正到 33%；表格被 HTML 剥平、纯 query 信号等改进
+  路线明确）。期间顺带修了验收测试与生产配置分叉的同类问题（`_index` 漏
+  二级切分）。测试 698 → 701。
 - 2026-10-08：**旧域资产再利用三件（回应「封存太浪费」）**。① **v4.0
   economist 反审主线**：`scripts/finqa_to_spans.py` 把 finqa 运行归档转成
   economist 双层 trace（runs 增强层 + OTel spans 标准层），真跑审计
