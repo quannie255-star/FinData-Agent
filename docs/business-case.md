@@ -100,8 +100,8 @@ MuleSoft 官方原话：
 
 | 岗位 | 关键职责原文 | 出处 |
 | --- | --- | --- |
-| **Adobe · AI Context Engineer**（$114,100–$215,950/年） | "Develop memory mechanisms… including summarization, pruning, and **context compression** strategies"；"**Own optimization of cost, latency, and reliability**—balancing token limits, response time, and accuracy for production workloads"；"Establish and document best practices for context engineering, **contributing to standards adopted across the enterprise**" | Adobe 官方招聘 |
-| **滴滴 · AI Agent 工程师（研发效能）** | "**Harness 工程能力建设**：设计和实现 AI Agent 的 Harness，构建**标准化评测体系**，支持 Agent 的**自动评估、回归测试和持续优化**"；"RAG 与**上下文工程**建设…优化上下文注入策略"；加分项"**成本优化经验（Token 优化 / 推理优化）**" | 滴滴招聘官网 |
+| **Adobe · AI Context Engineer**（$114,100–$215,950/年） | "Develop memory mechanisms… including summarization, pruning, and **context compression** strategies"；"**Own optimization of cost, latency, and reliability**—balancing token limits, response time, and accuracy for production workloads"；"Establish and document best practices for context engineering, **contributing to standards adopted across the enterprise**" | Adobe 官方职位页 |
+| **滴滴 · AI Agent 工程师（研发效能）** | "**Harness 工程能力建设**：设计和实现 AI Agent 的 Harness，构建**标准化评测体系**，支持 Agent 的**自动评估、回归测试和持续优化**"；"RAG 与**上下文工程**建设…优化上下文注入策略"；加分项"**成本优化经验（Token 优化 / 推理优化）**" | 滴滴官网 |
 | **彩讯科技 · 智能体算法工程师（Context Engineering / Agent Runtime）** 15–25k 广州 | "设计并实现 **Context Builder** 核心模块，完成多源上下文的接入、筛选、排序、**裁剪**、压缩、摘要和组装"；"通过**上下文预算管理**、优先级策略和动态压缩机制，提升长任务场景下的上下文质量、稳定性与 **token 使用效率**" | 猎聘 |
 | 某通（鱼泡直聘） | "**性能与成本优化**：深入理解模型计费与上下文窗口的关系…优化 token 使用，**平衡性能与成本**"；"建立科学的评估体系，通过 **A/B 测试**、人工评估和自动化指标…" | 鱼泡直聘 |
 

@@ -4,7 +4,7 @@
 ------------------
 实测过一次翻车：README 里第 90 行写「353 例测试」、第 226 行写
 `pytest(351, ...)`，PITCH 里同时存在 341 / 351 / 353。**仓库自己跟自己
-矛盾**——面试官扫一眼就会问「连测试数都对不上，你的数据血缘怎么信？」
+矛盾**——扫一眼就会问「连测试数都对不上，你的数据血缘怎么信？」
 
 这类漂移不会让任何测试变红，所以必须专门钉一道。检查的是**当前状态**的
 说法是否自洽；CHANGELOG 与 docs/archive 是历史记录，数字本来就应该不同，
@@ -31,10 +31,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # 只扫"描述当前状态"的文档；历史记录类（CHANGELOG / archive / reviews）
 # 里的数字天然不同，扫它们只会得到假警报。
 #
-# `docs/interview-qa.md` 与 `docs/interview-qa-round2.md` 也**刻意不在**名单里：
-# 它们为了讲清"口径漂移是怎么被抓出来的"，必须引用 353 / 351 / 358 这些
-# **历史错数字**（比如 round2 的 Q12 就是"353 vs 351 哪个真"）。扫它们等于
-# 要求不问历史。代价是它们自己写的当前值不受本门禁保护，只能靠人。
+# 历史记录类与内部问答稿也不在名单里：它们为了讲清"口径漂移是怎么被抓出来的"，
+# 必须引用 353 / 351 / 358 这些**历史错数字**（比如"353 vs 351 哪个真"）。
+# 扫它们等于要求不问历史。代价是它们自己写的当前值不受本门禁保护，只能靠人。
 CURRENT_DOCS = ["README.md", "PITCH.md", "AGENTS.md", "docs/handoff.md", "docs/ROADMAP.md"]
 
 PATTERNS = [
@@ -71,7 +70,7 @@ def test_test_count_has_a_single_value_across_docs():
 
 
 def test_readme_and_pitch_agree_on_current_state():
-    """README 与 PITCH 是面试官最可能看的两个文件，单独再钉一次。"""
+    """README 与 PITCH 是最可能被先看到的两个文件，单独再钉一次。"""
     found = _declared_counts()
     readme = {n for _, n in found.get("README.md", [])}
     pitch = {n for _, n in found.get("PITCH.md", [])}

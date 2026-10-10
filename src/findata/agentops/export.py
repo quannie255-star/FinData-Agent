@@ -136,7 +136,7 @@ class SplitWriter:
             "by_verdict": dict(self.counts),
             "files": {v: VERDICT_FILES[v] for v in VERDICT_FILES},
             # ── 可复现三元组：代码 + 规则 + 数据 ──
-            # 缺任何一项，"这批样本是怎么筛出来的"就复现不了。面试被追问过
+            # 缺任何一项，"这批样本是怎么筛出来的"就复现不了。被追问过
             # 「规则更新后旧结果怎么复现」，光有 commit 不够——规则常量可能
             # 改了但没提交，落盘的样本照样与代码对不上号。
             "reproducibility": {
