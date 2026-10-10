@@ -4,16 +4,28 @@
 > 更新仓库描述"两项的现成材料都在这里。**所有对外发布动作由维护者执行**，
 > 本文件只准备材料。
 
-## 一、GitHub 仓库（复制即用）
+## 一、GitHub 仓库（**已于 2026-10-09 应用**，此处为现文案）
 
-**Description**（GitHub 仓库一句话，≤350 字符）：
+> 旧文案是三代前的老赛道版（「数据质量监控 Agent：7 类探针 + 规则/LLM 双归因器」），
+> 与 README 首页（金融长文本问答）打架，已按主线替换。**改这里时记得同步本文件。**
+
+**Description**（**目标值**，153 字符；GitHub 上限 350）：
+
+> ⚠️ **待同步（2026-10-10）**：线上 Description 仍是 2026-10-09 应用的那版
+> （其中写「766 例测试」）。本文件已更新计数为 791，**线上值需维护者重新 PATCH
+> 一次**（命令见下）。在同步前，"线上值"与仓库当前值（README = 791）不一致。
 
 ```text
-可信数据增强模块：挂到任何 Agent 上的四档可信徽章（✓ 已核验/✓ 基线通过/⚠️ 仅借鉴/✗ 不可用），MCP/HTTP trust 接口 + 任意数据表的带徽章报告（trust-report）+ A 股领域包（探针-归因-抑制-可信日报）。真实数据考试抑制 0/9 → 8/9，回放 golden 进 CI。
+金融长文本智能问答系统：检索·判定·记忆·归因四层全链（BM25F 逐选项检索 + 选项级证据隔离 + 分层记忆压缩 + 引用观测归因），自建五域评测集（法规/财报/保险/合同/研报，50 题含 193 页募集说明书），791 例测试。场景口径对齐 AFAC2026 赛题四公开题面，无参赛成绩/官方关联。
 ```
 
-**Topics**：`data-quality` `data-agent` `mcp` `mcp-server` `langgraph` `duckdb`
-`data-trust` `attribution` `chinese-stock` `evaluation`
+**Topics**（当前线上 12 个）：
+`finance` `fintech` `question-answering` `long-context` `memory-compression`
+`retrieval` `bm25` `llm-eval` `qwen` `python` `data-quality` `mcp`
+
+⚠️ **实现坑（实测）**：`topics` 挂在 `PATCH /repos/{owner}/{repo}` 上**会被静默忽略**
+（返回 200 但 topics 不变）；必须走专用端点 `PUT /repos/{owner}/{repo}/topics`，
+body 为 `{"names": [...]}`。description 用 PATCH 正常生效。
 
 ## 二、MCP Registry 登记（草稿）
 
