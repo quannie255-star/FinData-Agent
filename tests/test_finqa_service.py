@@ -36,6 +36,11 @@ def test_index_served(client):
     assert "金融长文本智能问答系统" in r.text
 
 
+def test_favicon_returns_204_not_404(client):
+    """favicon 无真图可给，但必须是 204 占位——404 会把访问日志刷屏。"""
+    assert client.get("/favicon.ico").status_code == 204
+
+
 def test_questions_hide_gold(client):
     questions = client.get("/api/questions").json()
     assert len(questions) >= 50

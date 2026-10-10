@@ -15,6 +15,7 @@ data/*.duckdb
 data/*.duckdb.wal
 data/raw/
 data/filtered/
+data/embed-cache/
 htmlcov/
 .coverage
 .pytest_cache/

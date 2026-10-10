@@ -3,148 +3,883 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>Findata · 金融长文本智能问答系统</title>
 <style>
+  /* ── 设计系统：色板 / 字体 / 圆角 / 阴影 ── */
   :root {
-    --bg: #f6f7f9; --card: #fff; --ink: #1c2330; --muted: #66707f;
-    --line: #e3e7ec; --accent: #2456d6; --ok: #177245; --bad: #b3261e;
-    --warn: #9a6700; --chip: #eef2fb;
+    --bg: #f5f6fa; --surface: #ffffff; --ink: #182038; --muted: #5a6478;
+    --faint: #9099ad; --line: #e5e8f0; --line-strong: #d3d9e5;
+    --accent: #2b5cd9; --accent-deep: #1e46b4; --accent-soft: #ecf2fe;
+    --accent-ring: rgba(43, 92, 217, .16);
+    --ok: #178a4c; --ok-soft: #e9f7ef;
+    --bad: #d3382c; --bad-soft: #fdeeed;
+    --warn: #b9770e; --warn-soft: #fdf5e3;
+    --radius: 16px; --radius-s: 10px;
+    --shadow: 0 1px 2px rgba(24, 32, 56, .05), 0 2px 10px rgba(24, 32, 56, .05);
+    --shadow-pop: 0 12px 32px rgba(24, 32, 56, .14);
+    --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-         font: 15px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif; }
-  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 18px 24px 0; }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  .sub { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
-  nav { display: flex; gap: 4px; }
-  nav button { border: none; background: none; padding: 10px 16px; font-size: 14px;
-               cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; }
-  nav button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-  main { max-width: 980px; margin: 20px auto; padding: 0 16px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-          padding: 16px 20px; margin-bottom: 16px; }
-  .chip { display: inline-block; background: var(--chip); color: var(--accent);
-          border-radius: 999px; padding: 1px 10px; font-size: 12px; margin-right: 6px; }
-  select, button.act { font: inherit; padding: 8px 14px; border-radius: 8px;
-          border: 1px solid var(--line); background: var(--card); }
-  button.act { background: var(--accent); color: #fff; border: none; cursor: pointer; }
-  button.act:disabled { opacity: .5; cursor: wait; }
-  .verdict { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0;
-             border-bottom: 1px dashed var(--line); }
-  .badge { min-width: 74px; text-align: center; border-radius: 6px; color: #fff;
-           font-size: 12px; padding: 2px 0; font-weight: 600; }
-  .TRUE { background: var(--ok); } .FALSE { background: var(--bad); }
-  .UNCERTAIN { background: var(--warn); }
-  .ans { font-size: 26px; font-weight: 700; letter-spacing: 2px; }
-  table { border-collapse: collapse; width: 100%; font-size: 14px; }
-  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
-  th { color: var(--muted); font-weight: 500; }
-  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .bar { height: 14px; background: var(--accent); border-radius: 3px; min-width: 2px; }
-  .barrow { display: grid; grid-template-columns: 170px 1fr 74px; gap: 10px;
-            align-items: center; margin: 5px 0; font-size: 13px; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14.5px/1.7 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent-soft); }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── 顶栏：品牌 + 导航 ── */
+  .topline { height: 3px;
+    background: linear-gradient(90deg, #2b5cd9, #6a8df3 55%, #9db8f7); }
+  header.top {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(255, 255, 255, .88); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar { display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding-top: 14px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 42px; height: 42px; border-radius: 12px; flex: none;
+    background: linear-gradient(135deg, #2b5cd9, #6a8df3);
+    display: grid; place-items: center;
+    box-shadow: 0 4px 12px rgba(43, 92, 217, .35); }
+  .logo svg { width: 24px; height: 24px; }
+  .brandname { font-size: 17px; font-weight: 700; letter-spacing: .2px; line-height: 1.3; }
+  .brandname em { font-style: normal; font-weight: 600; }
+  .brandsub { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .brandsub .dot { margin: 0 5px; color: var(--line-strong); }
+  nav { display: flex; gap: 2px; overflow-x: auto; }
+  nav button {
+    position: relative; border: none; background: none; cursor: pointer;
+    padding: 12px 14px 14px; font: 600 14px/1 var(--font); color: var(--muted);
+    white-space: nowrap; transition: color .18s;
+  }
+  nav button::after {
+    content: ""; position: absolute; left: 14px; right: 14px; bottom: 0;
+    height: 3px; border-radius: 3px 3px 0 0;
+    background: var(--accent); transform: scaleX(0); transition: transform .22s ease;
+  }
+  nav button:hover { color: var(--ink); }
+  nav button.on { color: var(--accent); }
+  nav button.on::after { transform: scaleX(1); }
+  nav button:focus-visible, button.act:focus-visible, .dropzone:focus-visible {
+    outline: 3px solid var(--accent-ring); outline-offset: 2px; border-radius: 8px; }
+
+  main { padding: 26px 20px 10px; }
+  .panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 22px 24px; margin-bottom: 18px;
+  }
+  .panel > h2 { font-size: 15.5px; font-weight: 700; margin: 0 0 4px; }
+  .panel > .desc { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+
+  /* ── 通用控件 ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font: 600 14px/1 var(--font); padding: 10px 18px; border-radius: var(--radius-s);
+    border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+    cursor: pointer; transition: all .18s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .btn.primary {
+    background: linear-gradient(180deg, #3a68e0, var(--accent)); color: #fff;
+    border-color: var(--accent-deep);
+    box-shadow: 0 2px 6px rgba(43, 92, 217, .35);
+  }
+  .btn.primary:hover { background: linear-gradient(180deg, #2f5ed4, var(--accent-deep));
+    color: #fff; box-shadow: 0 4px 12px rgba(43, 92, 217, .4); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+  .btn.ghost-danger:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-soft); }
+  .btn.sm { padding: 6px 12px; font-size: 13px; border-radius: 8px; }
+  textarea, select {
+    font: inherit; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line-strong); border-radius: var(--radius-s);
+    padding: 10px 12px; transition: border-color .18s, box-shadow .18s; width: 100%;
+  }
+  textarea:focus, select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+  }
+  select { width: auto; cursor: pointer; }
+  .hidden { display: none !important; }
   .muted { color: var(--muted); }
-  .hidden { display: none; }
-  .warnbox { background: #fff7e6; border: 1px solid #f0d9a8; border-radius: 8px;
-             padding: 10px 14px; font-size: 13px; color: #7a5b00; }
-  a { color: var(--accent); text-decoration: none; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .small { font-size: 13px; }
+  code { font: 12.5px/1.5 var(--mono); background: #f2f4f9;
+    border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+
+  /* ── 提示条 ── */
+  .notice { display: flex; gap: 10px; align-items: flex-start;
+    border-radius: var(--radius-s); padding: 12px 14px; font-size: 13px; line-height: 1.65; }
+  .notice svg { flex: none; margin-top: 2px; }
+  .notice.warn { background: var(--warn-soft); border: 1px solid #efd9a6; color: #7a5600; }
+  .notice.info { background: var(--accent-soft); border: 1px solid #ccdcfb; color: #274b9f; }
+  .notice.danger { background: var(--bad-soft); border: 1px solid #f2cbc7; color: #8f2a20; }
+
+  /* ── 上传拖拽区 ── */
+  .dropzone {
+    border: 1.5px dashed var(--line-strong); border-radius: var(--radius);
+    background: #fafbfe; padding: 30px 20px; text-align: center; cursor: pointer;
+    transition: all .2s;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent); background: var(--accent-soft);
+  }
+  .dropzone .dz-icon {
+    width: 46px; height: 46px; margin: 0 auto 10px; border-radius: 50%;
+    background: var(--accent-soft); display: grid; place-items: center;
+  }
+  .dropzone b { font-size: 14.5px; }
+  .dropzone .muted { font-size: 13px; }
+  .dz-status { margin-top: 10px; font-size: 13px; color: var(--muted); }
+
+  /* ── 文档列表 ── */
+  .docrow {
+    display: flex; align-items: center; gap: 12px; padding: 12px 6px;
+    border-bottom: 1px solid var(--line); transition: background .15s;
+  }
+  .docrow:last-child { border-bottom: none; }
+  .docrow:hover { background: #fafbfe; }
+  .docicon { width: 36px; height: 36px; border-radius: 9px; flex: none;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font: 700 11px/1 var(--font); letter-spacing: .5px; }
+  .docname { font-weight: 600; font-size: 14px; word-break: break-all; }
+  .docmeta { font-size: 12.5px; color: var(--faint); }
+  .docrow .grow { flex: 1; min-width: 0; }
+
+  /* ── 空状态引导（三步上手） ── */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 14px 0; }
+  .step { background: #fafbfe; border: 1px solid var(--line); border-radius: var(--radius-s);
+    padding: 14px 16px; }
+  .step .no { width: 26px; height: 26px; border-radius: 50%; color: #fff;
+    background: linear-gradient(135deg, #3a68e0, #6a8df3);
+    display: grid; place-items: center; font: 700 13px/1 var(--font); margin-bottom: 8px; }
+  .step b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .step span { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+
+  /* ── 问答结果 ── */
+  .askbox { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+  .askbox textarea { flex: 1; resize: vertical; min-height: 74px; }
+  .result-card {
+    margin-top: 16px; border: 1px solid var(--line); border-radius: var(--radius-s);
+    background: linear-gradient(180deg, #fbfcff, #fff); padding: 18px 20px;
+  }
+  .answer-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .answer-big { font-size: 26px; font-weight: 800; letter-spacing: 2px; color: var(--accent-deep);
+    font-variant-numeric: tabular-nums; }
+  .answer-text { font-size: 15.5px; font-weight: 600; line-height: 1.75; white-space: pre-wrap; }
+  .copybtn { border: none; background: none; color: var(--faint); cursor: pointer;
+    font-size: 12.5px; padding: 2px 6px; border-radius: 6px; }
+  .copybtn:hover { color: var(--accent); background: var(--accent-soft); }
+  .subhead { font: 700 13px/1 var(--font); color: var(--muted); letter-spacing: .5px;
+    margin: 16px 0 8px; text-transform: uppercase; }
+  .cite { display: inline-flex; align-items: center; gap: 6px; margin: 0 8px 8px 0;
+    background: var(--accent-soft); color: #274b9f; border: 1px solid #ccdcfb;
+    border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; }
+  .cite svg { flex: none; }
+  .ledger { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line);
+    color: var(--faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+  /* ── 评测演示 ── */
+  .statrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-s);
+    padding: 12px 16px; box-shadow: var(--shadow); }
+  .stat b { display: block; font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+  .optlist { margin-top: 10px; }
+  .opt { display: flex; gap: 10px; padding: 9px 12px; border: 1px solid var(--line);
+    border-radius: var(--radius-s); margin-bottom: 8px; background: #fbfcfe; font-size: 13.5px; }
+  .opt .k { flex: none; font-weight: 800; color: var(--accent); }
+  .qtext { font-size: 14px; line-height: 1.8; margin-top: 12px; white-space: pre-wrap; }
+  .selrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .selrow select { flex: 1; min-width: 260px; }
+
+  /* ── 判定徽章 ── */
+  .verdicts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .vchip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+    padding: 5px 13px; font-size: 13px; font-weight: 700; border: 1px solid transparent; }
+  .vchip .opt-k { font-weight: 800; }
+  .vchip.TRUE { background: var(--ok-soft); color: var(--ok); border-color: #bfe5cf; }
+  .vchip.FALSE { background: var(--bad-soft); color: var(--bad); border-color: #f2cbc7; }
+  .vchip.UNCERTAIN { background: var(--warn-soft); color: var(--warn); border-color: #efd9a6; }
+
+  /* ── 运行归档表 ── */
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+  tbody tr { transition: background .15s; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover { background: #fafbfe; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .acccell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .track { width: 90px; height: 6px; border-radius: 3px; background: #edf0f7; overflow: hidden; }
+  .fill { height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, #6a8df3, var(--accent)); }
+  .wrongitem { padding: 7px 10px; border-left: 3px solid var(--bad);
+    background: var(--bad-soft); border-radius: 0 8px 8px 0; margin-bottom: 6px;
+    font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  /* ── 使用指南 ── */
+  .faq { border: 1px solid var(--line); border-radius: var(--radius-s); margin-bottom: 10px;
+    background: #fbfcfe; overflow: hidden; }
+  .faq summary { cursor: pointer; padding: 13px 16px; font-weight: 600; font-size: 14px;
+    list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--faint); font-size: 18px; font-weight: 400;
+    transition: transform .2s; flex: none; }
+  .faq[open] summary::after { transform: rotate(45deg); }
+  .faq .faqbody { padding: 0 16px 14px; color: var(--muted); font-size: 13.5px; }
+
+  /* ── 迭代链时间线 ── */
+  .chain { position: relative; margin: 6px 0 0; padding-left: 6px; }
+  .chainrow { position: relative; padding: 0 0 18px 30px; }
+  .chainrow::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: -2px;
+    width: 2px; background: var(--line); }
+  .chainrow:last-child::before { display: none; }
+  .chainrow .node { position: absolute; left: 0; top: 2px; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+    border: 2px solid #ccdcfb; display: grid; place-items: center;
+    font: 700 11px/1 var(--font); }
+  .chainrow b { font-size: 13.5px; }
+  .chainrow .fix { color: var(--ok); font-weight: 700; }
+  .chainrow .cause { color: var(--muted); font-size: 13px; }
+
+  footer { text-align: center; color: var(--faint); font-size: 12.5px;
+    padding: 18px 0 30px; }
+
+  /* ── 加载动效 ── */
+  .spinner { width: 15px; height: 15px; flex: none; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff;
+    animation: spin .7s linear infinite; }
+  .btn .spinner { display: none; }
+  .btn.loading .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade-in { animation: fadein .3s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } }
+
+  /* ── Toast ── */
+  .toast { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%) translateY(20px);
+    background: #232b40; color: #fff; border-radius: 10px; padding: 11px 20px;
+    font-size: 13.5px; box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none;
+    transition: all .25s ease; z-index: 50; max-width: min(90vw, 560px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: #7c2119; }
+  .toast.ok { background: #14532d; }
+
+  @media (max-width: 760px) {
+    .steps, .statrow { grid-template-columns: 1fr 1fr; }
+    .panel { padding: 18px 16px; }
+    .topbar { padding-top: 12px; }
+    .brandsub { display: none; }
+  }
+  @media (max-width: 480px) { .steps { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Findata · 金融长文本智能问答系统</h1>
-  <div class="sub">检索（BM25F 双通道 + 两阶段）· 判定（选项级证据隔离）· 记忆（分层压缩）· 引用归因
-    ｜ 演示调用真实 Qwen API，不预置答案</div>
-  <nav>
-    <button data-tab="mydocs" class="on">我的文档</button>
-    <button data-tab="demo">评测演示</button>
-    <button data-tab="runs">运行归档</button>
-    <button data-tab="about">系统说明</button>
-  </nav>
+<div class="topline"></div>
+<header class="top">
+  <div class="wrap topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brandname">Findata <em>金融长文本智能问答系统</em></div>
+        <div class="brandsub">检索<span class="dot">·</span>判定<span class="dot">·</span>记忆<span class="dot">·</span>归因
+          四层全链<span class="dot">｜</span>演示调用真实 Qwen API，不预置答案</div>
+      </div>
+    </div>
+    <nav id="nav" role="tablist">
+      <button data-tab="mydocs" class="on" aria-selected="true">我的文档</button>
+      <button data-tab="demo" aria-selected="false">评测演示</button>
+      <button data-tab="runs" aria-selected="false">运行归档</button>
+      <button data-tab="guide" aria-selected="false">使用指南</button>
+      <button data-tab="about" aria-selected="false">系统说明</button>
+    </nav>
+  </div>
 </header>
-<main>
+<main class="wrap">
 
+<!-- ═══════════ 我的文档 ═══════════ -->
 <section id="tab-mydocs">
-  <div class="card">
-    <h2 style="font-size:16px;margin:0 0 8px">我的文档库</h2>
-    <p class="muted" style="margin-top:0">上传你自己的 PDF / Word(docx) / TXT / Markdown
-      （≤50MB，仅存本机 <code>findata_userdata/</code>，不进 git），系统自动转换并建立检索索引。</p>
-    <input type="file" id="upfile" accept=".pdf,.docx,.txt,.md">
-    <button class="act" id="upbtn">上传</button>
-    <span id="upstatus" class="muted"></span>
-    <div id="liblist" style="margin-top:12px">加载中……</div>
+  <div class="panel">
+    <h2>上传文档</h2>
+    <p class="desc">支持 PDF / Word(docx) / TXT / Markdown，单个 ≤ 50MB。文件只存你本机的
+      <code>findata_userdata/</code>（不上传任何云端存储），系统自动转换并建立检索索引。</p>
+    <div class="dropzone" id="dropzone" tabindex="0" role="button"
+      aria-label="点击选择或拖拽文件上传">
+      <div class="dz-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b5cd9"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>
+        </svg>
+      </div>
+      <b>点击选择文件，或把文件拖到这里</b><br>
+      <span class="muted">上传后自动转换为可检索的文本，通常几秒内完成；扫描件（图片型 PDF）自动走本机 OCR</span>
+      <div class="dz-status" id="upstatus"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13.5px;cursor:pointer">
+      <input type="checkbox" id="maskpii" style="width:16px;height:16px;cursor:pointer">
+      <span>上传时对<b>检索文本</b>做 PII 脱敏（身份证 / 手机号 / 邮箱 / 银行卡形态数字；原件保持不动，
+        发往大模型的片段为脱敏后文本）</span>
+    </label>
+    <input type="file" id="upfile" accept=".pdf,.docx,.txt,.md" class="hidden">
   </div>
-  <div class="card">
-    <h2 style="font-size:16px;margin:0 0 8px">向自己的文档提问</h2>
-    <textarea id="freeq" rows="3" style="width:100%;font:inherit;padding:8px"
-      placeholder="例如：这份文件里约定的违约金比例是多少？"></textarea>
-    <div style="margin-top:8px">
-      <button class="act" id="freego">提问</button>
-      <span class="muted">真实 Qwen 调用（约 10–30 秒）；只依据你的文档作答，没有依据会明说。</span>
+
+  <div class="panel">
+    <h2>我的文档库</h2>
+    <p class="desc">已建索引的文档。删除会同时移除原件与索引。</p>
+    <div id="liblist">加载中……</div>
+  </div>
+
+  <div class="panel">
+    <h2>向自己的文档提问</h2>
+    <p class="desc">答案只依据你上传的文档生成，每条都带出处；文档里没有的，系统会明说、不编造。</p>
+    <textarea id="freeq" rows="3"
+      placeholder="用大白话问，例如：&#10;· 这份文件里约定的违约金比例是多少？&#10;· 研发投入占营业收入的比例是多少？&#10;· 这份保险的等待期是多长时间？"></textarea>
+    <div class="askbox">
+      <button class="btn primary" id="freego">
+        <span class="spinner" aria-hidden="true"></span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>
+        </svg>
+        <span class="btxt">提问</span>
+      </button>
+      <span class="muted small" id="freestatus">真实大模型调用，约 10–30 秒，请耐心等待</span>
     </div>
-    <div id="freeresult" class="hidden" style="margin-top:12px">
-      <div style="font-size:17px;font-weight:600" id="freeans"></div>
-      <h2 style="font-size:14px;margin:12px 0 4px">出处</h2>
-      <div id="freecites" class="muted"></div>
-      <div class="muted" id="freetokens" style="margin-top:8px;font-size:13px"></div>
-    </div>
+    <div id="freeresult" class="result-card hidden"></div>
   </div>
 </section>
 
+<!-- ═══════════ 评测演示 ═══════════ -->
 <section id="tab-demo" class="hidden">
-  <div class="card">
-    <div class="warnbox">⚠️ 点「开始作答」会发起<b>真实的 Qwen API 调用</b>（逐选项独立判定，
-      约 1–2 分钟、约数千 token）。题目来自自建五域评测集；标准答案不出后端——
-      作答依据（引用了哪些条款）随结果一并展示。</div>
-    <p style="margin:14px 0 8px">
-      <select id="qsel" style="min-width:70%"></select>
-      <button class="act" id="go">开始作答</button>
-    </p>
-    <div id="qtext" class="muted"></div>
-    <div id="qopts" style="margin-top:8px"></div>
+  <div class="statrow" id="statrow">
+    <div class="stat"><b>—</b><span>评测题目</span></div>
+    <div class="stat"><b>—</b><span>官方原文文档</span></div>
+    <div class="stat"><b>—</b><span>覆盖领域</span></div>
+    <div class="stat"><b>—</b><span>B 榜盲检题（不给文档范围）</span></div>
   </div>
-  <div class="card hidden" id="result">
-    <h2 style="font-size:16px;margin:0 0 8px">系统作答</h2>
-    <div>最终答案：<span class="ans" id="ans">—</span>
-      <span class="muted" id="ansmeta"></span></div>
-    <div id="verdicts" style="margin-top:10px"></div>
-    <h2 style="font-size:16px;margin:14px 0 6px">证据链（引用条款）</h2>
-    <div id="evidence" class="muted">（无）</div>
-    <div class="muted" id="tokens" style="margin-top:10px;font-size:13px"></div>
+  <div class="panel">
+    <h2>选一道题，看系统怎么作答</h2>
+    <p class="desc">题目来自自建五域评测集（法规 / 财报 / 保险条款 / 债券募集 / 研报）。
+      标准答案不出后端——这里是「考官模式」：系统作答，人来看依据。</p>
+    <div class="notice warn" style="margin-bottom:14px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>
+        <path d="M12 9v4"/><path d="M12 17h.01"/>
+      </svg>
+      <div>点「开始作答」会发起<b>真实的 Qwen API 调用</b>：逐选项独立判定，
+        约 1–2 分钟、数千 token（几分钱量级）。作答依据（引用了哪些条款）随结果一并展示。</div>
+    </div>
+    <div class="selrow">
+      <select id="qsel" aria-label="选择题目"></select>
+      <button class="btn primary" id="go">
+        <span class="spinner" aria-hidden="true"></span><span class="btxt">开始作答</span>
+      </button>
+      <span class="muted small" id="demostatus"></span>
+    </div>
+    <div id="qwrap" class="hidden">
+      <div class="qtext" id="qtext"></div>
+      <div class="optlist" id="qopts"></div>
+    </div>
+  </div>
+  <div class="panel hidden" id="result">
+    <h2>系统作答</h2>
+    <div class="result-card">
+      <div class="answer-line">
+        <span class="small muted">最终答案</span>
+        <span class="answer-big" id="ans">—</span>
+        <button class="copybtn" id="anscopy" onclick="copyText(this)">复制</button>
+      </div>
+      <div class="subhead">逐选项判定</div>
+      <div class="verdicts" id="verdicts"></div>
+      <div class="subhead">证据链（引用条款）</div>
+      <div id="evidence" class="muted small">（无）</div>
+      <div class="ledger" id="tokens"></div>
+    </div>
   </div>
 </section>
 
+<!-- ═══════════ 运行归档 ═══════════ -->
 <section id="tab-runs" class="hidden">
-  <div class="card">
-    <h2 style="font-size:16px;margin:0 0 10px">运行归档（examples/，全部可复现）</h2>
+  <div class="panel">
+    <h2>运行归档（examples/，全部可复现）</h2>
+    <p class="desc">每次评测的准确率与 token 台账。点任意一行看该次运行的证据使用率与错题明细。</p>
     <div id="runlist">加载中……</div>
   </div>
-  <div class="card hidden" id="rundetail"></div>
+  <div class="panel hidden" id="rundetail"></div>
 </section>
 
+<!-- ═══════════ 使用指南 ═══════════ -->
+<section id="tab-guide" class="hidden">
+  <div class="panel">
+    <h2>30 秒看懂这个系统</h2>
+    <p style="margin:6px 0 0;font-size:15px">把你的金融长文档——法规、财报、保险条款、募集说明书、研报——
+      变成一个<b>「可以提问」的知识库</b>：上传文档，用大白话提问，得到<b>带出处引用</b>的答案。
+      它只依据你的文档回答，文档里没有的会明说，<b>不编造</b>。</p>
+  </div>
+  <div class="panel">
+    <h2>三步上手</h2>
+    <div class="steps">
+      <div class="step"><div class="no">1</div><b>上传文档</b>
+        <span>回到「我的文档」标签页，点击虚线框选择文件，或直接把文件拖进去。支持 PDF、Word、TXT、Markdown。</span></div>
+      <div class="step"><div class="no">2</div><b>用大白话提问</b>
+        <span>在下方输入框里像问同事一样问，例如「违约金比例是多少」「这笔担保需要股东大会通过吗」。</span></div>
+      <div class="step"><div class="no">3</div><b>核对答案与出处</b>
+        <span>每条答案都标注来自哪份文档的哪个章节；点「出处」可以核对原文。答案与出处对不上就不该采信。</span></div>
+    </div>
+    <div class="notice info">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+      </svg>
+      <div>第一次用？建议先传一份 10 页以内的 PDF 练手，问一个你确定文档里有答案的问题，
+        感受一下「答案 + 出处」的形态。</div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>它擅长什么、不擅长什么</h2>
+    <p style="margin:4px 0"><b>擅长：</b>在长文档里<b>找条款、对数字、核结论</b>——
+      「第几条说了什么」「这个数字是多少」「研报的结论和正文数据一致吗」这类问题。
+      支持中文与英文文档（英文财报/10-K 检索经过 FinanceBench 外部基准校准），
+      扫描件（图片型 PDF）自动走本机 OCR；答案用与提问相同的语言作答。</p>
+    <p style="margin:4px 0"><b>不擅长 / 不做（会如实说，不硬答）：</b></p>
+    <ul style="margin:4px 0 8px;padding-left:20px" class="muted">
+      <li>文档里没有的信息——系统不会替你上网查，也不会用常识补，只会回答「未提及」；</li>
+      <li>投资决策建议（该不该买 / 目标价 / 选股）——<b>直接拒答</b>并转引客观事实，
+        这是有意的产品边界，不构成投资建议或法律意见；</li>
+      <li>英文域检索仍弱于中文条款域（recall@8：英文 16.2% vs 中文评测 98%+ 口径不同仅示意），
+        复杂英文题建议拆小了问；</li>
+      <li>跨文档的复杂推理可能需要你把问题拆小、分次问。</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h2>费用与隐私（如实边界）</h2>
+    <ul style="margin:6px 0;padding-left:20px" class="muted">
+      <li>每次提问是<b>真实大模型调用</b>：自由问答约 10–30 秒、评测题约 1–2 分钟，
+        花的是你配置的阿里云百炼 API key 的钱（单次几分钱量级）；</li>
+      <li>文档原件与检索索引<b>只存在你本机</b> <code>findata_userdata/</code>（已 gitignore）；
+        提问时，与问题相关的文档片段会发送给阿里云百炼（中国大陆节点）生成答案——
+        数据驻留与服务商数据处理条款以<b>阿里云百炼服务协议</b>为准；</li>
+      <li>上传时可勾选<b> PII 脱敏</b>：身份证 / 手机号 / 邮箱 / 银行卡形态数字在
+        检索文本中打码（原件不动）；扫描件 OCR 在<b>本机 CPU 推理</b>，图片不出本机；</li>
+      <li>本演示<b>无登录鉴权，只在本机使用，不要暴露到公网</b>。</li>
+    </ul>
+  </div>
+  <div class="panel">
+    <h2>常见问题</h2>
+    <details class="faq"><summary>支持哪些文件格式？有大小限制吗？</summary>
+      <div class="faqbody">PDF、Word（.docx）、TXT、Markdown，单个文件 ≤ 50MB。
+        扫描件（图片型 PDF）自动走本机 OCR 提取（需安装可选组件：
+        <code>uv sync --extra ocr</code>；未安装时会在文档里明确标注原因，
+        不会静默给空文本）。PDF 里的表格会自动还原为结构化表格。</div></details>
+    <details class="faq"><summary>问「该不该买」为什么不回答？</summary>
+      <div class="faqbody">这是有意的<b>产品边界</b>：系统做的是文档信息整理，
+        不是投资建议。买卖、仓位、目标价这类决策建议会被直接拒答（不发模型
+        调用），并提示你改问客观事实（如「文档披露的营收是多少」）。
+        投资决策请咨询持牌投资顾问。</div></details>
+    <details class="faq"><summary>为什么有时回答「文档中没有提及」？</summary>
+      <div class="faqbody">这是<b>有意设计</b>：系统只依据检索到的文档片段作答，
+        证据不足就明说，不靠模型记忆编一个像样的答案。对金融文件来说，
+        「宁可不答，不能编造」比「什么都答上来」更有价值。</div></details>
+    <details class="faq"><summary>为什么要点十几秒甚至一两分钟？</summary>
+      <div class="faqbody">因为每次都是真实的大模型调用：先检索相关段落，再逐项判定 / 生成答案，
+        最后核对引用出处。页面上的按钮会显示已等待时间，请勿重复点击。</div></details>
+    <details class="faq"><summary>「评测演示」和我上传的文档有关系吗？</summary>
+      <div class="faqbody">没有。评测演示用的是仓库自带的 50 道题 + 7 份官方原文（法规 / 财报 /
+        保险条款 / 债券募集说明书 / 研报），用来展示系统的证据链与判定过程；
+        你上传的文档只在「我的文档」里使用。</div></details>
+    <details class="faq"><summary>报错「缺少 DashScope API key」怎么办？</summary>
+      <div class="faqbody">在项目根目录的 <code>.env</code> 文件里配置
+        <code>FINDATA_DASHSCOPE_API_KEY=你的key</code>（阿里云百炼控制台可申请），
+        然后重启服务：<code>uv run findata-finqa-app</code>。</div></details>
+    <details class="faq"><summary>想删掉某个文档？</summary>
+      <div class="faqbody">在「我的文档」的文档库里点「删除」，会同时移除原件与索引，
+        之后提问不再引用它。</div></details>
+  </div>
+</section>
+
+<!-- ═══════════ 系统说明 ═══════════ -->
 <section id="tab-about" class="hidden">
-  <div class="card">
-    <h2 style="font-size:16px;margin-top:0">系统是什么</h2>
-    <p>金融长文档（法规 / 财报 / 保险条款 / 债券募集说明书 / 研报）问答系统，
-       四层全链：<b>检索</b>（条款级分块 + BM25F 双通道字段加权 + B 榜两阶段）→
-       <b>判定</b>（每个选项只用自己召回的证据独立三态判定，代码确定性拼装答案）→
-       <b>记忆</b>（朴素滚动摘要 / 分层压缩双臂）→
-       <b>归因</b>（引用观测：只统计匹配到在场内容的引用，防幻觉虚增）。</p>
-    <p class="muted">评测集：50 题 / 7 份官方原文文档（含 193 页募集说明书）/ 五域；685+ 例测试。
+  <div class="panel">
+    <h2>系统是什么</h2>
+    <p>金融长文档（法规 / 财报 / 保险条款 / 债券募集说明书 / 研报）问答系统，四层全链：</p>
+    <p style="margin:8px 0"><b>检索</b>（条款级分块 + BM25F 双通道字段加权 + B 榜两阶段）
+      → <b>判定</b>（每个选项只用自己召回的证据独立三态判定，代码确定性拼装答案）
+      → <b>记忆</b>（朴素滚动摘要 / 分层压缩双臂）
+      → <b>归因</b>（引用观测：只统计匹配到在场内容的引用，防幻觉虚增）。</p>
+    <p class="muted small">评测集：50 题 / 7 份官方原文文档（含 193 页募集说明书）/ 五域。
       当前读数：隔离判定臂 98%–100%，token 全程台账。</p>
   </div>
-  <div class="card">
-    <h2 style="font-size:16px;margin-top:0">错题形态迭代链（核心资产）</h2>
-    <div id="chain"></div>
-    <p class="muted">每一环：错题形态 → 机制根因 → 修法 → 归档读数 → 回归测试。
+  <div class="panel">
+    <h2>错题形态迭代链（核心资产）</h2>
+    <div id="chain" class="chain"></div>
+    <p class="muted small" style="margin-top:10px">每一环：错题形态 → 机制根因 → 修法 → 归档读数 → 回归测试。
       另有三次「走错又折返」同样留档（长度归一化反噬 / 复审干扰 / 测试配置分叉）。</p>
   </div>
 </section>
 
 </main>
+<footer>本机演示 · 文档数据不出本机（提问片段除外）· 检索 / 判定 / 记忆 / 归因 四层全链</footer>
+<div class="toast" id="toast" role="status"></div>
+
 <script>
+"use strict";
+// ── 小工具 ──
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (n) => Number(n || 0).toLocaleString("zh-CN");
+
+let toastTimer;
+function toast(msg, kind = "") {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show " + kind;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3800);
+}
+
+// 长调用的已等待计时器：真实 API 调用 10s–2min，让用户知道没卡死
+function startElapsed(el, hints) {
+  const t0 = Date.now();
+  let hi = 0;
+  const tmr = setInterval(() => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    if (hints && s > 6 * (hi + 1) && hi < hints.length - 1) hi++;
+    el.textContent = (hi > 0 ? hints[hi] + " · " : "") + `已等待 ${s} 秒`;
+  }, 1000);
+  return tmr;
+}
+
+function setLoading(btn, on, loadingText) {
+  btn.disabled = on;
+  btn.classList.toggle("loading", on);
+  const label = btn.querySelector(".btxt");
+  if (!label) return;
+  if (on) {
+    if (!btn.dataset.label) btn.dataset.label = label.textContent;
+    if (loadingText) label.textContent = loadingText;
+  } else if (btn.dataset.label) {
+    label.textContent = btn.dataset.label;
+    delete btn.dataset.label;
+  }
+}
+
+// 领域 / 题型中文标签（评测集字段是英文 id）
+const DOMAIN_LABEL = {
+  regulatory: "监管法规", financial_reports: "上市公司财报", insurance: "保险条款",
+  financial_contracts: "债券募集", research: "券商研报",
+};
+const FORMAT_LABEL = { mcq: "单选", multi: "多选", tf: "判断" };
+const VERDICT_LABEL = { TRUE: "应选", FALSE: "不选", UNCERTAIN: "证据不足" };
+const VERDICT_MARK = { TRUE: "✓", FALSE: "✕", UNCERTAIN: "?" };
+
+// ── 标签页切换（支持 #hash 深链，如 index.html#guide 直达使用指南）──
+const TABS = ["mydocs", "demo", "runs", "guide", "about"];
+function activateTab(name) {
+  if (!TABS.includes(name)) name = "mydocs";
+  document.querySelectorAll("#nav button").forEach((x) => {
+    x.classList.toggle("on", x.dataset.tab === name);
+    x.setAttribute("aria-selected", x.dataset.tab === name ? "true" : "false");
+  });
+  TABS.forEach((t) => $("tab-" + t).classList.toggle("hidden", t !== name));
+  if (name === "runs") loadRuns();
+  if (name === "mydocs") loadLib();
+  if (name === "demo") loadMeta();
+  if (location.hash !== "#" + name) history.replaceState(null, "", "#" + name);
+}
+document.querySelectorAll("#nav button").forEach(
+  (b) => (b.onclick = () => activateTab(b.dataset.tab)));
+window.addEventListener("hashchange", () => activateTab(location.hash.slice(1)));
+
+// ── 我的文档：拖拽上传 ──
+const dz = $("dropzone"), upfile = $("upfile");
+dz.onclick = () => upfile.click();
+dz.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") upfile.click(); };
+["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => {
+  e.preventDefault(); dz.classList.add("drag");
+}));
+["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => {
+  e.preventDefault(); dz.classList.remove("drag");
+}));
+dz.addEventListener("drop", (e) => {
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) uploadDoc(f);
+});
+upfile.onchange = () => { if (upfile.files[0]) uploadDoc(upfile.files[0]); };
+
+async function uploadDoc(f) {
+  $("upstatus").textContent = `正在上传并转换「${f.name}」……`;
+  const fd = new FormData();
+  fd.append("file", f);
+  fd.append("mask_pii", $("maskpii").checked ? "true" : "false");
+  try {
+    const r = await fetch("/api/library/upload", { method: "POST", body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "上传失败");
+    $("upstatus").innerHTML = "";
+    toast(`已转换：${d.doc_id}（${fmt(d.chars)} 字符）`, "ok");
+    loadLib();
+  } catch (err) {
+    $("upstatus").textContent = "";
+    toast(String(err.message || err), "err");
+  } finally { upfile.value = ""; }
+}
+
+const EXT_TAG = { pdf: "PDF", docx: "DOC", txt: "TXT", md: "MD" };
+async function loadLib() {
+  const lib = await (await fetch("/api/library")).json();
+  if (!lib.length) {
+    $("liblist").innerHTML =
+      '<div class="notice info"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"' +
+      ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>' +
+      "<div>文档库还是空的——上传第一份文档，然后在下面提问试试。</div></div>";
+    return;
+  }
+  $("liblist").innerHTML = lib.map((x) => {
+    const tag = EXT_TAG[(x.doc_id.match(/\.([a-z0-9]+)$/i) || [])[1] || ""] || "DOC";
+    return `<div class="docrow fade-in">
+      <div class="docicon">${tag}</div>
+      <div class="grow">
+        <div class="docname">${esc(x.doc_id)}</div>
+        <div class="docmeta">${fmt(x.chars)} 字符${x.has_original ? " · 原件已保存" : ""}</div>
+      </div>
+      <button class="btn sm ghost-danger" onclick="delDoc('${esc(x.doc_id)}')">删除</button>
+    </div>`;
+  }).join("");
+}
+async function delDoc(id) {
+  if (!confirm(`确定删除「${id}」？原件与索引会一并移除。`)) return;
+  const r = await fetch("/api/library/" + encodeURIComponent(id), { method: "DELETE" });
+  if (!r.ok) { toast((await r.json()).detail || "删除失败", "err"); return; }
+  toast("已删除", "ok");
+  loadLib();
+}
+
+// ── 我的文档：自由问答 ──
+async function askFree() {
+  const q = $("freeq").value.trim();
+  if (!q) { toast("先输入问题", "err"); return; }
+  const btn = $("freego");
+  setLoading(btn, true, "检索并作答中");
+  const FREE_HINT = "真实大模型调用，约 10–30 秒，请耐心等待";
+  const tmr = startElapsed($("freestatus"), ["检索相关段落…", "阅读并组织答案…"]);
+  try {
+    const r = await fetch("/api/ask-free", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: q }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || "调用失败");
+    const d = await r.json();
+    renderFree(d);
+  } catch (err) {
+    toast(String(err.message || err), "err");
+  } finally {
+    clearInterval(tmr); $("freestatus").textContent = FREE_HINT;
+    setLoading(btn, false);
+  }
+}
+$("freego").onclick = askFree;
+$("freeq").addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") askFree();
+});
+
+function renderFree(d) {
+  const box = $("freeresult");
+  const cites = d.citations.length
+    ? d.citations.map((c) =>
+      `<span class="cite"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"` +
+      ` stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">` +
+      `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>` +
+      `<path d="M14 3v5h5"/></svg>${esc(c.doc_id)} · ${esc(c.section)}</span>`).join("")
+    : '<span class="muted">（未引用具体章节）</span>';
+  const refused = d.refused
+    ? `<div class="notice warn" style="margin-bottom:10px">
+         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>
+           <path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+         <div>${esc(d.answer)}</div></div>`
+    : "";
+  const covLine = d.refused || d.coverage == null ? "" :
+    `<div class="subhead">引用覆盖率</div>
+     <div style="font-size:13.5px">${(d.coverage * 100).toFixed(0)}% 的关键数字可在被引用片段中找到` +
+    (d.uncovered_numbers && d.uncovered_numbers.length
+      ? `。<span style="color:var(--warn)">未直接引用原文的数字：${d.uncovered_numbers.map(esc).join("、")}</span>——请核对原文后再采信`
+      : "") + `</div>`;
+  const answerBody = d.refused ? "" :
+    `<div class="answer-text" style="margin-top:6px">${esc(d.answer)}</div>`;
+  // 检索臂如实标注：混合检索是产品口径（embedding 参与检索，与赛题口径不同）
+  const retriever = d.retriever || "bm25f";
+  const retrieverLabel = retriever === "refused" ? "—" :
+    retriever.startsWith("hybrid:") ? `混合 BM25F+向量（${esc(retriever.slice(7))}）` :
+    retriever.startsWith("bm25f(fallback") ? "BM25F（向量不可用，已回退）" : "BM25F";
+  box.innerHTML =
+    `<div class="answer-line"><span class="small muted">${d.refused ? "服务边界" : "答案"}</span>
+       <button class="copybtn" onclick="copyText(this)">复制</button></div>
+     ${refused}${answerBody}
+     <div class="subhead">出处</div><div>${cites}</div>
+     ${covLine}
+     <div class="ledger">输入 ${fmt(d.prompt_tokens)} · 输出 ${fmt(d.completion_tokens)} ·
+       合计 ${fmt(d.total_tokens)} tokens（检索片段 ${d.retrieved_sections} 段 · 检索 ${retrieverLabel}）</div>
+     <div class="ledger" style="border-top:none;padding-top:2px">
+       ⚖️ 内容由 AI 依据文档整理，可能存在遗漏，不构成投资建议或法律意见。</div>`;
+  box.dataset.answer = d.answer;
+  box.classList.remove("hidden");
+  box.classList.add("fade-in");
+}
+function copyText(btn) {
+  const text = btn.closest(".result-card").dataset.answer || "";
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => toast("已复制", "ok"))
+    .catch(() => toast("复制失败，请手动选择文本", "err"));
+}
+
+// ── 评测演示 ──
+let questions = [], metaLoaded = false;
+async function loadMeta() {
+  if (metaLoaded) return;
+  metaLoaded = true;
+  try {
+    const m = await (await fetch("/api/meta")).json();
+    const cells = $("statrow").children;
+    cells[0].children[0].textContent = m.questions;
+    cells[1].children[0].textContent = m.docs;
+    cells[2].children[0].textContent = Object.keys(m.by_domain).length;
+    cells[3].children[0].textContent = m.b_split;
+  } catch { metaLoaded = false; }
+}
+loadMeta();
+fetch("/api/questions").then((r) => r.json()).then((qs) => {
+  questions = qs;
+  const groups = { A: [], B: [] };
+  qs.forEach((q) => (groups[q.split] || groups.A).push(q));
+  $("qsel").innerHTML =
+    `<option value="">— 选择题目 —</option>` +
+    (groups.A.length
+      ? `<optgroup label="A 榜 · 给出文档范围（${groups.A.length} 题）">` +
+        groups.A.map(opt).join("") + "</optgroup>" : "") +
+    (groups.B.length
+      ? `<optgroup label="B 榜 · 盲检，不给文档（${groups.B.length} 题）">` +
+        groups.B.map(opt).join("") + "</optgroup>" : "");
+  function opt(q) {
+    const t = (q.type || q.qid).replace(/\s+/g, " ").slice(0, 34);
+    return `<option value="${esc(q.qid)}">[${DOMAIN_LABEL[q.domain] || q.domain}` +
+      `·${FORMAT_LABEL[q.answer_format] || ""}] ${esc(t)}</option>`;
+  }
+});
+$("qsel").onchange = showQ;
+function showQ() {
+  const q = questions.find((x) => x.qid === $("qsel").value);
+  $("qwrap").classList.toggle("hidden", !q);
+  $("result").classList.add("hidden");
+  if (!q) return;
+  $("qtext").innerHTML =
+    `<span class="cite">${esc(q.qid)}</span><span class="cite">${esc(q.domain)} </span>` +
+    `<span class="cite">${esc(FORMAT_LABEL[q.answer_format] || q.answer_format)}</span>` +
+    `<div style="margin-top:8px">${esc(q.question)}</div>`;
+  $("qopts").innerHTML = Object.entries(q.options).map(([k, v]) =>
+    `<div class="opt"><span class="k">${esc(k)}.</span><span>${esc(v)}</span></div>`).join("");
+}
+$("go").onclick = async () => {
+  const qid = $("qsel").value;
+  if (!qid) { toast("先选一道题", "err"); return; }
+  const btn = $("go");
+  setLoading(btn, true, "判定中");
+  const tmr = startElapsed($("demostatus"), ["检索相关条款…", "逐选项独立判定…", "汇总证据与拼装答案…"]);
+  try {
+    const r = await fetch("/api/answer/" + encodeURIComponent(qid), { method: "POST" });
+    if (!r.ok) throw new Error((await r.json()).detail || "调用失败");
+    renderResult(await r.json());
+  } catch (err) {
+    toast(String(err.message || err), "err");
+  } finally {
+    clearInterval(tmr);
+    $("demostatus").textContent = "";
+    setLoading(btn, false);
+  }
+};
+function renderResult(d) {
+  $("ans").textContent = d.answer || "（判定均不确定且回退未解析）";
+  $("result").querySelector(".result-card").dataset.answer = d.answer || "";
+  $("verdicts").innerHTML = Object.entries(d.verdicts).map(([k, v]) =>
+    `<span class="vchip ${esc(v)}"><span class="opt-k">${esc(k)}</span>` +
+    `<span>${VERDICT_MARK[v] || ""} ${VERDICT_LABEL[v] || esc(v)}</span></span>`).join("")
+    || '<span class="muted small">（无逐选项判定）</span>';
+  $("evidence").innerHTML = d.evidence.length
+    ? d.evidence.map((e) =>
+      `<span class="cite"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"` +
+      ` stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">` +
+      `<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>` +
+      `<path d="M14 3v5h5"/></svg>${esc(e.doc_id)} · ${esc(e.clause)}</span>`).join("")
+    : "（判定未引用在场条款）";
+  $("tokens").textContent = `模型 ${d.model || "—"} ｜ 输入 ${fmt(d.tokens.prompt)} · 输出 ` +
+    `${fmt(d.tokens.completion)} · 合计 ${fmt(d.tokens.total)} tokens` +
+    (d.used_fallback ? " ｜ 触发回退仲裁" : "");
+  $("result").classList.remove("hidden");
+  $("result").classList.add("fade-in");
+  $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ── 运行归档 ──
+async function loadRuns() {
+  const runs = await (await fetch("/api/runs")).json();
+  runs.sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
+  $("runlist").innerHTML = !runs.length
+    ? '<span class="muted">（examples/ 下暂无 afac*.json 归档）</span>'
+    : `<table><thead><tr><th>归档</th><th>臂</th><th class="num">正确 / 总</th>
+        <th class="num">准确率</th><th class="num">token</th></tr></thead><tbody>` +
+      runs.map((r) =>
+        `<tr class="clickable" onclick="showRun('${esc(r.file)}')">
+          <td><b>${esc(r.file.replace(".json", ""))}</b></td><td>${esc(r.mode)}</td>
+          <td class="num">${fmt(r.correct)} / ${fmt(r.total)}</td>
+          <td class="num"><span class="acccell"><span class="track"><span class="fill"
+            style="display:block;width:${Math.round((r.accuracy || 0) * 100)}%"></span></span>
+            ${((r.accuracy || 0) * 100).toFixed(1)}%</span></td>
+          <td class="num">${fmt(r.total_tokens)}</td></tr>`).join("") +
+      "</tbody></table>";
+}
+async function showRun(file) {
+  const data = await (await fetch("/api/runs/" + encodeURIComponent(file))).json();
+  const mode = Object.keys(data.runs)[0];
+  const run = data.runs[mode];
+  const byRank = (run.attribution || {}).by_rank || {};
+  const wrong = run.details.filter((d) => !d.correct);
+  $("rundetail").innerHTML =
+    `<h2>${esc(file.replace(".json", ""))}（${esc(mode)}）</h2>
+     <p class="desc">准确率 <b>${(run.report.accuracy * 100).toFixed(1)}%</b>，
+       token 台账 ${fmt(run.report.total_tokens)}</p>` +
+    (Object.keys(byRank).length
+      ? `<div class="subhead">证据使用率 · 按喂入位次</div>` +
+        Object.entries(byRank).map(([rank, s]) =>
+          `<div style="display:grid;grid-template-columns:76px 1fr 48px;gap:10px;
+            align-items:center;margin:6px 0;font-size:13px">
+            <span class="muted">第 ${esc(rank)} 位</span>
+            <span class="track"><span class="fill" style="display:block;
+              width:${Math.max(Math.round((s.rate || 0) * 100), 1)}%"></span></span>
+            <span class="muted" style="text-align:right">${((s.rate || 0) * 100).toFixed(0)}%</span>
+          </div>`).join("") : "") +
+    `<div class="subhead">错题（${wrong.length}）</div>` +
+    (wrong.map((d) =>
+      `<div class="wrongitem">✗ ${esc(d.qid)} ｜ gold=${esc(d.gold)} ｜ pred=${esc(d.pred || "空")}</div>`
+    ).join("") || '<div class="muted small">无</div>');
+  $("rundetail").classList.remove("hidden");
+  $("rundetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+// ── 系统说明：迭代链 ──
 const CHAIN = [
   ["漏证据（跨域题漏选）", "单查询被单一文档占满", "逐选项检索"],
   ["过包含（多选了干扰项）", "四选项同锅，互相干扰", "选项级证据隔离 + 三态判定"],
@@ -152,147 +887,13 @@ const CHAIN = [
   ["表格召回丢失", "散文高频词压制表格标签", "BM25F 双通道字段加权"],
   ["B 榜挤占（长文档挤出证据）", "全局片段池被 193 页文档占据", "两阶段检索：文档级粗筛"],
 ];
-const $ = (id) => document.getElementById(id);
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
-  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
-  ["mydocs", "demo", "runs", "about"].forEach(t => $("tab-" + t).classList.toggle("hidden", t !== b.dataset.tab));
-  if (b.dataset.tab === "runs") loadRuns();
-  if (b.dataset.tab === "mydocs") loadLib();
-});
+$("chain").innerHTML = CHAIN.map(([a, b, c], i) =>
+  `<div class="chainrow"><span class="node">${i + 1}</span>
+     <b>${esc(a)}</b><br><span class="cause">根因：${esc(b)}</span>
+     <span class="cause"> → </span><span class="fix">${esc(c)}</span></div>`).join("");
 
-// ── 我的文档 ──
-async function loadLib() {
-  const lib = await (await fetch("/api/library")).json();
-  $("liblist").innerHTML = lib.length
-    ? "<table><tr><th>文档</th><th class='num'>字符数</th><th></th></tr>" +
-      lib.map(x => `<tr><td>${x.doc_id}</td><td class='num'>${x.chars.toLocaleString()}</td>` +
-        `<td><a href="#" onclick="delDoc('${x.doc_id}');return false">删除</a></td></tr>`).join("") +
-      "</table>"
-    : "<span class='muted'>（空——先上传文件）</span>";
-}
-async function delDoc(id) {
-  await fetch("/api/library/" + encodeURIComponent(id), {method: "DELETE"});
-  loadLib();
-}
-$("upbtn").onclick = async () => {
-  const f = $("upfile").files[0];
-  if (!f) { $("upstatus").textContent = "先选择文件"; return; }
-  const fd = new FormData(); fd.append("file", f);
-  $("upbtn").disabled = true; $("upstatus").textContent = "上传并转换中……";
-  try {
-    const r = await fetch("/api/library/upload", {method: "POST", body: fd});
-    const d = await r.json();
-    $("upstatus").textContent = r.ok
-      ? `已转换：${d.doc_id}（${d.chars.toLocaleString()} 字符）`
-      : (d.detail || "失败");
-    if (r.ok) loadLib();
-  } finally { $("upbtn").disabled = false; }
-};
-$("freego").onclick = async () => {
-  const q = $("freeq").value.trim();
-  if (!q) return;
-  $("freego").disabled = true; $("freego").textContent = "检索并作答中…";
-  $("freeresult").classList.add("hidden");
-  try {
-    const r = await fetch("/api/ask-free", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({question: q}),
-    });
-    if (!r.ok) { alert((await r.json()).detail || "调用失败"); return; }
-    const d = await r.json();
-    $("freeans").textContent = d.answer;
-    $("freecites").innerHTML = d.citations.length
-      ? d.citations.map(c => `<div>【${c.doc_id} · ${c.section}】</div>`).join("")
-      : "（未引用具体章节）";
-    $("freetokens").textContent =
-      `token ${d.total_tokens.toLocaleString()}（检索片段 ${d.retrieved_sections} 段）`;
-    $("freeresult").classList.remove("hidden");
-  } finally { $("freego").disabled = false; $("freego").textContent = "提问"; }
-};
-
-// ── 评测演示 ──
-let questions = [];
-fetch("/api/meta").then(r => r.json()).then(m => {
-  $("qsel").innerHTML = "<option value=''>加载中…</option>";
-});
-fetch("/api/questions").then(r => r.json()).then(qs => {
-  questions = qs;
-  $("qsel").innerHTML = qs.map(q =>
-    `<option value="${q.qid}">[${q.split}·${q.domain}] ${q.type || q.qid}</option>`).join("");
-  showQ();
-});
-$("qsel").onchange = showQ;
-function showQ() {
-  const q = questions.find(x => x.qid === $("qsel").value);
-  if (!q) return;
-  $("qtext").textContent = q.question;
-  $("qopts").innerHTML = Object.entries(q.options)
-    .map(([k, v]) => `<div><b>${k}.</b> ${v}</div>`).join("");
-  $("result").classList.add("hidden");
-}
-$("go").onclick = async () => {
-  const qid = $("qsel").value;
-  if (!qid) return;
-  $("go").disabled = true; $("go").textContent = "判定中…（约 1–2 分钟）";
-  $("result").classList.add("hidden");
-  try {
-    const r = await fetch("/api/answer/" + qid, {method: "POST"});
-    if (!r.ok) { alert((await r.json()).detail || "调用失败"); return; }
-    const d = await r.json();
-    renderResult(d);
-  } finally {
-    $("go").disabled = false; $("go").textContent = "开始作答";
-  }
-};
-function renderResult(d) {
-  $("ans").textContent = d.answer || "（空：判定均不确定且回退未解析）";
-  $("ansmeta").textContent = `｜ 模型 ${d.model} ｜ token ${d.tokens.total.toLocaleString()}` +
-    (d.used_fallback ? " ｜ 触发回退仲裁" : "");
-  $("verdicts").innerHTML = Object.entries(d.verdicts).map(([k, v]) =>
-    `<div class="verdict"><span class="badge ${v}">${v}</span><span>选项 ${k}</span></div>`).join("");
-  $("evidence").innerHTML = d.evidence.length
-    ? d.evidence.map(e => `<div>【${e.doc_id} · ${e.clause}】</div>`).join("")
-    : "（判定未引用在场条款）";
-  $("result").classList.remove("hidden");
-}
-
-// ── 运行归档 ──
-async function loadRuns() {
-  const runs = await (await fetch("/api/runs")).json();
-  runs.sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
-  $("runlist").innerHTML = "<table><tr><th>归档</th><th>臂</th><th class='num'>正确/总</th>" +
-    "<th class='num'>准确率</th><th class='num'>token</th></tr>" + runs.map(r =>
-    `<tr><td><a href="#" onclick="showRun('${r.file}');return false">${r.file.replace('.json','')}</a></td>` +
-    `<td>${r.mode}</td><td class='num'>${r.correct}/${r.total}</td>` +
-    `<td class='num'>${(r.accuracy * 100).toFixed(1)}%</td>` +
-    `<td class='num'>${(r.total_tokens || 0).toLocaleString()}</td></tr>`).join("") + "</table>";
-}
-async function showRun(file) {
-  const data = (await (await fetch("/api/runs/" + file)).json());
-  const mode = Object.keys(data.runs)[0];
-  const run = data.runs[mode];
-  const byRank = (run.attribution || {}).by_rank || {};
-  const maxRate = 1;
-  $("rundetail").innerHTML =
-    `<h2 style="font-size:16px;margin-top:0">${file}（${mode}）</h2>` +
-    `<p>准确率 <b>${(run.report.accuracy * 100).toFixed(1)}%</b>，` +
-    `token ${run.report.total_tokens.toLocaleString()}</p>` +
-    (Object.keys(byRank).length ? "<h2 style='font-size:15px'>证据使用率·按喂入位次</h2>" +
-      Object.entries(byRank).map(([rank, s]) =>
-        `<div class="barrow"><span>第 ${rank} 位</span>` +
-        `<div class="bar" style="width:${Math.max(s.rate / maxRate * 100, 1)}%"></div>` +
-        `<span class="muted">${(s.rate * 100).toFixed(0)}%</span></div>`).join("") : "") +
-    `<h2 style="font-size:15px;margin-top:14px">错题</h2>` +
-    (run.details.filter(d => !d.correct).map(d =>
-      `<div>✗ ${d.qid}｜gold=${d.gold}｜pred=${d.pred || "空"}</div>`).join("") ||
-      "<div class='muted'>无</div>");
-  $("rundetail").classList.remove("hidden");
-  $("rundetail").scrollIntoView({behavior: "smooth"});
-}
-
-// ── 说明 ──
-$("chain").innerHTML = CHAIN.map(([a, b, c]) =>
-  `<div class="verdict"><span class="chip">${a}</span><span class="muted">${b} → <b>${c}</b></span></div>`).join("");
+// 首屏：按 hash 深链落到对应标签页，默认「我的文档」
+activateTab(location.hash.slice(1));
 </script>
 </body>
 </html>

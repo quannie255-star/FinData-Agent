@@ -23,6 +23,49 @@ _ARTICLE_TOKEN = re.compile(r"第[一二三四五六七八九十百千]+条")
 _LATIN = re.compile(r"[A-Za-z0-9]+")
 _CJK = re.compile(r"[\u4e00-\u9fff]")
 
+# ── 查询同义扩展（L2 英文域）：题问与 10-K 行文的词形失配 ──
+# 题问 "revenue"，10-K 写 "Net sales"——零 token 交集。扩展只在**查询侧**
+# 追加同组 token（语料侧不动：对称扩展稀释 idf 且建索引变慢）。组内词
+# 相互可替换；匹配按词边界（"eps" 不得命中 "epsilon"）。
+QUERY_EXPANSION = True  # 消融开关：FinanceBench 归因测量用，产品默认开
+
+_SYNONYM_GROUPS: list[list[str]] = [
+    ["revenue", "revenues", "net sales", "total revenue", "net revenues"],
+    ["net income", "net earnings", "net profit"],
+    ["operating income", "income from operations", "operating profit"],
+    ["earnings per share", "diluted eps", "eps"],
+    ["cash flow", "cash flows from operating", "operating cash flow"],
+    ["shareholders equity", "stockholders equity", "total equity"],
+    ["cost of revenue", "cost of sales", "cost of goods sold", "cogs"],
+    ["gross margin", "gross profit"],
+    ["research and development", "r&d"],
+    ["long-term debt", "long term debt", "notes payable"],
+]
+
+
+_WS_QUERY = re.compile(r"\s+")
+
+
+def expand_query(query: str) -> str:
+    """查询命中同组任一词时，把其余词追加到查询尾部（保序去重）。"""
+    lowered = " " + _WS_QUERY.sub(" ", query.lower()) + " "
+    extra: dict[str, None] = {}
+    for group in _SYNONYM_GROUPS:
+        for term in group:
+            if _word_hit(lowered, term):
+                for t in group:
+                    if not _word_hit(lowered, t):
+                        extra[t] = None
+                break
+    if not extra:
+        return query
+    return query + " " + " ".join(extra)
+
+
+def _word_hit(lowered_query: str, term: str) -> bool:
+    pattern = r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])"
+    return re.search(pattern, lowered_query) is not None
+
 
 @dataclass
 class Chunk:
@@ -33,6 +76,35 @@ class Chunk:
 
     def block(self) -> str:
         return f"【{self.doc_id} · {self.header}】\n{self.text}"
+
+
+def merge_rotating(
+    ranked_lists: list[list[int]], chunks: list[Chunk], total_cap: int
+) -> list[Chunk]:
+    """多查询轮转合并：按名次轮转取各列表高位命中，去重后截断。
+
+    轮转而非按查询拼接：不让第一个查询的 k 个命中把名额占满——多证据题
+    的证据散在不同查询里（v2 的 reg_s_001/015 就是单查询被单一域占满，
+    第二域证据进不了上下文，模型只能诚实判错）。BM25Index 与
+    HybridIndex（hybrid.py）共用本函数，两臂合并行为逐位一致。
+    """
+    if not ranked_lists:
+        return []
+    seen: set[int] = set()
+    merged: list[Chunk] = []
+    max_len = max(len(r) for r in ranked_lists)
+    for rank in range(max_len):
+        for ranked in ranked_lists:
+            if rank >= len(ranked):
+                continue
+            idx = ranked[rank]
+            if idx in seen:
+                continue
+            seen.add(idx)
+            merged.append(chunks[idx])
+            if len(merged) >= total_cap:
+                return merged
+    return merged
 
 
 def tokenize(text: str) -> list[str]:
@@ -135,6 +207,10 @@ def chunk_docs(docs: dict[str, str], max_chunk_chars: int = 0) -> list[Chunk]:
 
 
 _SHORT_LABEL = re.compile(r"^[\u4e00-\u9fffA-Za-z0-9，、（）()\s%．.]{1,14}$")
+# 英文短标签行：10-K 表格的指标名/期次行（"Total net sales"、
+# "January 1-31, 2018"）。FinanceBench 校准第一期的定位：字段通道要求
+# CJK，英文标签永不触发——英文域表格块拿不到低频高信号加成
+_EN_SHORT_LABEL = re.compile(r"^[\sA-Za-z0-9$_(),.%/\-'\"]{1,48}$")
 
 # 字段权重：v3 的失败证据是营收对比表块被「增长」等散文高频词挤出 top-4，
 # 而表格标签行（营业收入 / 2025 年）是低频高信号——正文统计压不过散文，
@@ -147,12 +223,20 @@ def _field_tokens(chunk: Chunk) -> list[str]:
 
     与正文分开建索引再线性组合（BM25F 的形态）——若把加权 token 直接注入
     正文语料，BM25 的长度归一化会反噬多标签块（实测：表格块不升反降）。
+    英文行要求含字母（纯数字行不做字段——年份与数值挂在含字母的期次行上）。
+    重组后的管道行（``a | b | c``）按 ``|`` 拆回单元格再逐格判定——标签
+    信号不因行重组丢失（实测：不拆则重组反而抵消字段通道的增益）。
     """
     tokens = tokenize(chunk.header)
     for line in chunk.text.splitlines():
-        stripped = line.strip()
-        if _SHORT_LABEL.match(stripped) and _CJK.search(stripped):
-            tokens.extend(tokenize(stripped))
+        candidates = line.split("|") if "|" in line else [line]
+        for cand in candidates:
+            stripped = cand.strip()
+            if _CJK.search(stripped):
+                if _SHORT_LABEL.match(stripped):
+                    tokens.extend(tokenize(stripped))
+            elif _EN_SHORT_LABEL.match(stripped) and re.search(r"[A-Za-z]", stripped):
+                tokens.extend(tokenize(stripped))
     return tokens
 
 
@@ -179,7 +263,7 @@ class BM25Index:
         self._field_bm25 = BM25Okapi([_field_tokens(c) for c in indexed])
 
     def _scores(self, query: str) -> list[float]:
-        toks = tokenize(query)
+        toks = tokenize(expand_query(query) if QUERY_EXPANSION else query)
         body = self._body_bm25.get_scores(toks)
         field = self._field_bm25.get_scores(toks)
         return [b + FIELD_WEIGHT * f for b, f in zip(body, field, strict=True)]
@@ -249,20 +333,4 @@ class BM25Index:
                 continue
             scores = self._scores(query)
             ranked_lists.append(sorted(pool_q, key=lambda i: scores[i], reverse=True))
-        if not ranked_lists:
-            return []
-        seen: set[int] = set()
-        merged: list[Chunk] = []
-        max_len = max(len(r) for r in ranked_lists)
-        for rank in range(max_len):
-            for ranked in ranked_lists:
-                if rank >= len(ranked):
-                    continue
-                idx = ranked[rank]
-                if idx in seen:
-                    continue
-                seen.add(idx)
-                merged.append(self.chunks[idx])
-                if len(merged) >= total_cap:
-                    return merged
-        return merged
+        return merge_rotating(ranked_lists, self.chunks, total_cap)

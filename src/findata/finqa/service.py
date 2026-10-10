@@ -20,12 +20,14 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 
+from findata.config import settings
 from findata.finqa import fixture as fx
+from findata.finqa.embedding import EmbeddingUnavailable, build_embedder
 from findata.finqa.isolate import run_isolate
-from findata.finqa.personal import ask_free, convert_file, safe_stem
+from findata.finqa.personal import ask_free, convert_file, embed_model_for, safe_stem
 from findata.finqa.qwen import QwenClient
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -48,12 +50,37 @@ def build_client() -> QwenClient:
     return QwenClient()
 
 
+def build_embedder_or_none(docs: dict[str, str]):
+    """混合检索开关（FINDATA_FINQA_HYBRID_RETRIEVAL，默认关）。
+
+    产品口径（docs/next-cycle-roadmap.md §3.1.1）：embedding 只进个人版
+    自由问答；后端不可用返回 None（ask_free 走 BM25F 并在响应里如实标注），
+    不让检索基建的缺失挡住问答本身。
+    """
+    if not settings.finqa_hybrid_retrieval:
+        return None
+    try:
+        return build_embedder(
+            backend=settings.finqa_embed_backend,
+            model=embed_model_for(docs, settings.finqa_embed_model),
+            cache_dir=settings.finqa_embed_cache_dir,
+        )
+    except EmbeddingUnavailable:
+        return None
+
+
 app = FastAPI(title="finqa demo", docs_url=None, redoc_url=None)
 
 
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> PlainTextResponse:
+    # 站内不提供 favicon，返回 204 避免访问日志被 404 刷屏（同 findata.cli.serve 的占位做法）
+    return PlainTextResponse("", status_code=204)
 
 
 @lru_cache(maxsize=1)
@@ -208,9 +235,13 @@ def _original_suffix(stem: str) -> str:
 
 
 @app.post("/api/library/upload")
-def upload(file: Annotated[UploadFile, File()] = None) -> dict:
+def upload(
+    file: Annotated[UploadFile, File()] = None,
+    mask_pii: str = Form("false"),
+) -> dict:
+    """上传文档；``mask_pii=true`` 时对转换后的检索文本做 PII 脱敏（原件不动）。"""
     if file is None:
-        raise HTTPException(400, '缺少文件')
+        raise HTTPException(400, "缺少文件")
 
     if not file.filename:
         raise HTTPException(400, "缺少文件名")
@@ -225,7 +256,12 @@ def upload(file: Annotated[UploadFile, File()] = None) -> dict:
     original = USER_DOCS_DIR / f"{stem}{suffix}"
     original.write_bytes(content)
     try:
-        converted = convert_file(original, USER_DOCS_DIR, USER_CONVERTED_DIR)
+        converted = convert_file(
+            original,
+            USER_DOCS_DIR,
+            USER_CONVERTED_DIR,
+            mask_pii=mask_pii.strip().lower() in ("1", "true", "yes", "on"),
+        )
     except ValueError as exc:
         original.unlink(missing_ok=True)
         raise HTTPException(400, str(exc)) from exc
@@ -269,7 +305,7 @@ def ask_free_endpoint(payload: dict) -> dict:
         client = build_client()
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
-    return ask_free(question, docs, client)
+    return ask_free(question, docs, client, embedder=build_embedder_or_none(docs))
 
 
 def main() -> int:

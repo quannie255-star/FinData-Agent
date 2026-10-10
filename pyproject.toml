@@ -25,6 +25,21 @@ dependencies = [
     "python-docx>=1.2.0",
 ]
 
+[project.optional-dependencies]
+# D1 扫描件 OCR 兜底：图片型 PDF 提取。默认安装（不带 extra 的 uv sync）不装；
+# 本机产品化启用：uv sync --extra ocr。⚠️注意 CI 的 test/smoke/eval-gate 用
+# `uv sync --all-extras`——这两个 extra 在 CI 会装上（真模型用例因此会执行，
+# 未装时走 skip，收集数不变）。
+ocr = [
+    "rapidocr-onnxruntime>=1.4.0",
+]
+# L2 混合检索：本机 CPU 向量推理（ONNX，文本不出本机；产品口径，
+# 赛题口径评测线不用）。默认安装不装；本机启用：uv sync --extra embed；
+# CI 同上面 ocr——`--all-extras` 会装。
+embed = [
+    "fastembed>=0.3.6",
+]
+
 [dependency-groups]
 dev = [
     "huggingface-hub>=1.31.0",

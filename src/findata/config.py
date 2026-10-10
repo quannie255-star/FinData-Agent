@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     dashscope_model: str = "qwen-plus"
     dashscope_timeout_seconds: float = 120.0
 
+    # ---- finqa 个人版混合检索（L2 深化，产品口径 2026-10-10 所有者裁决）----
+    # 赛题口径评测线不受此开关影响（不 import 向量模块）。
+    # hybrid_retrieval=False → 纯 BM25F；True → BM25F+向量 RRF（embedding
+    # 需要 extra=embed，本机推理，文本不出本机；未装则显式回退 BM25F）。
+    finqa_hybrid_retrieval: bool = False
+    finqa_embed_backend: str = "fastembed"  # fastembed（本机）/ dashscope（云端兜底）
+    finqa_embed_model: str = ""  # 空 = 按语料语言自动选 bge-small en/zh
+    finqa_embed_cache_dir: Path = PROJECT_ROOT / "data" / "embed-cache"
+
     # ---- 告警推送（每日管线 scripts/daily_pipeline.py 用）----
     # channel 取 wecom（企业微信机器人）/ dingtalk / feishu / serverchan（Server酱）；
     # 两者任一为空 = 不推送，只写运行日志。
