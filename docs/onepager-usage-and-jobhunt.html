@@ -129,12 +129,15 @@ uv run pytest &amp;&amp; uv run ruff check .  # 全绿</pre>
         <td><span class="tag b">✅ 已完成 10-09</span><strong>GitHub 第一屏最老</strong>：
             原 description 是「数据质量监控 Agent：7 类探针 + 规则/LLM 双归因器」、topics 10 个全是老赛道，
             与 README 首页（金融长文本问答）打架。<br>
-            现已改为金融长文本问答口径 + 12 个 topics（下方文案即线上值）。</td>
-        <td>改完。<strong>后续改动记得同步 <code>docs/launch-kit.md</code></strong>（该文件曾长期留旧文案）</td></tr>
+            现已改为金融长文本问答口径 + 12 个 topics。⚠ <strong>线上 Description 仍是 10-09 那版
+            （写「766 例测试」）</strong>，仓库现为 791——需重新 PATCH 一次（命令见
+            <code>docs/launch-kit.md</code>）。</td>
+        <td>改完。后续改动记得同步 <code>docs/launch-kit.md</code>（该文件曾长期留旧文案）</td></tr>
     <tr><td>2</td>
-        <td>工作区有未提交改动：<code>PITCH.md</code> 已改、<code>docs/architecture-review.md</code>
-            与 <code>scripts/extract_financebench_docs.py</code> 未入库。</td>
-        <td>确认后提交，别让面试官 clone 到半截状态</td></tr>
+        <td><span class="tag b">✅ 已完成 10-10</span><strong>工作区曾有未提交改动</strong>：
+            产品化第一批代码/文档/归档未入库，clone 到的是半截状态。</td>
+        <td>已整理为 3 个逻辑提交（feat 代码 / docs / evidence 归档），工作区干净。
+            <strong>唯一未做的是推送到远端</strong>——见下</td></tr>
     <tr><td>3</td>
         <td><strong>没有「陌生人跑过一次」的证据</strong>（stars 0 / forks 0）——这条自证不算数。</td>
         <td>找一个没看过本项目的人，用自己的 CSV 跑一次 <code>findata-trust-report</code>，把卡住的地方原文照贴</td></tr>
